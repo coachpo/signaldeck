@@ -4,7 +4,7 @@
 
 - `run_service.py` coordinates launch, planned evidence rows, execution and cancellation. Put historical read shaping in `run_read_projection.py`, rerun preparation in `run_rerun.py`, and queue leases in `run_queue_service.py`.
 - Rebuild execution/rerun plans from `RunWorkflowPackageSnapshot`, including the frozen non-secret Model Connection profile. `agent_execution_service.py` looks up the live connection only for its current API key; HTTP operations and extension tools resolve current package secrets at execution time.
-- A lost scheduler lease fails the run and active child rows, skips pending rows, and never requeues it. Preserve claim ownership checks before committing results and cancellation checks at step boundaries.
+- Under the current scheduler, a lost lease fails the run and active child rows, skips pending rows, and never requeues it. This describes current behavior; its replacement follows [the target's durable execution contract](../../../docs/迭代目标.md). Preserve claim ownership checks before committing results and cancellation checks while maintaining this scheduler.
 - `workflow_package_schedule_service.py` owns CRUD, previews and run-now; `workflow_package_schedule_materializer.py` owns due fires. Reuse recurrence, input rendering and launch helpers so overlap/misfire and fire idempotency semantics agree.
 - Schedule deletion detaches live refs while preserving run-owned provenance; package deletion removes owned runs. Keep these paths distinct.
 

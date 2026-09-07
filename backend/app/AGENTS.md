@@ -1,5 +1,7 @@
 # Backend App Guide
 
+The locations below route maintenance of the current implementation. For module extraction and independent-plugin work within the accepted target, follow [the target design](../../docs/迭代目标.md) and update the current architecture after validation.
+
 ## Change Boundaries
 
 - Keep HTTP adapters in `api/`, public contracts in `schemas/`, orchestration and transaction ownership in `services/`, and query/persistence operations in `repositories/`. Provider adapters also live in `services/`; follow the existing interface instead of assuming all external I/O belongs in extensions.
@@ -7,7 +9,7 @@
 - `db/session.py` owns PostgreSQL initialization under an advisory lock. `create_all` does not alter existing tables; preset SQL upserts can overwrite same-key package definitions at startup.
 - Model and cascade changes must agree with [the data model](../../docs/data-model.md). `models/run.py` requires a run-owned executable snapshot before flushing a Workflow Package run.
 - `models/base.py` owns `EncryptedJSONB`. Preserve failure on wrong keys, non-empty plaintext payloads and unsupported envelope versions; ordinary JSONB columns are not implicitly encrypted.
-- Keep runtime execution in `agents/`, `services/` and static `extensions/`; there is no separate `app/runtime` package.
+- Current runtime execution lives in `agents/`, `services/` and static `extensions/`; there is currently no separate `app/runtime` package.
 
 ## Read and Validation Boundaries
 

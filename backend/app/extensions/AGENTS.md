@@ -1,6 +1,6 @@
 # Backend Extensions Guide
 
-Read the [static extension contract](../../../docs/writing-extensions.md) before changing extension wiring.
+For the currently installed in-process extensions, read the [static extension contract](../../../docs/writing-extensions.md) before changing wiring. The independent-plugin destination is defined in [the target design](../../../docs/迭代目标.md); the current registry is not its installation contract.
 
 - `contract.py` owns contribution fields; `registry.py` owns `INSTALLED_EXTENSIONS` and composition. Keep import-time duplicate checks for extension, catalog, runtime, and normalized package-private MCP keys.
 - Keep each extension's `ownership.py`, `tool_specs.py`, and `runtime_executors.py` aligned. Native tool keys carry the extension prefix; function names replace `.` with `_`. `RuntimeToolRegistry` also rejects collisions introduced by this mapping.

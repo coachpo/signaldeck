@@ -2,6 +2,8 @@
 
 SignalDeck extension 是随 backend 一起部署的静态 Python 组合契约。当前没有 marketplace、runtime discovery、安装 API、扩展 enable/disable 状态或 `/api/extensions` 路由。系统边界见[架构说明](架构说明.md)，本文说明扩展如何接入现有 API、工具执行和依赖记录。
 
+本文仅用于维护当前进程内扩展；后续独立部署插件的目标契约见 [`迭代目标`](迭代目标.md)。下列静态注册步骤不构成目标插件的安装方式，本文也不表示独立插件已经实现。
+
 ## Contract 字段
 
 扩展在自己的包中声明 `EXTENSION = Extension(...)`。[`Extension`](../backend/app/extensions/contract.py) 是 frozen dataclass；除 `key` 外，字段默认均为空：

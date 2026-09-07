@@ -17,12 +17,13 @@ SignalDeck is a trusted single-user workflow runner: YAML Workflow Packages defi
 | Frontend routes, authoring, and run inspection | [frontend/AGENTS.md](frontend/AGENTS.md); route ownership starts in `frontend/src/routes.ts`, with local guides under affected features and E2E. |
 | Workflow Package examples | [demo/AGENTS.md](demo/AGENTS.md); check corresponding bundled seeds and package contract tests. |
 | Documentation | [docs/AGENTS.md](docs/AGENTS.md) and the canonical navigation below. |
+| Iteration toward the accepted target | Resolve the frozen baseline through [STATUS.md](STATUS.md#冻结迭代目标), then read [the target design](docs/迭代目标.md) at that commit and the current architecture's remaining gaps. |
 | Local launch and container images | `start.sh`, root Compose/Dockerfile for local/demo; `backend/Dockerfile`, `frontend/Dockerfile`, and `.github/workflows/docker-images.yml` for split images. |
 
 ## Cross-Cutting Boundaries
 
-- Prefer the current architecture over compatibility shims, legacy stubs, or speculative compatibility paths. Workflow Packages remain the only executable workflow authoring root, and extensions are statically installed.
-- Do not add auth/RBAC product surfaces, multi-tenant accounts, a plugin marketplace, Studio, Tryout, orchestration, runtime-v2, memory, fork, portfolio, simulations, or backtests unless explicitly re-scoped. Preserve Templates and Reports under the finance extension.
+- Use current architecture for maintenance; use the accepted frozen target for goal-directed replacement. Read its target and acceptance identifiers before implementation and report the covered criteria. Current static extension and scheduler wiring are implementation facts, not permanent target constraints. Do not add compatibility shims or legacy paths to constrain the target; Workflow Packages remain the executable workflow authoring root.
+- DAG execution, Agent Runtime redesign and independently deployed plugins are within the accepted target. Do not add auth/RBAC product surfaces, multi-tenant accounts, a plugin marketplace, Studio, Tryout, memory, fork, portfolio, simulations, backtests or restore historical orchestration/runtime-v2 product entry points unless explicitly re-scoped. Preserve Finance ownership of Templates and Reports.
 - Preserve external camelCase through `CamelModel`, API-owned `{code, message, details[]}` errors, and string serialization for money, quantities, and market values. Apply [development rules](docs/开发规范.md) across both API producers and browser consumers; authentication middleware has its own documented 401 response.
 - Secret values must never appear in reads, exports, run details, logs, diagnostics, API error details, or metadata. Use existing encryption and safe projection boundaries; internal runtime payloads are not browser response models.
 - Keep YAML source safety and graph semantics in the manifest parser, deterministic ordering and hashes in the compiler, and distinct validation/launch/strict-readiness diagnostics in preflight. Package schemas stay closed; do not introduce `additionalProperties`, `allowAdditionalProperties`, or `patternProperties`.

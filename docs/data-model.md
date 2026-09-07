@@ -2,6 +2,8 @@
 
 SignalDeck 使用 PostgreSQL 保存工作流包、计划任务、模型连接、运行证据以及 finance 模板与报告。表结构以 [`backend/app/models/`](../backend/app/models/) 为实现依据；应用层生命周期见 [`架构说明.md`](架构说明.md)，数据与兼容政策以 [`STATUS.md`](../STATUS.md) 为准。
 
+本文记录当前表结构。后续定义、执行证据与插件业务数据的目标所有权见 [`迭代目标`](迭代目标.md)；目标领域对象不等同于已存在的数据表。
+
 ## Finance 表
 
 | 表 | 作用与约束 |

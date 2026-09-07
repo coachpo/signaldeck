@@ -6,6 +6,8 @@ SignalDeck 是一个面向 LLM agent 的自托管流水线运行器：用 YAML �
 
 当前开发档位为 **MVP**，围绕本地内网个人使用验证工作流的端到端闭环，并保持现有数据、密钥与运行快照约束。此处只是派生摘要，完整状态以 [`STATUS.md`](STATUS.md) 为准。
 
+后续迭代目标已形成 **SD-TARGET-001** 文档基线，见 [`迭代目标`](docs/迭代目标.md)；冻结提交的定位与引用方式见 [`STATUS.md`](STATUS.md#冻结迭代目标)。下列启动方式和能力描述仍对应当前实现。
+
 ## 快速开始
 
 启动需要 Docker 和 Docker Compose v2；执行包含 agent 的工作流还需要可用的模型提供商配置。
@@ -39,6 +41,7 @@ docker compose down
 - [`docs/README.md`](docs/README.md)：文档索引与权威边界。
 - [`docs/产品说明.md`](docs/产品说明.md)：产品范围、流程、需求和验收。
 - [`docs/架构说明.md`](docs/架构说明.md)：当前组件、数据流、部署边界和架构例外。
+- [`docs/迭代目标.md`](docs/迭代目标.md)：已接受的终态设计、选型待验证项与目标验收。
 - [`CONTRIBUTING.md`](CONTRIBUTING.md)：开发环境、启动、检查、测试、工作流和完成定义。
 - [`docs/开发规范.md`](docs/开发规范.md)：项目特有的技术和实现规则。
 - [`docs/源代码规模与职责规则.md`](docs/源代码规模与职责规则.md)：通用的规模与职责规则。
