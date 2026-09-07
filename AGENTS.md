@@ -17,7 +17,7 @@ SignalDeck is a trusted single-user workflow runner: YAML Workflow Packages defi
 | Frontend routes, authoring, and run inspection | [frontend/AGENTS.md](frontend/AGENTS.md); route ownership starts in `frontend/src/routes.ts`, with local guides under affected features and E2E. |
 | Workflow Package examples | [demo/AGENTS.md](demo/AGENTS.md); check corresponding bundled seeds and package contract tests. |
 | Documentation | [docs/AGENTS.md](docs/AGENTS.md) and the canonical navigation below. |
-| Iteration toward the accepted target | Resolve the frozen baseline through [STATUS.md](STATUS.md#冻结迭代目标), then read [the target design](docs/迭代目标.md) at that commit and the current architecture's remaining gaps. |
+| Iteration toward the accepted target | Resolve the frozen baseline and explicit user amendments through [STATUS.md](STATUS.md#冻结迭代目标), then read [the target design](docs/迭代目标.md) at that commit, apply those amendments, and inspect the current architecture's remaining gaps. |
 | Local launch and container images | `start.sh`, root Compose/Dockerfile for local/demo; `backend/Dockerfile`, `frontend/Dockerfile`, and `.github/workflows/docker-images.yml` for split images. |
 
 ## Cross-Cutting Boundaries

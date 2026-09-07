@@ -18,7 +18,7 @@
 
 ## 专项文档
 
-- [`迭代目标.md`](迭代目标.md)：SD-TARGET-001 已接受的终态设计、契约边界、执行引擎比较条件和目标验收；冻结提交的定位与后续引用以 [`STATUS.md`](../STATUS.md#冻结迭代目标) 为准，当前实现仍查产品和架构文档。
+- [`迭代目标.md`](迭代目标.md)：SD-TARGET-001 已接受的终态设计、契约边界、已确定的 Temporal 选型与目标验收；冻结提交和用户补充决定的引用以 [`STATUS.md`](../STATUS.md#冻结迭代目标) 为准，当前实现仍查产品和架构文档。
 - [`data-model.md`](data-model.md)：PostgreSQL 表、运行快照和数据完整性边界。
 - [`writing-extensions.md`](writing-extensions.md)：静态 backend extension 的编写契约。
 - [`handover-deps-follow-up.md`](handover-deps-follow-up.md)：依赖升级遗留问题的当前状态、解锁条件和验证命令。
