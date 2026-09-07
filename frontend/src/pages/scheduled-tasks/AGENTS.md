@@ -1,30 +1,13 @@
 # Scheduled Tasks UI Guide
 
-## Overview
+This subtree owns recurrence authoring, input preview, schedule configuration, fire history and run-now. Follow [`the schedule contract`](../../../../docs/产品说明.md#scheduled-tasks).
 
-Scheduled Task routes own recurrence authoring, timezone-aware previews, schedule detail, fire history, run-now, and stale Workflow Package handling.
+- `editor.tsx` creates a schedule for an explicit package/workflow pair. That pair is fixed in update payloads; `detail.tsx` edits timing, inputs and status for the existing target.
+- Recurrence is structured (`interval`, `daily`, `weekly`, `monthly`) with an explicit IANA timezone. `pickers.tsx` and `time-zones.ts` supply controls; never substitute the browser timezone for the saved value.
+- Input templates may reference `schedule`, `fire`, `window`, `lastRun` and `vars`. Reuse schema-derived defaults and show the preview's rendered parameters and validation errors; preview does not persist or launch.
+- Missing/stale manifest or workflow state blocks workflow-dependent input operations and run-now with a reason. Keep independent timing/status management available; do not blanket-disable the entire detail page.
+- Preserve overlap (`skip`/`queue`) and misfire (`skip`/`catchUpOne`) choices and their displayed consequences. Run-now sends an idempotency key and scheduled instant, then opens the created ordinary run.
+- `../../hooks/use-scheduled-tasks.ts` invalidates schedule list/detail, fire history and linked run scopes after mutations. Preview mutations intentionally do not invalidate caches.
+- Deleting a schedule removes its fire history and future automation; existing runs keep run-owned schedule provenance. Confirmation and result text must reflect this distinction.
 
-## Where To Look
-
-| Task | Location | Notes |
-| --- | --- | --- |
-| List route | `list.tsx` | Inventory view and schedule status actions. |
-| Editor route | `editor.tsx` | Create/edit form and recurrence payloads. |
-| Detail route | `detail.tsx` | Preview, fire history, run-now, linked runs, stale guards. |
-| Recurrence helpers | `pickers.tsx`, `time-zones.ts` | Timezone and recurrence inputs. |
-| Tests | `editor.test.tsx` | Authoring payload and route behavior. |
-
-## Conventions
-
-- Recurrence is structured: `interval`, `daily`, `weekly`, or `monthly` plus IANA timezone.
-- Preview is safe and does not persist schedule state.
-- Runtime input templates are seeded from Workflow Package schemas and may reference `schedule`, `fire`, `window`, `lastRun`, and `vars`.
-- Stale/missing Workflow Package state must block unsafe edits or run-now actions with explicit user feedback.
-- Run-now creates an ordinary queued run and should invalidate schedule detail, fire history, runs, and linked package views.
-- Deleting a schedule removes future automation and schedule-owned fire rows; existing runs stay visible through run-owned schedule provenance.
-
-## Anti-Patterns
-
-- Do not treat local browser timezone as the persisted schedule timezone.
-- Do not mutate recurrence preview data into saved schedule state by side effect.
-- Do not hide overlap/misfire policy consequences from detail or editor flows.
+Authoring payload checks live in `editor.test.tsx`; invalidation checks in `../../hooks/use-scheduled-tasks.test.ts`. `../../../e2e/scheduled-tasks.spec.ts` covers filters, create/preview, pause, run-now and schedule deletion with preserved linked runs; it pins timezone to UTC.

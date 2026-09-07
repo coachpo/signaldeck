@@ -1,31 +1,10 @@
 # Backend Extensions Guide
 
-## Overview
+Read the [static extension contract](../../../docs/writing-extensions.md) before changing extension wiring.
 
-Extensions are private Python wiring for bundled product capabilities, not a dynamic plugin system.
-
-## Where To Look
-
-| Task | Location | Notes |
-| --- | --- | --- |
-| Extension contract | `contract.py` | Static `Extension` dataclass fields. |
-| Installed extensions | `registry.py` | Import-time uniqueness checks and provider merge. |
-| Finance extension | `signaldeck_finance/` | API plus runtime tools. |
-| Digital Oracle extension | `signaldeck_digital_oracle/` | Tool-only runtime extension. |
-| Tool catalog types | `../agents/tool_catalog/` | Server-declared metadata shape. |
-| Runtime registry | `../agents/runtime_tools/` | Runtime tool specs and dispatch. |
-
-## Conventions
-
-- Add capabilities by editing `INSTALLED_EXTENSIONS`; there is no filesystem/plugin discovery.
-- Extension keys and canonical runtime tool keys are dotted lowercase names such as `signaldeck.finance`.
-- OpenAI function names use the mechanical snake_case mapping from canonical tool keys.
-- Each extension contributes only explicit API routers, tool declarations, runtime tool specs, provider factories, dependency surfaces, and package-private MCP ownership.
-- `registry.py` must reject duplicate extension keys, server-declared tool keys, runtime spec keys, and package-private MCP tool keys at import time.
-- Runtime access failures should use the project denial shape, including `agent_execution_access_denied`.
-
-## Anti-Patterns
-
-- Do not add user-installed plugins, marketplaces, or dynamic extension loading.
-- Do not let extensions silently shadow another extension's tool keys.
-- Do not expose package-private MCP config or runtime secrets through catalog metadata.
+- `contract.py` owns contribution fields; `registry.py` owns `INSTALLED_EXTENSIONS` and composition. Keep import-time duplicate checks for extension, catalog, runtime, and normalized package-private MCP keys.
+- Keep each extension's `ownership.py`, `tool_specs.py`, and `runtime_executors.py` aligned. Native tool keys carry the extension prefix; function names replace `.` with `_`. `RuntimeToolRegistry` also rejects collisions introduced by this mapping.
+- The composition root consumes the `execution_provider_bundle` factory explicitly. Other factory names need explicit consumers; merged bundles reject duplicate extension payloads.
+- Dependency surfaces are safe labels consumed by `backend/app/services/extension_dependencies.py`. Update package/compiler and run provenance coverage when changing ownership or labels; they do not capture provider objects or installed code versions.
+- Preserve grant checks before parameter parsing/execution in `backend/app/agents/runtime_tools/registry.py`; extension executors must not create an alternate ungranted dispatch path.
+- For wiring changes, use `tests/test_extension_contract.py`, `tests/test_tool_catalog_api.py`, `tests/test_runtime_tools.py`, and `tests/test_execution_providers.py` from `backend/`, selecting the affected contracts.

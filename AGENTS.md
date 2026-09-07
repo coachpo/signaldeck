@@ -1,124 +1,48 @@
 # SignalDeck Agent Guide
 
-**Generated:** 2026-07-09T19:21:48Z
-**Commit:** 9c00b8ff
-**Branch:** main
-**Code map:** codebase-memory project `home-qing-Documents-projects-ledger`
-
-## Overview
-
-SignalDeck is a trusted single-user mini-Jenkins for LLM agents: YAML Workflow Packages define multi-agent pipelines, manual or scheduled launches enqueue runs, and operators inspect run evidence, outputs, templates, and reports.
-Prefer clean current architecture over compatibility shims, legacy stubs, or speculative compatibility paths.
+SignalDeck is a trusted single-user workflow runner: YAML Workflow Packages define agent pipelines, manual or scheduled launches enqueue runs, and operators inspect execution evidence and outputs. Product scope and the development tier are owned by [STATUS.md](STATUS.md) and the [product specification](docs/产品说明.md).
 
 ## Communication
 
 - Do not send optional progress commentary; report required results, blockers, and final status.
 - Do not revert, overwrite, or stage user changes you did not make.
 
-## Structure
+## Change Routing
 
-| Path | Purpose |
+| Change | Start here |
 | --- | --- |
-| `backend/` | FastAPI, SQLAlchemy, runtime tools, static extensions, scheduler worker, pytest. |
-| `frontend/` | React 19, Vite 8, TanStack Query, shadcn/Radix UI, Vitest, Playwright. |
-| `docs/` | Canonical product, architecture, development, data-model, and extension-writing docs. |
-| `demo/` | Grounded Workflow Package YAML examples. |
-| `.github/workflows/` | CI gates and split backend/frontend Docker image publishing. |
-| `start.sh`, `Dockerfile`, `docker-compose.yml` | Local/demo combined stack only. |
+| Backend APIs, schemas, persistence, and runtime | [backend/app/AGENTS.md](backend/app/AGENTS.md); HTTP composition starts in `backend/app/main.py`, execution in `backend/app/services/`, scheduler in `backend/app/workers/run_scheduler.py`. |
+| Static tools, providers, Templates, and Reports | [backend/app/extensions/AGENTS.md](backend/app/extensions/AGENTS.md); `backend/app/extensions/registry.py` is the composition root. |
+| Backend regression coverage | [backend/tests/AGENTS.md](backend/tests/AGENTS.md). |
+| Frontend routes, authoring, and run inspection | [frontend/AGENTS.md](frontend/AGENTS.md); route ownership starts in `frontend/src/routes.ts`, with local guides under affected features and E2E. |
+| Workflow Package examples | [demo/AGENTS.md](demo/AGENTS.md); check corresponding bundled seeds and package contract tests. |
+| Documentation | [docs/AGENTS.md](docs/AGENTS.md) and the canonical navigation below. |
+| Local launch and container images | `start.sh`, root Compose/Dockerfile for local/demo; `backend/Dockerfile`, `frontend/Dockerfile`, and `.github/workflows/docker-images.yml` for split images. |
 
-## Where To Look
+## Cross-Cutting Boundaries
 
-| Task | Location | Notes |
-| --- | --- | --- |
-| Backend API/runtime changes | `backend/app/` | Child guide covers API/data/runtime boundaries. |
-| Backend route contracts | `backend/app/api/` | Two API roots, extension mounting, literal route order. |
-| Backend orchestration | `backend/app/services/` | Run queue, scheduler, parser/compiler, model gateways. |
-| Bundled tool surfaces | `backend/app/extensions/` | Static extension contract and per-extension guides. |
-| Backend tests | `backend/tests/` | Real PostgreSQL fixture and fake provider patterns. |
-| Frontend app work | `frontend/` | Child guide covers design system, hooks, route conventions. |
-| Package authoring UI | `frontend/src/pages/workflow-packages/` | Manifest editor, import/export, preflight, launch. |
-| Schedule UI | `frontend/src/pages/scheduled-tasks/` | Recurrence, timezone, run-now, fire history. |
-| Run evidence UI | `frontend/src/pages/runs/` | Immutable snapshots, inspection state, rerun lineage. |
-| Schema/value helpers | `frontend/src/lib/platform-authoring/` | Pure codecs and diagnostics shared by authoring surfaces. |
-| Browser workflows | `frontend/e2e/` | Cross-stack Playwright setup and API seeding. |
+- Prefer the current architecture over compatibility shims, legacy stubs, or speculative compatibility paths. Workflow Packages remain the only executable workflow authoring root, and extensions are statically installed.
+- Do not add auth/RBAC product surfaces, multi-tenant accounts, a plugin marketplace, Studio, Tryout, orchestration, runtime-v2, memory, fork, portfolio, simulations, or backtests unless explicitly re-scoped. Preserve Templates and Reports under the finance extension.
+- Preserve external camelCase through `CamelModel`, API-owned `{code, message, details[]}` errors, and string serialization for money, quantities, and market values. Apply [development rules](docs/开发规范.md) across both API producers and browser consumers; authentication middleware has its own documented 401 response.
+- Secret values must never appear in reads, exports, run details, logs, diagnostics, API error details, or metadata. Use existing encryption and safe projection boundaries; internal runtime payloads are not browser response models.
+- Keep YAML source safety and graph semantics in the manifest parser, deterministic ordering and hashes in the compiler, and distinct validation/launch/strict-readiness diagnostics in preflight. Package schemas stay closed; do not introduce `additionalProperties`, `allowAdditionalProperties`, or `patternProperties`.
+- Execute and rerun from immutable package snapshots. Preserve queue, schedule, and run provenance when changing the corresponding flows.
+- PostgreSQL initialization uses `create_all`, bundled seeds, and startup recovery. There is no migration framework; follow the [data and rebuild policy](STATUS.md) for schema changes.
+- Frontend data access uses feature hooks and `queryKeys`; shared components remain presentational. Follow [frontend/DESIGN.md](frontend/DESIGN.md) for visual changes.
+- Demo YAML is contract material. Review affected parser/compiler/preflight tests, locked hashes, and seeds when changing it.
 
-## Code Map
+## Validation and Local Runtime
 
-| Symbol | Type | Location | Role |
-| --- | --- | --- | --- |
-| `create_app` | function | `backend/app/main.py` | FastAPI setup, middleware, health/readiness, routers. |
-| `RunService` | class | `backend/app/services/run_service.py` | Central run launch/execution/projection orchestration. |
-| `WorkflowPackageService` | class | `backend/app/services/workflow_package_service.py` | Package CRUD, snapshots, manifest import/export. |
-| `WorkflowPackageScheduleService` | class | `backend/app/services/workflow_package_schedule_service.py` | Schedule lifecycle, preview, run-now, fire materialization. |
-| `CamelModel` | class | `backend/app/schemas/common.py` | External camelCase API schema contract. |
-| `ApiError` | class | `backend/app/core/errors.py` | Error envelope source. |
-| `Extension` | class | `backend/app/extensions/contract.py` | Static extension contribution contract. |
-| `queryKeys` | const | `frontend/src/lib/query-keys.ts` | Canonical TanStack Query key registry. |
-| `WorkflowPackageEditorPage` | component | `frontend/src/pages/workflow-packages/editor.tsx` | Package authoring workspace. |
-| `SchemaForm` | component | `frontend/src/components/platform-authoring/generated-form/schema-form.tsx` | Schema-backed runtime input form. |
+Use the verified setup, checks, and completion rules in [CONTRIBUTING.md](CONTRIBUTING.md), then run `git diff --check`. Follow the nearest subtree guide for focused checks.
 
-## Current Product Shape
+`./start.sh` is the local/demo launcher; the default application URL is `http://localhost:${APP_PORT:-8080}`. The root combined image is local/demo only; production image wiring uses the split backend and frontend images. A root Dockerfile change requires local `docker build .` validation because the image workflow builds only the split images. Before exposing SignalDeck outside a trusted network, configure the API token on the backend or use an authenticated reverse proxy.
 
-- Workflow Packages are the only agent-workflow authoring root; package-local agents, output schemas, capability profiles, private MCP configs, HTTP operation nodes, and workflow graphs live in package YAML artifacts.
-- Scheduled Tasks target Workflow Packages, use structured recurrence plus IANA timezones, and materialize due fires into ordinary queued runs.
-- Model Connections are global encrypted provider/model bindings; Tools are read-only server-declared metadata at `/api/tools`.
-- Runs store immutable package snapshots, inputs, per-step evidence, operation evidence, queue/progress state, retry/failure metadata, rerun lineage, and final outputs.
-- `signaldeck.finance` is a static backend extension for templates, reports, finance providers, and finance runtime tools.
-- `signaldeck.digital_oracle` is a static tool-only backend extension.
-- Templates and Reports remain preserved product surfaces under `/api/v1` and browser routes `/templates` and `/reports`.
-
-## Conventions
-
-- Before changing code, read the applicable canonical docs linked in the managed navigation block, then apply the nearest subtree guide.
-- Backend JSON is camelCase externally and snake_case internally; `CamelModel` owns aliases and request validation.
-- Error envelopes are `{code, message, details[]}` and unsafe error detail keys are filtered before browser reads.
-- Money, quantities, and market values cross the API as strings.
-- Secret values must never appear in reads, exports, run details, logs, diagnostics, API error details, or metadata.
-- Schema changes require DB rebuild; there is no migration framework. `backend/app/db/` uses `create_all`, bundled seeds, and startup recovery.
-- Workflow Package parser owns source YAML safety and graph semantic validation before compile.
-- Workflow Package compiler output must stay deterministic: sorted compiled sections, canonical JSON hashes, and no secret leakage.
-- Package schemas are closed by default; do not add `additionalProperties`, `allowAdditionalProperties`, or `patternProperties`.
-- Preflight intentionally projects different warning/blocker levels for validation, launch metadata, and strict readiness.
-- Demo Workflow Package YAML is contract material; update parser/compiler/preflight tests and locked hashes when changing it.
-- Frontend data fetching goes through feature hooks plus `queryKeys`; shared components stay presentational.
-- Docker production artifacts are the split backend and frontend images; the root combined image is local/demo only.
-
-## Anti-Patterns
-
-- Do not add auth/RBAC, multi-tenant accounts, plugin marketplace, Studio, Tryout, orchestration, runtime-v2, memory, fork, portfolio, simulations, or backtests unless explicitly re-scoped.
-- Do not introduce compatibility shims for removed product shapes.
-- Do not reintroduce `corepack enable` in Node 26 Dockerfiles; use the pinned global pnpm install.
-- Do not lift the FastAPI `<0.137` cap until Logfire allows `opentelemetry-sdk>=1.43` and FastAPI instrumentation resolves to `>=0.64b0`.
-
-## Commands
-
-```bash
-(cd backend && uv sync)
-(cd frontend && pnpm install)
-(cd backend && uv run ruff check app tests && uv run black --check app tests && uv run isort --check-only app tests && uv run mypy app && uv run pytest)
-(cd frontend && pnpm lint)
-(cd frontend && pnpm typecheck)
-(cd frontend && pnpm build)
-(cd frontend && pnpm test:run)
-(cd frontend && pnpm exec playwright install --with-deps chromium && pnpm test:e2e)
-git diff --check
-```
-
-## Local Stack
-
-```bash
-./start.sh
-docker compose -f docker-compose.yml down
-docker compose -f docker-compose.yml down -v
-```
-
-`start.sh` is the authoritative local/demo launcher and exposes only `http://localhost:${APP_PORT:-8080}`.
-Set `SIGNALDECK_API_TOKEN` or use an authenticated reverse proxy before exposing SignalDeck outside a trusted network.
+For dependency changes, inspect the manifests, lockfiles, and [dependency follow-up](docs/handover-deps-follow-up.md). Do not lift FastAPI `<0.137` until Logfire allows `opentelemetry-sdk>=1.43` and FastAPI instrumentation resolves to `>=0.64b0`. Node 26 Dockerfiles use pinned global pnpm installation; do not reintroduce `corepack enable`.
 
 <!-- write-project-docs:document-navigation:start -->
 ## 项目文档导航
 
-执行相关任务前，根据任务范围读取以下权威文档：
+执行相关任务前，只读取确认相关事实、约束和验收标准所需的章节：
 
 - [项目状态](STATUS.md)
 - [文档索引](docs/README.md)
@@ -128,7 +52,9 @@ Set `SIGNALDECK_API_TOKEN` or use an authenticated reverse proxy before exposing
 - [源代码规模与职责规则](docs/源代码规模与职责规则.md)
 - [贡献指南](CONTRIBUTING.md)
 
-实现、审查或验证工程变更时，结合 `STATUS.md` 和产品说明理解当前事实与交付意图，并读取贡献指南中实际存在的[当前迭代策略](CONTRIBUTING.md#当前迭代策略)。只消费与任务相关的本轮必做项、不可降低边界和重新推导条件；不要把明确暂缓或未被当前风险触发的事项自行扩大为工作。用户的新要求、活动 Goal、可达风险、硬性项目规则/不变量或有证据支持的审查发现一旦触发相关工作，暂缓描述不得压制它。该派生策略不扩大用户授权，MVP 快速验证开关也不定义或覆盖它；源事实变化或摘要漂移时不得沿用旧策略。
+需要确认相关事实、约束或交付意图时，查阅 `STATUS.md` 和产品说明。使用档位默认值或豁免前，确认[当前开发策略](CONTRIBUTING.md#当前开发策略)存在、有效且适用于本次任务，并读取其中相关的要求、边界和切换条件。档位默认值不替代事实、不扩大用户授权，也不覆盖用户要求、项目硬性规则及必需检查。
+
+本轮任务中已核实的信息，在来源未变化且仍适用时可复用；事实、档位、范围或要求变化，或出现冲突证据时，重新核实受影响的信息。
 
 ## 项目文档内容边界
 

@@ -1,32 +1,10 @@
 # Digital Oracle Extension Guide
 
-## Overview
+`signaldeck.digital_oracle` contributes tool declarations and runtime specs only. It has no API router, browser navigation, or extension-level provider factory.
 
-`signaldeck.digital_oracle` is a static tool-only extension for prediction markets, SEC filings, sentiment, macro/rates, crypto derivatives, CFTC, and options data.
-
-## Where To Look
-
-| Task | Location | Notes |
-| --- | --- | --- |
-| Extension export | `__init__.py` | Tool declarations and runtime specs only. |
-| Tool ownership | `ownership.py` | Canonical tool keys and function names. |
-| Runtime dispatch | `runtime_executors.py` | Runtime executor map. |
-| Core service | `service.py` | Provider orchestration and result assembly. |
-| Providers | `runtime_*_providers.py` | External provider adapters for supported data families. |
-| Payload/parsing | `runtime_*_payloads.py`, `runtime_*_parser.py`, `runtime_options_parser.py` | Family-specific normalization and parsing. |
-| Runtime modules | `runtime_*.py` | Tool-specific clients, execution wrappers, and result assembly. |
-
-## Conventions
-
-- This extension adds no API router, browser route, nav item, or provider factory.
-- Provider failures should produce structured warning results when partial data is useful.
-- Optional dependencies stay optional; do not require vendored `digital-oracle` or mandatory `yfinance` for phase 1 behavior.
-- FRED and EDGAR secrets are resolved from runtime context/settings where needed and must stay out of reads/logs/catalog metadata.
-- Keep parser and payload modules family-specific; avoid one large cross-family normalization switch.
-- Runtime result shapes should preserve warnings and source metadata needed for run evidence.
-
-## Anti-Patterns
-
-- Do not make one failed upstream provider fatal when the tool can return bounded partial data.
-- Do not add product pages or `/api/v1` routes for this tool-only extension.
-- Do not leak provider request headers, keys, or raw stack traces into warnings.
+- Keep provider orchestration in `service.py`, with family-specific clients, argument parsers, and payload normalization in the existing `runtime_*` modules. Extend the relevant family rather than adding a cross-family normalization switch.
+- `settings.py` owns feature flags, item limits, and timeouts. Resolve `fred_api_key` and `edgar_contact_email` through `RuntimeToolContext.resolve_secret_value` in the relevant executor and pass `DigitalOracleProviderSecrets` to `factory.py`; they are not environment settings fields.
+- Keep provider failures scoped to their source when bounded partial data is available. Preserve empty, unavailable, partial, stale, and truncated-result warnings alongside source metadata; return no invented coverage.
+- Build public warnings through `warnings.py` so sensitive detail keys and credential-like message values are filtered before runtime serialization. Do not include raw request headers or stack traces.
+- Keep `yfinance` optional and missing-dependency failures scoped to options. The current implementation does not require vendoring `digital-oracle`.
+- Changes to provider coverage or result shapes should exercise the corresponding cases in `backend/tests/test_runtime_tools.py` and catalog/alias assertions in `backend/tests/test_tool_catalog_api.py`.

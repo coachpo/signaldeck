@@ -24,7 +24,7 @@ SignalDeck 是一个用于 Workflow Package、Scheduled Task、Run、Model Conne
 - `Layout` 负责 app shell、sidebar、breadcrumb、scroll mode、full-height mode 和 route width。
 - inventory route 使用 `InventoryPageShell`、`PageContextBar`、`ResourceToolbar`、可选 `ResourceFilterBar` 和 route-owned content。
 - full-height editor 与 console 使用 `WorkspacePageShell`。
-- 可检查的 source/detail flow 使用 `SplitInspectorLayout` 或 `SheetInspectorLayout`。
+- 可检查的 source/detail 工作区使用 `WorkspacePageShell`，由 feature 组合 source 与详情布局；结构化值和原始 JSON 分别复用 `StructuredValueInspector` 与 `ExactJsonPreview`。
 - 避免嵌套 page shell 和 route-local top-level layout wrapper。
 
 ## 组件规则

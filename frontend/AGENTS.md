@@ -1,47 +1,17 @@
 # Frontend Guide
 
-## Overview
+Read [`DESIGN.md`](DESIGN.md) for the visual system and [`Frontend rules`](../docs/开发规范.md#frontend-规则) for implementation constraints. Validation commands are maintained in [`CONTRIBUTING.md`](../CONTRIBUTING.md#检查测试与构建); run them from `frontend/` when using package scripts directly.
 
-The frontend is a React 19/Vite management UI using TanStack Query, React Router, shadcn/Radix primitives, semantic Tailwind tokens, Vitest, and Playwright.
+## Change boundaries
 
-## Where To Look
+- `src/routes.ts` owns browser paths and route handles: sidebar ownership, breadcrumbs, width, scroll/full-height mode, and state variants. Change route metadata together with its page; `src/components/layout.tsx` consumes those handles.
+- `src/styles/theme.css` owns semantic tokens. `src/components/ui` holds primitives; `src/components/shared` holds management shells and reusable presentational controls. Keep route parameters, API state, domain copy, validation and navigation with the owning feature.
+- `src/lib/api-client.ts` owns API base URL normalization, token retry, safe error details and downloads. `src/lib/api/` selects `request` for `/api/v1` extension endpoints or `requestPlatform` for `/api` platform endpoints.
+- `src/hooks/` owns TanStack Query calls and invalidation using `src/lib/query-keys.ts`. Batch delete hooks settle all requests and invalidate affected scopes even on partial failure; preserve that behavior.
+- `src/lib/platform-authoring/` owns schema/value codecs; generated form components live in `src/components/platform-authoring/`. Keep transformations out of page components when these helpers already provide them.
 
-| Task | Location | Notes |
-| --- | --- | --- |
-| App routes | `src/routes.ts` | Browser route families and layout ownership. |
-| Design system | `DESIGN.md`, `src/styles/theme.css` | Tokens, shells, surface model, component rules. |
-| API client | `src/lib/api-client.ts` | `/api/v1` and `/api` request helpers, token retry, safe errors. |
-| Query keys | `src/lib/query-keys.ts` | Canonical TanStack Query key registry. |
-| Data hooks | `src/hooks/` | Query/mutation boundary and invalidation behavior. |
-| UI primitives | `src/components/ui/` | Presentational shadcn/Radix wrappers only. |
-| Shared chrome | `src/components/shared/` | Page shells, tables, dialogs, states, status chrome. |
-| E2E | `e2e/` | Cross-stack browser specs. |
+## Validation
 
-## Conventions
-
-- Follow `DESIGN.md`: compact management UI, semantic tokens, `shadow-ui-*`, no route-local themes or decorative variants.
-- Inventory routes use `InventoryPageShell`; full-height editors and consoles use `WorkspacePageShell`.
-- Feature pages own copy, route params, hooks, mutations, toasts, navigation, sorting, and validation.
-- Shared components stay presentational and reusable. Do not put route/API/domain logic in `components/ui`.
-- API files call `request` for `/api/v1` extension surfaces and `requestPlatform` for platform `/api` surfaces.
-- Hooks use `queryKeys`, guard optional IDs with `enabled`, and invalidate every affected list/detail/related scope.
-- Browser-visible API types mirror external camelCase contracts; secret-like values are write-only or represented by safe presence fields.
-- React Hooks recommended lint rules stay enabled without local downgrades, including `react-hooks/set-state-in-effect`.
-
-## Commands
-
-```bash
-pnpm lint
-pnpm typecheck
-pnpm build
-pnpm test:run
-pnpm exec playwright install --with-deps chromium
-pnpm test:e2e
-```
-
-## Anti-Patterns
-
-- Do not add new UI libraries, styling frameworks, token files, or route-local visual systems.
-- Do not hand-roll query key arrays.
-- Do not use regex/string hacks for Workflow Package YAML or schema/value transformation when structured helpers exist.
-- Do not render raw secret values, unsafe API error details, or provider internals.
+- `package.json` is the command source; unit/component tests use Vitest, cross-stack flows use Playwright. Run focused tests with `pnpm exec vitest run <test-path>` before broader checks when implementation changes warrant them.
+- Preserve `eslint.config.js`'s React Hooks recommended rules, including `react-hooks/set-state-in-effect`; fix state synchronization rather than lowering severity.
+- Route and layout changes need the corresponding component tests and `e2e/shell.spec.ts` coverage. Package, schedule, run and schema/value subtrees have narrower guides for their behavior boundaries.

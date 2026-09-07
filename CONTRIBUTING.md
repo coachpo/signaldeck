@@ -4,34 +4,55 @@
 
 ## 开发环境与依赖
 
-- Backend：Python 3.13，使用 uv；依赖和锁文件位于 `backend/`。
-- Frontend：Node 24、pnpm 10.30.1；依赖和锁文件位于 `frontend/`。
-- 本地运行需要 Docker Compose v2 和 PostgreSQL/pgvector；完整本地栈优先使用根目录 `start.sh`。
+- Backend：`backend/pyproject.toml` 要求 Python >=3.13；CI 使用 Python 3.13、uv 0.9.8，根镜像与 backend 镜像使用 Python 3.14。
+- Frontend：`frontend/package.json` 要求 Node >=24，并固定 pnpm 10.30.1；CI 使用 Node 24，镜像构建使用 Node 26。
+- 依赖以 `backend/uv.lock` 和 `frontend/pnpm-lock.yaml` 为准；按现有锁文件安装，不在普通环境准备中升级依赖。
+- 完整本地栈需要 Docker Compose v2，使用 PostgreSQL/pgvector；普通安装与启动见 [`README.md`](README.md#快速开始)。
 
 安装依赖：
 
 ```bash
-(cd backend && uv sync)
-(cd frontend && pnpm install)
+(cd backend && uv sync --frozen)
+(cd frontend && pnpm install --frozen-lockfile)
 ```
 
 ## 开发启动
 
-本地/演示组合栈：
+完整本地/演示组合栈使用 [`start.sh`](start.sh)，启动与停止命令见 [`README.md`](README.md#快速开始)。它只向宿主机发布应用端口，不能直接用 Compose 内的 `db:5432` 作为宿主机进程的数据库地址。
+
+需要热更新时，先准备可从宿主机访问的 PostgreSQL，并在 backend 与 scheduler 的终端中设置相同的 `DATABASE_URL`；保持 `AGENT_PLATFORM_ENCRYPTION_KEY` 一致，以读取已有加密配置。在仓库根目录分别打开三个终端执行：
 
 ```bash
-./start.sh
-docker compose -f docker-compose.yml down
+(cd backend && uv run uvicorn app.main:app --reload --host 127.0.0.1 --port 8000)
+(cd backend && uv run python -m app.workers.run_scheduler)
+(cd frontend && pnpm dev --host 127.0.0.1)
+```
+
+Vite 默认使用 5173 端口，开发 API client 默认访问 `http://127.0.0.1:8000/api` 并派生 `/api/v1` 扩展地址；只有改用其他 backend 地址时才需设置 `VITE_API_BASE_URL`。API 进程负责入队，scheduler 进程负责执行，单独启动 API 不会消费队列。
+
+根镜像同时运行 Nginx、FastAPI 和 scheduler，仅用于本地/演示。拆分部署使用 backend、frontend 两类镜像，scheduler 复用 backend 镜像；环境变量与运行边界见 [`docs/架构说明.md`](docs/架构说明.md) 和 [`docker/compose.production.example.yml`](docker/compose.production.example.yml)。
+
+### 测试数据库与 E2E 环境
+
+Backend pytest 的数据库 fixture 优先使用 `TEST_DATABASE_URL`，其次使用 `DATABASE_URL`。两者均未设置时，fixture 会启动或复用 `signaldeck-local-postgres` 容器，默认分配宿主机随机端口，可通过 `LOCAL_POSTGRES_PORT` 指定端口。它与根 Compose 的数据库是不同的启动路径。
+
+测试连接需要有权限访问 `postgres` 管理库并创建、删除临时 database；每个数据库 fixture 创建独立的 `signaldeck_test_*` 库并在结束时删除。自动创建的本地容器和数据卷会保留，测试不把应用数据库当作临时库清空。
+
+Playwright 使用 `DATABASE_URL`（不读取 `TEST_DATABASE_URL`，缺省为 backend 的本地 25432 地址），要求 PostgreSQL 已可连接并具备同样的建库/删库权限。启动脚本创建独立的 `signaldeck_e2e_*` 库，并启动 fake OpenAI-compatible provider、scheduler、8001 端口的 backend 和 4173 端口的 frontend preview；结束时清理所拥有的进程与临时库。E2E 默认使用 deterministic quote provider，不需要真实 LLM key，且不复用已有 web server。
+
+### 本地数据重置
+
+只有明确允许丢弃根 Compose 的 PostgreSQL 数据时才运行：
+
+```bash
 docker compose -f docker-compose.yml down -v
 ```
 
-`start.sh` 默认暴露 `http://localhost:${APP_PORT:-8080}`。根镜像同时运行 Nginx、FastAPI 和 scheduler，只用于本地/演示；生产拆分拓扑和环境变量以 [`docs/架构说明.md`](docs/架构说明.md) 与 [`docker/compose.production.example.yml`](docker/compose.production.example.yml) 为准。
-
-如果单独运行 backend 测试，必须提供可连接且具备测试数据库权限的 PostgreSQL；可使用 `TEST_DATABASE_URL` 或 `DATABASE_URL`。
+这会删除 Compose 数据卷；普通停止使用不带 `-v` 的 `docker compose down`。数据与兼容政策以 [`STATUS.md`](STATUS.md) 为准。
 
 ## 检查、测试与构建
 
-Backend：
+以下质量门禁与 [CI](.github/workflows/ci.yml) 对齐，按受影响范围运行；文档变更只需相关文档校验和差异检查。Backend：
 
 ```bash
 (cd backend && uv run ruff check app tests)
@@ -66,51 +87,43 @@ git diff --check
 
 ## 开发工作流
 
-1. 先读取与任务相关的 `STATUS.md`、产品说明、架构说明、开发规范和适用的子目录 `AGENTS.md`。
+1. 先读取与任务相关的 `STATUS.md`、下方当前开发策略、产品说明、架构说明、开发规范和适用的子目录 `AGENTS.md`。开发档位只选择执行默认值，不改变产品范围和已有硬约束。
 2. 搜索已有实现、接口和测试，确认变更所属模块及允许的依赖方向；不要为假设中的未来需求添加抽象、依赖或兼容层。
 3. 先运行与改动直接相关的最小检查；完成后按影响范围运行 backend/frontend 质量门禁，并保持 demo、API contract、snapshot/provenance 和文档同步。
-4. 检查 secret、错误详情、包导出、运行读取和日志路径，确认没有原始凭据或内部信息泄露。
+4. 修改 secret、错误详情、包导出、运行读取或日志路径时，检查现有加密、脱敏和安全投影约束。
 5. 检查精确 diff、未纳入无关文件，并按下方共享完成定义交付。
 
 ## 项目文档
 
 规范文档的索引和权威边界见 [`docs/README.md`](docs/README.md)。数据表见 [`docs/data-model.md`](docs/data-model.md)，扩展编写见 [`docs/writing-extensions.md`](docs/writing-extensions.md)，依赖遗留事项见 [`docs/handover-deps-follow-up.md`](docs/handover-deps-follow-up.md)。
 
-<!-- write-project-docs:derived-iteration-strategy:start -->
-<!-- write-project-docs:derived-iteration-strategy:metadata {"contentSha256":"sha256:f440df2388c4f4748b1d642e0d4b8f3996360782cd68a638261739f2f29ea3ef","schemaVersion":1,"sources":[{"normalization":"without-visible-exact-mvp-control-line-terminal-lf-v2","path":"STATUS.md","sha256":"sha256:fe32da860633c44684c1501e35bb14e99200464bb066b58e3fc438d3fbcffaf3"},{"path":"docs/产品说明.md","sha256":"sha256:f205632f1c0c001ca5feee5c24efeee39fe96f8a0c1fdf0165c9f7ec66f54904"},{"path":"docs/架构说明.md","sha256":"sha256:45585ae7ed9559a1d74b4b4a8942b9e029d26a635a416ef72245e698825da216"},{"path":"docs/开发规范.md","sha256":"sha256:4f69b91702a3a81b475c1908f9bd7f0bc80523676d94e942eb7fb0a6f5f1d649"}]} -->
-## 当前迭代策略
-
-以本地内网个人使用的可重复开发调试闭环为最高执行优先级，在不降低现有正确性、数据完整性、密钥处理和必需检查的前提下优先改善开发与使用便利度。
-
-派生依据（事实权威仍在原文档）：[`STATUS.md`](STATUS.md)、[`docs/产品说明.md`](docs/产品说明.md)、[`docs/架构说明.md`](docs/架构说明.md)、[`docs/开发规范.md`](docs/开发规范.md)。
-
-> 本区块只约束当前迭代，不改变 MVP 快速验证开关，也不得降低安全、隐私、权限、数据完整性、已有兼容承诺或更高优先级要求。
-
-### 本轮必须完成
-
-- 保持 start.sh 和 Docker Compose 本地闭环可重复启动，并验证健康、就绪和核心运行路径。
-- 围绕 Workflow Package、Scheduled Task、Model Connection、Run evidence、Templates/Reports 的已确认范围实现和修复，使用现有 API、服务和静态扩展边界。
-- 对受影响变更运行适用的后端检查、前端检查、构建和测试，并用 git diff --check 收尾。
-
-### 本轮不主动投入
-
-- 公网或生产级安全加固、认证/RBAC、多租户和高可用：当前部署是个人本地内网且没有相应验收触发；当出现公网暴露、外部用户、生产部署或明确安全验收时重新评估。
-- 容量、并发、性能和灾备专项：当前目的为本地开发调试且没有对应性能验收；当出现吞吐/延迟/并发目标或真实负载时重新评估。
-
-### 不可降低的边界
-
-- 保留密钥与 secret 的加密存储、读取/导出/日志/诊断脱敏，以及 API 错误详情的安全过滤。
-- 保留 Workflow Package YAML 解析安全、语义校验、确定性编译、闭合 schema 和 HTTP/MCP 边界。
-- 保留数据库完整性、不可变运行快照、队列/调度状态和适用质量检查；不以便利度跳过相关测试或改变生产镜像边界。
-
-### 重新推导条件
-
-- 生命周期从本地开发调试转为生产运行，或部署从本地内网扩展到公网。
-- 出现外部用户、真实或不可丢弃数据、明确兼容承诺、性能/容量验收或新的安全/隐私/权限要求。
-- STATUS.md、产品范围、架构边界、开发规范或仓库必需检查发生变化。
-<!-- write-project-docs:derived-iteration-strategy:end -->
-
 <!-- write-project-docs:shared-contributing:start -->
+## 当前开发策略
+
+**开发档位：`MVP`**
+
+围绕 [`docs/产品说明.md`](docs/产品说明.md) 已确认的核心价值、范围、非目标、验收与退出条件，完成最小可观察的端到端闭环。本档位永久豁免安全、隐私、数据、密钥与凭据管理、兼容、审计/监控/SLO 和法规合规要求的主动投入。
+
+### 本档位必须完成
+
+- 跑通核心用户流程、可见结果和与核心验收直接相关的错误路径。
+- 运行足以使核心结论可观察、可重复的受影响路径测试、检查和构建验证。
+
+### 默认不投入
+
+- 永久豁免安全、隐私、数据、密钥与凭据管理、权限体系扩建、兼容层与全量兼容回归、审计/监控/SLO、法规合规等合规要求的主动投入；不主动投入非核心功能、仓库级默认门禁、高可用和生产加固。
+- 不为未验证需求添加通用化能力、抽象、依赖或非主路径业务分支。
+
+### 不可越过的边界
+
+- 用户明确要求、已接受 GOAL、项目硬规则/不变量、仓库必需检查和 [`STATUS.md`](STATUS.md) 明确禁止事项仍然有效，不受豁免影响；现有兼容承诺作为既有合同不被档位删除。
+- 不扩大权限，不执行未授权外部写入或破坏性操作，不删除或重置现有数据，不虚构验证结果。
+
+### 切换条件
+
+- 当有限真实用户、真实或不可丢弃数据、外部流量或试点运维责任出现时切换到 `PILOT`。
+- 当需要一般可用性、明确 SLO 或持续生产支持时切换到 `PRODUCTION`。
+
 ## 通用设计原则
 
 在满足已确认的功能范围、架构边界、质量属性、安全性、兼容性和运行约束的前提下，按以下顺序选择设计方案：

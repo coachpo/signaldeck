@@ -1,30 +1,12 @@
-# Platform Authoring Lib Guide
+# Platform Authoring Library Guide
 
-## Overview
+These modules transform schema, values and package drafts without React, DOM, network, toast or query-cache dependencies.
 
-This library owns pure schema, value, resource-reference, launch input, and Workflow Package transformation helpers shared by package editor, launch forms, schedules, and run inspection.
+- `schema/codec.ts` maps the supported JSON Schema subset to schema IR; `values/` encodes/decodes value-entry IR. Preserve optional-field omission, nullable values, discriminated unions and array path rebasing through round trips.
+- `schema/launch-input-state.ts` builds launch drafts, validates advanced JSON and exposes unsupported-schema fallback. `schema/schema-template.ts` provides template values. Preserve the difference between omitted, null, empty and defaulted values.
+- `common/field-path.ts` owns diagnostic path tokens; reuse them across generated forms and codecs. Schema title/description are display metadata and must not become runtime fields.
+- `common/resource-ref.ts` parses resource identity as `key` or `key@version`; these are not workflow input/output wiring paths. Workflow graph references remain inside the manifest representation.
+- `workflow-packages/manifest.ts` converts package drafts and Workflow YAML using the `yaml` library. Its client-side checks help authoring; the backend parser remains authoritative for source safety, closed fields and graph semantics. Never treat successful frontend parsing as permission to bypass backend validation.
+- Keep local diagnostic paths deterministic and map backend diagnostics to the correct authoring section. Do not duplicate these transformations in pages or parse YAML with regex/string splitting.
 
-## Structure
-
-| Path | Purpose |
-| --- | --- |
-| `common/` | Path tokens, diagnostics, shared resource reference utilities. |
-| `schema/` | JSON Schema to internal schema IR helpers. |
-| `values/` | Value-entry IR, defaults, coercion, and validation. |
-| `workflow-packages/` | Package YAML/manifests, graph/resource refs, launch inputs. |
-
-## Conventions
-
-- Keep modules pure: no React hooks, DOM reads, network calls, toasts, or query invalidation.
-- Preserve schema/value-entry shape, optional-field add/remove behavior, discriminated union variants, and path token semantics.
-- Use structured JSON/YAML parsers and existing codecs. Do not parse manifests with regex or string splitting.
-- Diagnostics should be deterministic, path-addressable, and safe for browser display.
-- Schema `title` and `description` are display metadata only and must not alter runtime payloads.
-- Resource refs target `inputs.<path>` or `nodes.<nodeId>.outputs.<slot>[.<path>]`; workflow outputs reference node outputs.
-- Secret references `${{ secrets.<key> }}` are accepted only in HTTP request fields.
-
-## Anti-Patterns
-
-- Do not allow YAML aliases, anchors, merge keys, unsupported tags, non-finite numbers, duplicate keys, or unknown manifest fields.
-- Do not smuggle DB ids or secret-like fields into package definitions.
-- Do not duplicate schema/value logic in page components.
+Use the colocated `schema/`, `common/` and `workflow-packages/` tests for changed codecs and `src/components/platform-authoring/` tests (relative to `frontend/`) for visible generated-form behavior.

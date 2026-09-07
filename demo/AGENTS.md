@@ -1,30 +1,22 @@
 # Demo Workflow Package Guide
 
-## Overview
+Demo manifests are importable product contracts and the source examples for bundled startup presets:
 
-Demo YAML files are canonical, grounded Workflow Package examples that double as readable product contracts.
+- [TradingAgents advisory research](tradingagents_advisory_research.yaml) contains finance research workflows and bounded debate loops; its private MCP list is empty.
+- [Digital Oracle researcher](digital_oracle_researcher.yaml) contains parallel specialist research, SEC metadata collection, and synthesis, including the package-private Exa `web_research` MCP example.
 
-## Where To Look
+Keep example changes within the [current product scope](../docs/产品说明.md) and these local constraints:
 
-| Task | Location | Notes |
-| --- | --- | --- |
-| Finance advisory demo | `tradingagents_advisory_research.yaml` | Finance tools, reports, private MCP example. |
-| Digital Oracle demo | `digital_oracle_researcher.yaml` | Tool-only oracle research workflow. |
-| Import/runtime tests | `../backend/tests/` | Demo manifests are used as package contract fixtures. |
+- Coordinate each demo with its corresponding `backend/app/db/<name>.sql` preset. These seeds embed the YAML, package definition, compiled plan, and extension dependencies; a YAML-only change leaves newly initialized databases with a different example.
+- Use stable global Model Connection keys and owner-qualified tools. Keep private MCP credentials as explicit placeholders; never commit real credentials, database/run ids, or machine-local endpoints. Names and descriptions are operator-facing copy.
+- Bounded loops are compiled topology. Do not describe the TradingAgents debate-round inputs as dynamically changing the runtime loop bound.
+- Do not treat `backend/tests/fixtures/workflow_packages/tradingagents_advisory_research.yaml` as a mirror of the demo: that separate fixture covers private MCP behavior absent from the current TradingAgents demo.
+- Check parser/compiler, demo-preset, and execution-plan tests after changing topology or dependencies. Recompute expected manifest/compiled hashes from the compiler; the Digital Oracle API tests also lock hashes. Keep the existing Digital Oracle dependency set unless the compiler contract changes.
 
-## Conventions
+From `backend/`, the focused contract checks are:
 
-- Use `signaldeck.workflowPackage/v1` manifests only.
-- Keep examples grounded in currently supported package fields: inputs, package-local agents, output schemas, capability profiles, private MCP configs, HTTP nodes, and workflow graphs.
-- Reference Model Connections by stable global key and runtime tools by canonical owner-qualified key.
-- Secret references use `${{ secrets.<key> }}` only in HTTP request fields.
-- Do not include raw database ids, run ids, secret values, or machine-local endpoints.
-- Demo manifests should be useful for import tests and smoke flows; keep names and descriptions operator-readable.
-- Keep demo topology realistic: sequence, fanout, loop, HTTP, and synthesis examples should match compiler/preflight support.
-- Demo YAML hashes may be locked in tests, so changing manifests can require expected hash updates.
-- Treat descriptions as operator-facing copy, not marketing pages.
+```bash
+uv run pytest tests/test_workflow_package_manifest_parser.py tests/test_workflow_package_manifest_compiler.py tests/test_workflow_package_demo_presets.py tests/test_workflow_package_execution_plan.py
+```
 
-## Anti-Patterns
-
-- Do not add examples for Studio, Tryout, runtime-v2, workflow memory, forks, portfolio accounting, broker execution, simulations, or backtests.
-- Do not rely on YAML aliases, anchors, merge keys, unsupported tags, or duplicate keys.
+For import, preflight, execution, or seed changes, also select the affected cases in `test_workflow_package_api.py`, `test_workflow_package_diagnostics.py`, `test_workflow_package_run_contracts.py`, and `test_db_bootstrap.py`. Use the PostgreSQL test setup in [CONTRIBUTING.md](../CONTRIBUTING.md).

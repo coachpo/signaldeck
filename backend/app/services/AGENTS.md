@@ -1,37 +1,17 @@
 # Backend Services Guide
 
-## Overview
+## Runtime Ownership
 
-Services own SignalDeck transactions, orchestration, validation projection, run execution, provider calls, and scheduler semantics.
+- `run_service.py` coordinates launch, planned evidence rows, execution and cancellation. Put historical read shaping in `run_read_projection.py`, rerun preparation in `run_rerun.py`, and queue leases in `run_queue_service.py`.
+- Rebuild execution/rerun plans from `RunWorkflowPackageSnapshot`, including the frozen non-secret Model Connection profile. `agent_execution_service.py` looks up the live connection only for its current API key; HTTP operations and extension tools resolve current package secrets at execution time.
+- A lost scheduler lease fails the run and active child rows, skips pending rows, and never requeues it. Preserve claim ownership checks before committing results and cancellation checks at step boundaries.
+- `workflow_package_schedule_service.py` owns CRUD, previews and run-now; `workflow_package_schedule_materializer.py` owns due fires. Reuse recurrence, input rendering and launch helpers so overlap/misfire and fire idempotency semantics agree.
+- Schedule deletion detaches live refs while preserving run-owned provenance; package deletion removes owned runs. Keep these paths distinct.
 
-## Where To Look
+## Artifact and Provider Boundaries
 
-| Task | Location | Notes |
-| --- | --- | --- |
-| Run launch/execution/projection | `run_service.py` | Central hot path for queued runs and evidence. |
-| Queue claiming/leases | `run_queue_service.py` | Uses repository `FOR UPDATE SKIP LOCKED` behavior. |
-| Scheduler materialization | `workflow_package_schedule_service.py` | Recurrence, fire history, run-now, stale package checks. |
-| Manifest parse/compile | `workflow_package_manifest_parser.py`, `workflow_package_manifest_compiler.py` | YAML/package contract. |
-| Preflight/diagnostics | `workflow_package_preflight.py` | Browser-visible validation diagnostics. |
-| Execution plans | `execution_plan.py`, `package_execution_plan_builder.py` | Frozen runtime graph shape. |
-| Output schemas | `output_schema_compiler.py` | JSON Schema to runtime node compilation. |
-| OpenAI runtime | `model_gateway_openai.py` | Provider retries, tool calls, tracing metadata. |
-| HTTP operation nodes | `http_operation_execution_service.py` | Request execution and evidence redaction. |
-
-## Conventions
-
-- Services receive a SQLAlchemy `Session` or repository factory and own commit/rollback behavior.
-- Keep repository methods narrow; compose them in services for user-visible workflows.
-- Preserve run immutability: execute from snapshots, not current mutable Workflow Package rows.
-- Scheduler correctness depends on PostgreSQL advisory locks, lease heartbeats, stale lease recovery, and bounded executor threads.
-- Preflight and compiler diagnostics must be deterministic and safe for browser display.
-- Tool-call correction retries are bounded; provider retry metadata is evidence, not control flow hidden in logs.
-- HTTP operation request metadata must be sanitized before persistence.
-- Model runtime profiles are resolved from Model Connections once, then stored as safe run context.
-
-## Anti-Patterns
-
-- Do not read mutable package definitions during rerun execution.
-- Do not make provider/network calls in repositories.
-- Do not leak raw provider exceptions or secret-bearing request material into run evidence.
-- Do not bypass schedule overlap/misfire policy helpers when creating due runs.
+- Keep YAML source safety and graph semantics in `workflow_package_manifest_parser.py`; deterministic compiled artifacts in `workflow_package_manifest_compiler.py`; browser diagnostics and distinct validation/launch/strict-readiness levels in `workflow_package_preflight.py`.
+- `workflow_package_export.py` owns manifest hydration/export redaction. Do not treat stored compiled plans as public response payloads.
+- `model_gateway.py` dispatches the supported OpenAI-compatible protocols; `model_gateway_openai.py` and `model_gateway_openai_responses.py` own protocol-specific execution. Keep bounded provider/tool correction retry evidence in the existing result metadata.
+- `http_operation_execution_service.py` owns URL/method/network/size/redirect restrictions and request/response evidence sanitization. Test the affected boundary with `httpx.MockTransport` and explicit secret fixtures.
+- Relevant regression coverage is in `tests/test_workflow_package_run_contracts.py`, `test_runtime_repositories.py`, `test_run_cancel.py`, `test_db_bootstrap.py` and the parser/compiler/HTTP tests; command authority is [CONTRIBUTING](../../../CONTRIBUTING.md).

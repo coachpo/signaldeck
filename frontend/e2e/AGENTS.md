@@ -1,31 +1,20 @@
 # Frontend E2E Guide
 
-## Overview
+Playwright runs Chromium against a disposable PostgreSQL database, fake OpenAI provider, scheduler and built frontend preview.
 
-Playwright specs exercise browser workflows against a disposable backend, fake OpenAI provider, scheduler worker, and production frontend preview.
+## Harness
 
-## Where To Look
+- [`../playwright.config.ts`](../playwright.config.ts) starts owned backend/frontend processes without server reuse. Specs run fully parallel; CI uses one worker and two retries.
+- [`../scripts/start-playwright-backend.mjs`](../scripts/start-playwright-backend.mjs) derives PostgreSQL access from `DATABASE_URL` or the backend default, creates a uniquely named `signaldeck_e2e_*` database and drops only that database on shutdown. The database account needs create/drop permission; do not substitute an application database for the owned disposable database.
+- Default ports are API `8001`, fake provider `18081`, and frontend `4173`. The provider port/base URL can be overridden by the harness environment.
+- [`../scripts/start-playwright-frontend.mjs`](../scripts/start-playwright-frontend.mjs) builds with the E2E API base URL, then starts Vite preview. These are built frontend tests, not a reused dev server.
 
-| Task | Location | Notes |
-| --- | --- | --- |
-| Playwright config | `playwright.config.ts` | Chromium-only, parallel, CI retry/worker behavior. |
-| Backend server | `scripts/start-playwright-backend.mjs` | Disposable DB, fake provider, scheduler, uvicorn on `8001`. |
-| Frontend server | `scripts/start-playwright-frontend.mjs` | Build then preview on `4173`. |
-| Workflow specs | `workflow-packages.spec.ts`, `workflow-package-tradingagents-smoke.spec.ts` | Package CRUD/import/launch smoke. |
-| Schedule specs | `scheduled-tasks.spec.ts` | Recurrence and run-now flows. |
-| Run specs | `runs.spec.ts` | Evidence and async run polling. |
+## Specs
 
-## Conventions
+- Seed through Playwright `request` at `http://127.0.0.1:8001/api` or `/api/v1`; keep test data unique because specs run in parallel. Never call real model providers.
+- Prefer accessible role/label or stable test-id locators. Wait for specific responses, URLs or polled run states instead of fixed sleeps.
+- `workflow-packages.spec.ts` covers authoring, export/import, launch, provider capability blockers and snapshot evidence. `workflow-package-tradingagents-smoke.spec.ts` exercises the ordinary demo fixture with the fake provider.
+- `scheduled-tasks.spec.ts` pins `timezoneId: "UTC"` for recurrence assertions and verifies linked runs survive schedule deletion. Normalize timestamps before comparisons.
+- `runs.spec.ts` covers monitor/detail and cancellation; `reports.spec.ts` covers template generation, upload, editing and download; `shell.spec.ts` covers navigation and responsive overflow.
 
-- Seed state through Playwright `request` against `http://127.0.0.1:8001/api` or `/api/v1`.
-- Use unique names with timestamps/random suffixes and clean up created entities when practical.
-- Prefer role, label, and stable `data-testid` locators over CSS structure.
-- Wait on specific responses, URLs, or run-state polling instead of fixed sleeps.
-- Scheduled-task specs should pin timezone with `test.use({ timezoneId: "UTC" })` when recurrence math matters.
-- Backend E2E ports are `8001` for API and `18081` for fake provider; frontend preview is `4173`.
-
-## Anti-Patterns
-
-- Do not call real model/provider services.
-- Do not make tests order-dependent or rely on seed data from another spec.
-- Do not assert transient timestamps without timezone normalization.
+Run `pnpm test:e2e` from `frontend/`; select a spec with `pnpm exec playwright test e2e/<file>.spec.ts`. Environment setup and broader checks are in [`CONTRIBUTING.md`](../../CONTRIBUTING.md#检查测试与构建).

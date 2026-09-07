@@ -4,11 +4,11 @@ SignalDeck 是一个面向 LLM agent 的自托管流水线运行器：用 YAML �
 
 ## 当前状态
 
-当前项目用于本地开发调试和个人使用，部署边界是本地内网；在不降低既有正确性、数据完整性和密钥处理边界的前提下，开发与使用便利度优先于额外的安全加固。此处只是派生摘要，完整状态以 [`STATUS.md`](STATUS.md) 为准。
+当前开发档位为 **MVP**，围绕本地内网个人使用验证工作流的端到端闭环，并保持现有数据、密钥与运行快照约束。此处只是派生摘要，完整状态以 [`STATUS.md`](STATUS.md) 为准。
 
 ## 快速开始
 
-需要 Docker 和 Docker Compose v2，以及一个 LLM 提供商的 API key。
+启动需要 Docker 和 Docker Compose v2；执行包含 agent 的工作流还需要可用的模型提供商配置。
 
 ```bash
 git clone https://github.com/coachpo/signaldeck.git
@@ -22,9 +22,9 @@ cd signaldeck
 docker compose down
 ```
 
-首次打开应用后，在 **Model Connections** 中保存模型提供商配置，再到 **Workflow Packages** 选择预置的演示包并启动运行。运行证据可在 **Runs** 中查看。两个演示包的 YAML 源文件位于 [`demo/`](demo/)。
+首次打开应用后，在 **Model Connections** 中保存并测试模型提供商配置，再到 **Workflow Packages** 选择预置演示包、选择包内 workflow、填写输入并查看启动检查结果。满足所需模型和工具依赖后启动运行，在 **Runs** 查看证据和输出。两个预置包是只读的；需要修改时复制为自己的包，YAML 源文件位于 [`demo/`](demo/)。
 
-根目录的 `docker-compose.yml`、根 `Dockerfile` 和 `start.sh` 仅用于本地/演示组合栈；拆分的 backend、scheduler、frontend 镜像及生产示例见 [`docker/compose.production.example.yml`](docker/compose.production.example.yml)。
+根目录的 `docker-compose.yml`、根 `Dockerfile` 和 `start.sh` 仅用于本地/演示组合栈；拆分部署使用 backend、frontend 两类镜像，scheduler 复用 backend 镜像。配置示例见 [`docker/compose.production.example.yml`](docker/compose.production.example.yml)。
 
 ## 主要能力
 
@@ -32,7 +32,7 @@ docker compose down
 - Scheduled Task：按 interval、daily、weekly 或 monthly 规则和 IANA 时区将到期任务物化为普通运行。
 - Run evidence：保留不可变包快照、输入、步骤、agent/HTTP 操作证据、队列进度、重试、失败信息和最终输出。
 - Model Connections：保存全局模型提供商绑定；API key 只写入、不在读取接口中返回。
-- Templates 与 Reports：生成、编辑、下载模板和 markdown 报告快照。
+- Templates 与 Reports：创建和编辑模板，编译生成、编辑并下载 Markdown 报告快照。
 
 ## 文档
 

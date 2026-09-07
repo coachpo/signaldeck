@@ -1,33 +1,10 @@
 # Backend Tests Guide
 
-## Overview
-
-Backend tests are integration-heavy product contract tests over real PostgreSQL, FastAPI, SQLAlchemy services, runtime tools, and fake providers.
-
-## Where To Look
-
-| Task | Location | Notes |
-| --- | --- | --- |
-| DB/app fixtures | `conftest.py` | Disposable PostgreSQL DB, app/client fixtures, settings reset. |
-| Fake OpenAI server | `fake_openai_provider.py` | OpenAI-compatible local test server. |
-| Shared fixtures | `fixtures/` | Manifest/provider/runtime case builders. |
-| API route tests | `test_api.py`, `test_*_api.py` | Public route and contract behavior. |
-| Runtime tool tests | `test_runtime_tools*.py`, `test_*oracle*_tools.py` | Tool grants and redaction. |
-| Workflow package tests | `test_workflow_package_*.py` | Parser/compiler/export/run contracts. |
-
-## Conventions
-
-- Tests require PostgreSQL. If `TEST_DATABASE_URL` or `DATABASE_URL` is unset, `conftest.py` manages a local `pgvector/pgvector:pg16` Docker container.
-- Each test database is disposable and named with a UUID; fixtures reset DB/settings caches around use.
-- The autouse fixture clears `SIGNALDECK_API_TOKEN`; auth tests set it explicitly.
-- Prefer `response.status_code == expected, response.json()` for API failures.
-- Serialize public API models with `model_dump(mode="json", by_alias=True)`.
-- Use `httpx.MockTransport`, fake providers, or the fake OpenAI server for provider/network paths.
-- Public route presence tests should inspect `app.openapi()["paths"]`, not FastAPI private route internals.
-- Keep fixture manifests grounded in supported Workflow Package YAML; no future product surfaces.
-
-## Anti-Patterns
-
-- Do not depend on SQLite behavior.
-- Do not call real external providers in tests.
-- Do not assert secret ciphertext, plaintext, or unsafe error details.
+- Database-backed tests use real PostgreSQL. `conftest.py` resolves `TEST_DATABASE_URL`, then `DATABASE_URL`, otherwise provisions or reuses a local `pgvector/pgvector:pg16` Docker container; do not substitute SQLite.
+- The database fixture connects to `postgres`, creates a UUID-named database and drops it after the test. Supplied credentials need those privileges; fixtures reset DB and settings caches.
+- The autouse fixture clears `SIGNALDECK_API_TOKEN`; auth tests set it explicitly and reset settings through the existing fixtures.
+- Provider paths use `httpx.MockTransport`, `fixtures/fake_providers.py` or `fake_openai_provider.py`. Keep tests independent of real external provider credentials and availability.
+- Use supported manifests from `fixtures/workflow_manifests.py` or grounded package fixtures. Demo and preset changes require their existing parser/compiler/export/runtime assertions and hash contracts to stay aligned.
+- Serialize public API models with `model_dump(mode="json", by_alias=True)`. Test route presence through `app.openapi()["paths"]`, and observable response behavior through `TestClient`.
+- Test secret absence at read/export/error boundaries. Encryption tests may inspect controlled test payloads and ciphertext envelopes to prove encryption and wrong-key failure; do not turn a no-leak assertion into a blanket ban on testing the storage contract.
+- Run the narrow relevant tests and the applicable backend gates from [CONTRIBUTING](../../CONTRIBUTING.md).

@@ -1,92 +1,71 @@
-# 交接：依赖升级遗留问题（2026-07-09）
+# 交接：依赖升级遗留问题
 
-背景：15 个 Dependabot PR 已全部合并。其中两个 PR 为了合入做了临时妥协，需要后续收尾。本文保留当前状态、验收标准与验证命令。
+本文记录仓库内的依赖约束、已完成收尾和解除 FastAPI 封顶所需的证据。版本以本地 manifest 和锁文件为准；上游是否已有可用版本，应在实际升级时核验。
 
-## 当前状态
+## 当前锁定状态
 
-- `react-hooks/set-state-in-effect` 前端收尾已完成；`frontend/eslint.config.js` 不再降级该规则。
-- FastAPI `<0.137` 封顶仍未解锁；PyPI 上 Logfire 4.37.0 仍要求 `opentelemetry-sdk<1.43.0`。
-- 两个 FastAPI 路由挂载测试已预先改为从 `app.openapi()["paths"]` 读取公开路径集合。
+| 依赖 | 仓库状态 | 依据 |
+| --- | --- | --- |
+| FastAPI | 声明 `>=0.136.3,<0.137`，锁定 `0.136.3` | [`backend/pyproject.toml`](../backend/pyproject.toml)、[`backend/uv.lock`](../backend/uv.lock) |
+| Logfire | 声明 `logfire[fastapi]>=4.37.0`，锁定 `4.37.0` | 同上 |
+| OpenTelemetry SDK | 锁定 `1.40.0` | [`backend/uv.lock`](../backend/uv.lock) |
+| FastAPI instrumentation | 锁定 `opentelemetry-instrumentation-fastapi==0.61b0` | 同上 |
+| React Hooks ESLint 插件 | 声明 `^7.1.1`，锁定 `7.1.1` | [`frontend/package.json`](../frontend/package.json)、[`frontend/pnpm-lock.yaml`](../frontend/pnpm-lock.yaml) |
 
-## 已完成：`react-hooks/set-state-in-effect` 降级为 warn（来自 PR #12）
+FastAPI 封顶仍在仓库中；当前锁文件尚未采用解除封顶要求的 OpenTelemetry 版本组合。这个状态不代表当前 PyPI 发布状态。
 
-### 现状
+## 已完成：恢复 React Hooks 规则
 
-`eslint-plugin-react-hooks` 已升到 7.1.1。v7 的 recommended 配置新增 `set-state-in-effect` 规则。16 处存量违规已重构，`frontend/eslint.config.js` 不再覆盖该规则。
+[`frontend/eslint.config.js`](../frontend/eslint.config.js) 使用 `reactHooks.configs.recommended.rules`，已移除 `react-hooks/set-state-in-effect` 的 `warn` 覆盖。相关 effect 重构与规则恢复可追溯到本地提交 `6f40db5e`。
 
-### 验收
+后续修改这些组件或升级 lint 插件时，保留规则的推荐级别，按 [`CONTRIBUTING.md`](../CONTRIBUTING.md#检查测试与构建) 运行受影响的前端检查。
 
-```bash
-cd frontend && pnpm lint && pnpm typecheck && pnpm test:run && pnpm test:e2e
-```
+## 遗留：FastAPI 封顶 `<0.137`
 
-要求 lint 为 0 error、0 warning，且该规则不再出现；`frontend/eslint.config.js` 中无 `set-state-in-effect` override。
+### 原因与现有保护
 
-## 遗留：FastAPI 封顶 `<0.137`（来自 PR #6）
+封顶注释及本地提交 `e5f6b4d1` 记录的故障链是：FastAPI 0.137 的 `include_router` 使用私有 `_IncludedRouter` 嵌套路由；旧版 FastAPI instrumentation 在 partial route match（例如 POST 到仅接受 GET 的路由）访问 `.path` 时会抛出 `AttributeError`。当时采用的修复门槛为 instrumentation `>=0.64b0`、OpenTelemetry SDK `>=1.43`，但 Logfire 4.37.0 的 SDK 约束阻止该组合。
 
-### 现状
+[`backend/app/main.py`](../backend/app/main.py) 在创建应用时调用 [`instrument_fastapi_app`](../backend/app/core/telemetry.py)，因此 405 路由行为属于应用运行时回归边界。
 
-`backend/pyproject.toml` 中 FastAPI 被钉在 `>=0.136.3,<0.137`。原因链：
+[`backend/tests/test_api.py`](../backend/tests/test_api.py) 中两个路由挂载测试已经从公开的 `app.openapi()["paths"]` 读取路径集合，不依赖 `app.routes` 的平铺形态或私有 `_IncludedRouter`。
 
-1. FastAPI 0.137 起，`include_router` 挂载的路由不再平铺进 `app.routes`，而是嵌套在私有的 `_IncludedRouter` 对象里；
-2. `opentelemetry-instrumentation-fastapi` `<0.64b0` 的 `_get_route_details` 在 partial route match（典型是 POST 打到 GET-only 路由返回 405）时访问 `starlette_route.path`，`_IncludedRouter` 没有该属性，运行时会直接 `AttributeError`；
-3. 修复版 `0.64b0` 依赖 otel-sdk 1.43，而 Logfire（截至 4.37.0，当时最新）要求 `opentelemetry-sdk<1.43.0`，形成依赖死锁。
+### 解锁条件与升级步骤
 
-### 解锁条件
+在后续依赖升级任务中，先核验目标 Logfire 版本的依赖元数据，确认它允许 SDK `>=1.43`，并确认整个依赖集合能够同时解析出 instrumentation `>=0.64b0`。仅看到某个 SDK 上限放宽不足以解除封顶。
 
-Logfire 发布支持 otel-sdk 1.43 的版本。检查方式：
-
-```bash
-curl -s https://pypi.org/pypi/logfire/json | python3 -c "
-import json,sys; d=json.load(sys.stdin)
-print(d['info']['version'])
-print([r for r in d['info'].get('requires_dist') or [] if 'opentelemetry-sdk' in r])"
-```
-
-看到 sdk 上限放宽到 `<1.44` 或更高后再动手。
-
-### 解锁后的操作
-
-1. 修改 `backend/pyproject.toml`：删除 FastAPI 的封顶注释，将约束恢复为当时确认的目标范围，例如 `"fastapi>=0.139.0,<1.0"`。
-2. 重新解析锁文件并确认 otel instrumentation 达到 `>=0.64b0`：
-
-   ```bash
-   cd backend
-   uv lock --upgrade-package fastapi --upgrade-package logfire \
-           --upgrade-package opentelemetry-instrumentation-fastapi
-   grep -A2 'name = "opentelemetry-instrumentation-fastapi"' uv.lock | grep version
-   ```
-
-3. 保留两个已修复的路由测试；它们不应重新依赖私有 `_IncludedRouter`：
-   - `backend/tests/test_api.py::test_agent_platform_routes_mount_package_first_api`
-   - `backend/tests/test_api.py::test_finance_workspace_product_routes_remain_mounted_for_templates_and_reports`
-
-   当前做法是从公开 OpenAPI 读取路径集合：
-
-   ```python
-   route_paths = set(app.openapi()["paths"])
-   ```
-
-4. 确认 405 场景不再崩：`backend/tests/test_tool_catalog_api.py::test_tools_catalog_route_is_get_only` 必须通过。
-
-### 验收
+满足上述前提后，将 [`backend/pyproject.toml`](../backend/pyproject.toml) 的 FastAPI 约束改为已核验的目标范围，再解析锁文件：
 
 ```bash
-docker run -d --name pg-test -e POSTGRES_DB=signaldeck -e POSTGRES_USER=signaldeck \
-  -e POSTGRES_PASSWORD=signaldeck -p 25432:5432 postgres:16-alpine
-
 cd backend
-export DATABASE_URL=postgresql+psycopg://signaldeck:signaldeck@127.0.0.1:25432/signaldeck
-export TEST_DATABASE_URL=$DATABASE_URL
-uv sync
-uv run ruff check app tests && uv run black --check app tests \
-  && uv run isort --check-only app tests && uv run mypy app && uv run pytest
+uv lock --upgrade-package fastapi --upgrade-package logfire \
+  --upgrade-package opentelemetry-instrumentation-fastapi
+uv run --frozen python - <<'PY'
+from pathlib import Path
+import tomllib
+
+names = {"fastapi", "logfire", "opentelemetry-sdk", "opentelemetry-instrumentation-fastapi"}
+for package in tomllib.loads(Path("uv.lock").read_text())["package"]:
+    if package["name"] in names:
+        print(f'{package["name"]}: {package["version"]}')
+PY
 ```
 
-要求全绿，且 `pyproject.toml` 不再保留 FastAPI 封顶注释。
+核对实际解析版本及完整锁文件 diff。移除封顶及其注释的完成条件是版本组合符合门槛、下列回归测试通过，并完成 [`CONTRIBUTING.md`](../CONTRIBUTING.md#检查测试与构建) 中适用的后端检查。
 
-## 附注
+### 定向回归
 
-- 本文相关 `ponytail:` 待办只剩 `backend/pyproject.toml` 的 FastAPI 封顶注释；仓库中还有其他不属于本交接范围的 `ponytail:` 技术债标记。
-- 根目录 `Dockerfile` 与 `frontend/Dockerfile` 已改为 `npm install -g pnpm`（Node 26 移除了内置 corepack）；这不是遗留，后续升级 Node 镜像不要把 `corepack enable` 加回来。
-- 根目录 Dockerfile CI 不构建（docker-images workflow 只构建 `./frontend`、`./backend` 两个 context），改动它时需要本地 `docker build .` 自验。
+数据库准备和依赖安装按 [`CONTRIBUTING.md`](../CONTRIBUTING.md#开发启动) 执行。以下命令在仓库根目录运行：
+
+```bash
+(cd backend && uv run pytest \
+  tests/test_api.py::test_agent_platform_routes_mount_package_first_api \
+  tests/test_api.py::test_finance_workspace_product_routes_remain_mounted_for_templates_and_reports \
+  tests/test_tool_catalog_api.py::test_tools_catalog_route_is_get_only)
+```
+
+前两个测试验证 Workflow Package API 与 Templates/Reports API 挂载；最后一个测试验证 `POST /api/tools` 返回 405，且 OpenAPI 中该路径只提供 GET。升级后应保留这些公开行为断言。
+
+## 已完成的镜像调整
+
+[`Dockerfile`](../Dockerfile) 和 [`frontend/Dockerfile`](../frontend/Dockerfile) 的 Node 26 构建阶段均使用 `npm install -g pnpm@10.30.1`。镜像依赖规则见 [`开发规范.md`](开发规范.md#依赖与镜像规则)；根组合镜像的额外构建检查见 [`CONTRIBUTING.md`](../CONTRIBUTING.md#检查测试与构建)。

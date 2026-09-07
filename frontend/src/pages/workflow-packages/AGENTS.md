@@ -1,33 +1,13 @@
 # Workflow Packages UI Guide
 
-## Overview
+This subtree owns package list/import/edit/export, Secret Bindings and the dedicated launch page. Follow [`the product contract`](../../../../docs/产品说明.md#工作流包与启动).
 
-This route family owns Workflow Package list, import, authoring, validation, secret bindings, preflight, export, and launch flows.
+- `editor.tsx` must hydrate resource drafts from `manifestSource`, not package summary metadata. Failed manifest reads or parsing block authoring; preserve retry and dirty-draft protection.
+- Editing and launching are separate routes. A launch uses the persisted package; dirty editor handoff must acknowledge that unsaved changes are excluded. Preserve the separate Open and Launch actions in `list.tsx`.
+- `editor-sections.tsx` owns package-local resource sections; workflows, including HTTP nodes, remain structured data edited through Workflow YAML. Reuse `../../lib/platform-authoring/workflow-packages/manifest.ts` for draft conversion and diagnostic routing.
+- `launch.tsx` requires an explicitly selected workflow from the current manifest. Reset inputs when the workflow/schema changes and readiness when workflow selection changes; stale selections must not launch.
+- Schema-backed form mode and advanced JSON share one validated payload. Apply JSON back through the launch-input codec before preflight/launch; keep the JSON fallback for schemas unsupported by generated forms. Launch rechecks preflight for the current inputs.
+- Secret Binding values are write-only and cleared after saving. Operators may enter new private MCP `env`, `headers` and `query` values in the editor; persisted values must not be reconstructed from reads or echoed in export/provenance.
+- Diagnostic focus must resolve to the current field after tab changes without trapping users who have moved to another field.
 
-## Where To Look
-
-| Task | Location | Notes |
-| --- | --- | --- |
-| List route | `list.tsx` | Inventory shell and package launch/navigation actions. |
-| Import route | `import-page.tsx` | YAML import and validation projection. |
-| Editor route | `editor.tsx`, `editor-sections.tsx` | Package manifest authoring workspace. |
-| Launch route | `launch.tsx` | Schema-backed inputs, JSON mode, preflight, run launch. |
-| Shared editor data | `editor-sections.shared.ts` | Cross-section constants and helpers. |
-| Tests | `*.test.tsx`, `*.test.ts` | Editor, import, preflight, launch, secret-binding contracts. |
-
-## Conventions
-
-- Workflow Packages are the only executable authoring root; do not introduce alternate agent workflow builders.
-- Schema-backed form mode is canonical for launch inputs. JSON mode must validate/apply back before preflight or launch.
-- Editor state should preserve package-local agents, output schemas, capability profiles, private MCP configs, HTTP operation nodes, and graph nodes.
-- Diagnostics should focus the relevant editor field only when that field is still being edited.
-- Secret Binding UI exposes key, presence, and timestamps only; values are write-only.
-- Manifest import/export must omit raw secrets, DB ids, run history, and inline private MCP values.
-- Use platform-authoring helpers for schema/value/resource-ref behavior; keep path token handling consistent with generated forms.
-- Launch mutations invalidate package launch/preflight scopes and linked run views.
-
-## Anti-Patterns
-
-- Do not add `spec.skills`, YAML aliases/anchors, merge keys, unknown manifest fields, or raw database ids.
-- Do not bypass preflight before launch.
-- Do not store or echo private MCP `env`, `headers`, or `query` values in browser-visible state.
+Validate relevant editor/import/HTTP/secret-binding behavior with colocated tests. Full launch, schema-input and snapshot flows are covered by `../../../e2e/workflow-packages.spec.ts`.
