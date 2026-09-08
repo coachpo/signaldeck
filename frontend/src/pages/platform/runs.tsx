@@ -1,23 +1,12 @@
-import { Link, useNavigate, useParams, useSearchParams } from "react-router";
-import { useState } from "react";
+import { Link, useParams, useSearchParams } from "react-router";
+import { CopyButton } from "@/components/shared/copy-button";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { InventoryPageShell } from "@/components/shared/inventory-page-shell";
 import { InventoryStatePanel } from "@/components/shared/inventory-state-panel";
 import { WorkspacePageShell } from "@/components/shared/workspace-page-shell";
 import { PageContextBar } from "@/components/shared/page-context-bar";
 import { ResourceStatusBadge } from "@/components/shared/resource-status-strip";
-import { ResourceTableFrame } from "@/components/shared/resource-table-frame";
 import {
-  usePlatformRuns,
   usePlatformRun,
   usePlatformMutations,
   isRunActive,
@@ -28,85 +17,14 @@ import { ArtifactValue, EvidenceTree } from "./evidence";
 import { findArtifacts } from "./artifact-references";
 import { CacheProvenance } from "./cache-provenance";
 import { RequestError } from "./feedback";
-export function RunsPage() {
-  const runs = usePlatformRuns();
-  return (
-    <InventoryPageShell
-      pageContext={{
-        title: "Runs",
-        description: "Durable execution and retained evidence",
-        actions: (
-          <Button variant="outline" onClick={() => void runs.refetch()}>
-            Refresh runs
-          </Button>
-        ),
-      }}
-    >
-      <RequestError error={runs.error} retry={() => void runs.refetch()} />
-      {runs.isPending ? (
-        <InventoryStatePanel title="Loading runs…" />
-      ) : runs.data?.items.length ? (
-        <ResourceTableFrame>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Run</TableHead>
-                <TableHead>Workflow</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Origin</TableHead>
-                <TableHead>Created</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {runs.data.items.map((run) => (
-                <TableRow key={run.id}>
-                  <TableCell>
-                    <Button asChild variant="link">
-                      <Link to={`/runs/${encodeURIComponent(run.id)}`}>
-                        {run.id}
-                      </Link>
-                    </Button>
-                  </TableCell>
-                  <TableCell>
-                    {run.packageKey} / {run.workflowKey}
-                  </TableCell>
-                  <TableCell>
-                    <ResourceStatusBadge label={run.status} />
-                    {run.cancelRequestedAt && isRunActive(run) && (
-                      <p className="text-xs">Cancellation requested</p>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {run.origin.kind}
-                    {run.origin.scheduleId && (
-                      <p className="text-xs">
-                        Schedule {run.origin.scheduleId}
-                      </p>
-                    )}
-                    {run.origin.triggerId && (
-                      <p className="break-all text-xs">
-                        Trigger {run.origin.triggerId}
-                      </p>
-                    )}
-                    {run.origin.scheduledAt && (
-                      <p className="text-xs">{run.origin.scheduledAt}</p>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {new Date(run.createdAt).toLocaleString()}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </ResourceTableFrame>
-      ) : (
-        <InventoryStatePanel title="No runs yet" />
-      )}
-    </InventoryPageShell>
-  );
-}
+export { ResultHistoryPage as RunsPage } from "./result-history";
+import { runSearch } from "./result-navigation";
+import { ResultPage } from "./result-view";
 export function RunPage() {
+  const [search] = useSearchParams();
+  return search.has("tab") ? <TechnicalRunPage /> : <ResultPage />;
+}
+function TechnicalRunPage() {
   const { runId } = useParams();
   const run = usePlatformRun(runId);
   if (run.isPending) return <InventoryStatePanel title="Loading run…" />;
@@ -116,9 +34,7 @@ export function RunPage() {
 }
 function RunInspector({ run }: { run: RunDetail }) {
   const [search, setSearch] = useSearchParams();
-  const [rerunId] = useState(() => crypto.randomUUID());
   const mutations = usePlatformMutations();
-  const navigate = useNavigate();
   const tabs = ["graph", "evidence", "artifacts", "snapshot"];
   const tab = tabs.includes(search.get("tab") ?? "")
     ? search.get("tab")!
@@ -152,6 +68,17 @@ function RunInspector({ run }: { run: RunDetail }) {
           status={<ResourceStatusBadge label={run.status} />}
           actions={
             <div className="flex flex-wrap gap-2">
+              <CopyButton value={run.id} label="复制运行 ID" />
+              <Button asChild variant="outline">
+                <Link
+                  to={{
+                    pathname: `/runs/${encodeURIComponent(run.id)}`,
+                    search: runSearch(search, {}).toString(),
+                  }}
+                >
+                  返回结果
+                </Link>
+              </Button>
               {isRunActive(run) && (
                 <Button
                   variant="outline"
@@ -165,19 +92,6 @@ function RunInspector({ run }: { run: RunDetail }) {
                   Request cancellation
                 </Button>
               )}
-              <Button
-                disabled={mutations.rerun.isPending}
-                onClick={() =>
-                  void mutations.rerun
-                    .mutateAsync({ id: run.id, launchId: rerunId })
-                    .then((next) =>
-                      navigate(`/runs/${encodeURIComponent(next.id)}`),
-                    )
-                    .catch(() => {})
-                }
-              >
-                Rerun frozen snapshot
-              </Button>
             </div>
           }
         />
@@ -200,7 +114,12 @@ function RunInspector({ run }: { run: RunDetail }) {
         {run.errorCode && (
           <InventoryStatePanel tone="danger" title={run.errorCode} />
         )}
-        <Tabs value={tab} onValueChange={(value) => setSearch({ tab: value })}>
+        <Tabs
+          value={tab}
+          onValueChange={(value) =>
+            setSearch(runSearch(search, { tab: value }))
+          }
+        >
           <TabsList className="flex h-auto flex-wrap">
             <TabsTrigger value="graph">Run graph</TabsTrigger>
             <TabsTrigger value="evidence">Call evidence</TabsTrigger>
@@ -215,9 +134,12 @@ function RunInspector({ run }: { run: RunDetail }) {
               evidence={run.evidence}
               onSelect={(nodeId, evidenceId) =>
                 setSearch(
-                  evidenceId
-                    ? { tab: "evidence", target: evidenceId }
-                    : { tab: "evidence", node: nodeId },
+                  runSearch(
+                    search,
+                    evidenceId
+                      ? { tab: "evidence", target: evidenceId }
+                      : { tab: "evidence", node: nodeId },
+                  ),
                 )
               }
             />
@@ -283,7 +205,7 @@ function RunInspector({ run }: { run: RunDetail }) {
                     className="break-all"
                   >
                     <Link
-                      to={`?tab=evidence&target=${encodeURIComponent(edge.evidenceId)}`}
+                      to={`?${runSearch(search, { tab: "evidence", target: edge.evidenceId })}`}
                     >
                       {edge.evidenceId}
                     </Link>{" "}

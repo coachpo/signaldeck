@@ -58,7 +58,7 @@ test("running cancellation reports actual stopped state and does not fabricate o
       )
       .toBeLessThanOrEqual(1);
     await page
-      .getByRole("button", { name: "Request cancellation", exact: true })
+      .getByRole("button", { name: "取消本次运行", exact: true })
       .click();
     await expect
       .poll(
@@ -69,7 +69,7 @@ test("running cancellation reports actual stopped state and does not fabricate o
       )
       .toBe("cancelled");
     await expect(
-      page.getByText("Execution stopped", { exact: true }),
+      page.getByText("本次运行已取消", { exact: true }),
     ).toBeVisible();
     const detail = await (
       await request.get(`${apiBase}/runs/${run.id}`)
@@ -82,6 +82,9 @@ test("running cancellation reports actual stopped state and does not fabricate o
           item.kind === "model" && item.status === "succeeded",
       ),
     ).toBe(false);
+    await page
+      .getByRole("link", { name: "技术详情与调用证据", exact: true })
+      .click();
     await page.getByRole("tab", { name: "Call evidence", exact: true }).click();
     await expect(page.getByLabel("Call ownership tree")).toBeVisible();
     await page.screenshot({

@@ -326,6 +326,33 @@ class FakeOpenAIProviderHandler(BaseHTTPRequestHandler):
                 }
             ],
         }
+        # Opt-in E2E mode calls the advertised Oracle contract once before answering.
+        if "oracle-tools" in model and not any(
+            message.get("role") == "tool" for message in payload.get("messages", [])
+        ):
+            for entry in payload.get("tools", []):
+                function = entry.get("function", {})
+                properties = function.get("parameters", {}).get("properties", {})
+                if "indicator" not in properties:
+                    continue
+                body["choices"][0].update(
+                    finish_reason="tool_calls",
+                    message={
+                        "role": "assistant",
+                        "content": None,
+                        "tool_calls": [
+                            {
+                                "id": "controlled-oracle-sentiment",
+                                "type": "function",
+                                "function": {
+                                    "name": function["name"],
+                                    "arguments": json.dumps({"indicator": "fear_greed"}),
+                                },
+                            }
+                        ],
+                    },
+                )
+                break
         if include_usage:
             body["usage"] = {"prompt_tokens": 3, "completion_tokens": 2, "total_tokens": 5}
         self._send_json(200, body)

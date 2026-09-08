@@ -6,6 +6,8 @@ import {
   rmSync,
   chmodSync,
   readdirSync,
+  writeFileSync,
+  readFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { createConnection } from "node:net";
@@ -19,6 +21,12 @@ const fakeProviderBaseUrl =
   process.env.SIGNALDECK_FAKE_PROVIDER_BASE_URL ??
   `http://127.0.0.1:${fakeProviderPort}/v1`;
 const children = new Set();
+const expectedExits = new Set();
+const controlFile = process.env.SIGNALDECK_E2E_CONTROL_FILE;
+let controlFileOwned = false;
+let controlTimer;
+let controlState;
+
 const runtimeDirectory = mkdtempSync(join(tmpdir(), "signaldeck-e2e-"));
 const temporalCli =
   process.env.TEMPORAL_CLI ??
@@ -29,7 +37,7 @@ const temporalPort = process.env.SIGNALDECK_E2E_TEMPORAL_PORT ?? "17233";
 const e2eDatabaseName = `signaldeck_e2e_${process.pid}_${Date.now()}`;
 let backendEnv = process.env;
 let pythonExecutable;
-let e2eDatabaseCreated = false;
+const ownedDatabases = new Set();
 let shuttingDown = false;
 
 const databaseManagerScript = String.raw`
@@ -80,7 +88,7 @@ function exitCodeFor(code, signal) {
   return signal ? 1 : 0;
 }
 
-function runDatabaseManager(command) {
+function runDatabaseManager(command, databaseName = e2eDatabaseName) {
   const result = spawnSync(
     "uv",
     [
@@ -90,7 +98,7 @@ function runDatabaseManager(command) {
       "-c",
       databaseManagerScript,
       command,
-      e2eDatabaseName,
+      databaseName,
     ],
     {
       cwd: backendDir,
@@ -109,20 +117,18 @@ function runDatabaseManager(command) {
 function createE2eDatabase() {
   // E2E owns a disposable DB so stale local rows cannot leak into Playwright.
   const databaseUrl = runDatabaseManager("create");
-  e2eDatabaseCreated = true;
+  ownedDatabases.add(e2eDatabaseName);
   return databaseUrl;
 }
 
 function dropE2eDatabase() {
-  if (!e2eDatabaseCreated) {
-    return;
-  }
-  try {
-    runDatabaseManager("drop");
-  } catch (error) {
-    console.warn(error);
-  } finally {
-    e2eDatabaseCreated = false;
+  for (const databaseName of ownedDatabases) {
+    try {
+      runDatabaseManager("drop", databaseName);
+      ownedDatabases.delete(databaseName);
+    } catch (error) {
+      console.warn(error);
+    }
   }
 }
 
@@ -158,6 +164,11 @@ async function stopAll(exitCode = 0) {
       } catch (error) {
         if (error.code !== "ESRCH") throw error;
       }
+  clearInterval(controlTimer);
+  if (controlFileOwned) {
+    rmSync(controlFile, { force: true });
+    rmSync(`${controlFile}.request`, { force: true });
+  }
   dropE2eDatabase();
   unlockOwnedDirectories(runtimeDirectory);
   rmSync(runtimeDirectory, {
@@ -169,10 +180,10 @@ async function stopAll(exitCode = 0) {
   process.exit(exitCode);
 }
 
-function spawnProcess(label, command, args) {
+function spawnProcess(label, command, args, env = backendEnv) {
   const child = spawn(command, args, {
     cwd: backendDir,
-    env: backendEnv,
+    env,
     stdio: "inherit",
     detached: true,
   });
@@ -183,6 +194,13 @@ function spawnProcess(label, command, args) {
   });
   child.on("exit", (code, signal) => {
     children.delete(child);
+    if (expectedExits.delete(child)) {
+      if (controlFileOwned && !shuttingDown) {
+        controlState = { ...controlState, status: "temporal_stopped" };
+        writeFileSync(controlFile, JSON.stringify(controlState));
+      }
+      return;
+    }
     if (shuttingDown) return;
     console.error(
       `${label} exited with code ${code ?? "unknown"} signal ${signal ?? "none"}`,
@@ -232,9 +250,16 @@ async function main() {
   if (interpreter.status !== 0)
     throw new Error("Cannot resolve the locked Python environment");
   pythonExecutable = interpreter.stdout.trim();
+  const presetsPath = join(runtimeDirectory, "connection-presets.json");
+  writeFileSync(presetsPath, JSON.stringify({items: [
+    {id:"local-model", name:"本地受控研究服务", description:"仅用于隔离测试，不访问真实模型供应商。", resourceId:"research-model", kind:"model", config:{name:"Controlled local research",baseUrl:fakeProviderBaseUrl,modelId:"fake-e2e-oracle-tools",apiStyle:"chat_completions"}, credentialFields:[{key:"apiKey",label:"本地测试密钥",required:true}]},
+    {id:"local-notes", name:"本地笔记保存位置", description:"本次测试独立笔记库",resourceId:"notes-workspace",kind:"tool",config:{pluginId:"example/notes",scope:{collection:"research"}},credentialFields:[]},
+    {id:"local-finance",name:"本地受控行情",description:"固定测试行情，不代表真实市场",resourceId:"finance-market-data",kind:"tool",config:{pluginId:"signaldeck/finance",scope:{allowedSymbols:["MSFT","AAPL"]}},credentialFields:[]},
+  ]}));
   backendEnv = {
     ...process.env,
     DATABASE_URL: e2eDatabaseUrl,
+    SIGNALDECK_CONNECTION_PRESETS_FILE: presetsPath,
     OPENAI_API_KEY: "sk-e2e-fake-provider",
     OPENAI_BASE_URL: fakeProviderBaseUrl,
     TEMPORAL_ADDRESS: `127.0.0.1:${temporalPort}`,
@@ -279,6 +304,29 @@ async function main() {
     "warn",
   ]);
   await waitForPort(temporalPort, temporal);
+  // Only the explicitly isolated fault configuration can stop this owned server.
+  // Tests submit a nonce-bound file request; they never signal a discovered PID.
+  if (controlFile && process.env.SIGNALDECK_E2E_ALLOW_ENGINE_STOP === "1") {
+    controlState = {
+      nonce: crypto.randomUUID(),
+      requestPath: `${controlFile}.request`,
+      temporalPid: temporal.pid,
+      status: "running",
+    };
+    writeFileSync(controlFile, JSON.stringify(controlState), { flag: "wx", mode: 0o600 });
+    controlFileOwned = true;
+    controlTimer = setInterval(() => {
+      if (!existsSync(controlState.requestPath) || controlState.status !== "running") return;
+      let request;
+      try { request = JSON.parse(readFileSync(controlState.requestPath, "utf8")); }
+      catch { return; }
+      if (request.nonce !== controlState.nonce || request.action !== "stop_temporal") return;
+      controlState.status = "stopping_temporal";
+      expectedExits.add(temporal);
+      process.kill(-temporal.pid, "SIGTERM");
+    }, 100);
+  }
+
   const provider = spawnOwned("fake OpenAI-compatible provider", [
     "run",
     "--frozen",
@@ -290,6 +338,22 @@ async function main() {
     fakeProviderPort,
   ]);
   await waitForPort(fakeProviderPort, provider);
+  for (const [kind, defaultPort] of [["notes", "18082"], ["finance", "18083"], ["oracle", "18084"]]) {
+    const port = process.env[`SIGNALDECK_E2E_${kind.toUpperCase()}_PORT`] ?? defaultPort;
+    const databaseName = `${e2eDatabaseName}_${kind}`;
+    const databaseUrl = runDatabaseManager("create", databaseName);
+    ownedDatabases.add(databaseName);
+    const child = spawnProcess(`${kind} plugin`, pythonExecutable, [
+      resolve(__dirname, "e2e-plugin.py"), kind, port,
+    ], {
+      ...backendEnv,
+      PLUGIN_DATABASE_URL: databaseUrl,
+      PLUGIN_ENDPOINT: `http://127.0.0.1:${port}/mcp/`,
+      PLUGIN_PAGE_URL: `http://127.0.0.1:${port}/`,
+      PYTHONDONTWRITEBYTECODE: "1",
+    });
+    await waitForPort(port, child);
+  }
   spawnOwned("command dispatcher", [
     "run",
     "--frozen",

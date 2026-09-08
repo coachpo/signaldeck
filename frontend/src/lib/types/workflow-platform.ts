@@ -1,10 +1,5 @@
 export type Json =
-  | null
-  | boolean
-  | number
-  | string
-  | Json[]
-  | { [key: string]: Json };
+  null | boolean | number | string | Json[] | { [key: string]: Json };
 export type JsonObject = { [key: string]: Json };
 export interface AgentDefinition {
   name?: string;
@@ -94,11 +89,7 @@ export interface WorkflowPackage {
   updatedAt: string;
 }
 export type RunStatus =
-  | "queued"
-  | "running"
-  | "succeeded"
-  | "failed"
-  | "cancelled";
+  "queued" | "running" | "succeeded" | "failed" | "cancelled";
 export interface LaunchOrigin {
   kind: "manual" | "rerun" | "schedule";
   sourceRunId?: string | null;
@@ -205,6 +196,7 @@ export interface Plugin {
   };
 }
 export interface ScheduleConfig {
+  creationId?: string;
   id?: string;
   name: string;
   packageKey: string;

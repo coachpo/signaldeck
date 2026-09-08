@@ -10,6 +10,9 @@ from plugin_runtime.formatting import decimal_to_string, to_utc
 from sqlalchemy.orm import Session
 
 _PLACEHOLDER_RE = re.compile(r"\{\{(.+?)\}\}")
+_INPUT_DECLARATION_RE = re.compile(
+    r"<!--\s*input: ([A-Za-z_][A-Za-z0-9_]*)\s*\|\s*([^|\n]+?)\s*\|\s*(required|optional)\s*-->"
+)
 _INPUT_REFERENCE_RE = re.compile(r"^inputs\.(?P<name>[A-Za-z_][A-Za-z0-9_]*)$")
 _REPORT_LATEST_RE = re.compile(
     r"^\.latest(?:\(\s*(?P<argument>.*?)\s*\))?(?:\.(?P<field>[A-Za-z_][A-Za-z0-9_]*))?$"
@@ -39,8 +42,16 @@ class TemplateCompilerService:
 
     def compile(self, content: str, inputs: dict[str, str] | None = None) -> str:
         self._report_resolve_stack = set()
-        self._inputs = inputs or {}
-        return _PLACEHOLDER_RE.sub(lambda match: self._resolve(match.group(1).strip()), content)
+        self._inputs = {
+            match.group(1): ""
+            for match in _INPUT_DECLARATION_RE.finditer(content)
+            if match.group(3) == "optional"
+        }
+        self._inputs.update(inputs or {})
+        return _PLACEHOLDER_RE.sub(
+            lambda match: self._resolve(match.group(1).strip()),
+            _INPUT_DECLARATION_RE.sub("", content),
+        )
 
     def get_placeholder_tree(self) -> dict[str, list[dict[str, object]]]:
         return {

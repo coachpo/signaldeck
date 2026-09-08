@@ -24,6 +24,7 @@ import {
 import { parseObject } from "@/lib/platform-authoring/package-source";
 import type { Resource } from "@/lib/types/workflow-platform";
 import { RequestError } from "./feedback";
+import { CopyButton } from "@/components/shared/copy-button";
 const modelConfig = {
   name: "Local model",
   baseUrl: "http://localhost:11434/v1",
@@ -69,6 +70,11 @@ export function ResourcesPage() {
                 <CardDescription>{resource.kind}</CardDescription>
               </CardHeader>
               <CardContent className="flex flex-wrap gap-2">
+                <CopyButton
+                  value={resource.resourceId}
+                  text="复制资源 ID"
+                  label={`复制资源 ID ${resource.resourceId}`}
+                />
                 <ResourceStatusBadge
                   label={
                     resource.hasCredentials

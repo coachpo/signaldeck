@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from finance_plugin.models.report import Report
 from finance_plugin.repositories.base import BaseRepository
-from sqlalchemy import select
+from sqlalchemy import or_, select
 
 
 class ReportRepository(BaseRepository[Report]):
@@ -11,6 +11,8 @@ class ReportRepository(BaseRepository[Report]):
     def list_all(
         self,
         *,
+        q: str | None = None,
+        sort: str = "newest",
         ticker: str | None = None,
         tag: str | None = None,
         review_type: str | None = None,
@@ -20,6 +22,14 @@ class ReportRepository(BaseRepository[Report]):
     ) -> list[Report]:
         statement = select(self.model)
 
+        if q is not None:
+            statement = statement.where(
+                or_(
+                    self.model.name.icontains(q, autoescape=True),
+                    self.model.content.icontains(q, autoescape=True),
+                    self.model.slug.icontains(q, autoescape=True),
+                )
+            )
         if ticker is not None:
             statement = statement.where(
                 self.model.metadata_.contains({"analysis": {"ticker": ticker}})
@@ -33,7 +43,12 @@ class ReportRepository(BaseRepository[Report]):
         if source is not None:
             statement = statement.where(self.model.source == source)
 
-        statement = statement.order_by(self.model.created_at.desc(), self.model.id.desc())
+        if sort == "name":
+            statement = statement.order_by(self.model.name.asc(), self.model.id.asc())
+        elif sort == "oldest":
+            statement = statement.order_by(self.model.created_at.asc(), self.model.id.asc())
+        else:
+            statement = statement.order_by(self.model.created_at.desc(), self.model.id.desc())
 
         if offset > 0:
             statement = statement.offset(offset)

@@ -8,10 +8,12 @@ from fastapi import APIRouter, Depends
 from app.api.platform_dependencies import get_launch_service, get_platform_store
 from app.application.definitions import save_definition
 from app.application.launch import LaunchService
+from app.application.task_preparation import prepare_task
 from app.domain.definition_parser import parse_package_source
 from app.domain.execution import ApplicationError, RunSummary
 from app.domain.schema_contract import DomainValidationError
 from app.infrastructure.platform_store import PlatformStore
+from app.infrastructure.plugin_health import PluginHealthReader
 from app.schemas.platform import (
     DiagnosticRead,
     LaunchRequest,
@@ -20,6 +22,7 @@ from app.schemas.platform import (
     PackageRead,
     ValidationRead,
 )
+from app.schemas.task_experience import PreparationRead, PrepareRequest
 
 router = APIRouter(prefix="/workflow-packages", tags=["workflow-packages"])
 Store = Annotated[PlatformStore, Depends(get_platform_store)]
@@ -85,5 +88,39 @@ def launch_package(
     service: Annotated[LaunchService, Depends(get_launch_service)],
 ) -> RunSummary:
     return service.launch(
-        package_key, payload.workflow_key, payload.parameters, launch_id=payload.launch_id
+        package_key,
+        payload.workflow_key,
+        payload.parameters,
+        launch_id=payload.launch_id,
+        revision_hash=payload.revision_hash,
+        binding_token=payload.binding_token,
     )
+
+
+@router.post("/{package_key}/prepare", response_model=PreparationRead)
+def prepare_package(
+    package_key: str,
+    payload: PrepareRequest,
+    store: Store,
+    service: Annotated[LaunchService, Depends(get_launch_service)],
+) -> PreparationRead:
+    result = prepare_task(
+        service,
+        package_key,
+        payload.workflow_key,
+        payload.parameters,
+        payload.revision_hash,
+        payload.source_run_id,
+    )
+    installed = {item["pluginId"]: item for item in store.list_plugins()}
+    health = PluginHealthReader(store.session_factory)
+    for requirement in result.requirements:
+        if requirement.kind == "plugin" and requirement.id in installed:
+            release = installed[requirement.id]["release"]
+            if not isinstance(release.get("artifactDigest"), str):
+                continue
+            observation = health.latest(requirement.id, release["artifactDigest"])
+            requirement.observation = observation.status
+            requirement.observed_at = observation.observed_at
+            requirement.observation_error = observation.error_code
+    return result

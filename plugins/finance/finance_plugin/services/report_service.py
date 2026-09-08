@@ -38,6 +38,8 @@ class ReportService:
     def list_reports(
         self,
         *,
+        q: str | None = None,
+        sort: str = "newest",
         ticker: str | None = None,
         tag: str | None = None,
         review_type: str | None = None,
@@ -46,6 +48,8 @@ class ReportService:
         offset: int = 0,
     ) -> list[ReportRead]:
         return self._list_report_reads(
+            q=q,
+            sort=sort,
             ticker=ticker,
             tag=tag,
             review_type=review_type,
@@ -77,7 +81,7 @@ class ReportService:
         name = self._generate_unique_name(template.name)
         return self._create_report_record(
             name=name,
-            slug=name,
+            slug=self._generate_unique_slug(name),
             source="compiled",
             content=compiled_content,
             metadata=metadata,
@@ -200,6 +204,8 @@ class ReportService:
     def _list_report_reads(
         self,
         *,
+        q: str | None = None,
+        sort: str = "newest",
         ticker: str | None = None,
         tag: str | None = None,
         review_type: str | None = None,
@@ -208,6 +214,8 @@ class ReportService:
         offset: int = 0,
     ) -> list[ReportRead]:
         reports = self.repository.list_all(
+            q=self._normalize_optional_filter(q),
+            sort=sort,
             ticker=self._normalize_ticker_filter(ticker),
             tag=self._normalize_optional_filter(tag),
             review_type=self._normalize_optional_filter(review_type),
@@ -231,6 +239,8 @@ class ReportService:
 
     def _generate_unique_name(self, template_name: str) -> str:
         normalized = self._normalize_name(template_name)
+        if not normalized:
+            normalized = re.sub(r"\s+", "_", template_name.strip()) or "report"
         now = utcnow()
         datetime_suffix = now.strftime("_%Y%m%d_%H%M%S")
 

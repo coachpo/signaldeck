@@ -17,12 +17,15 @@ from app.domain.execution import (
     RunDetail,
     RunSummary,
 )
+from app.domain.launch_bindings import binding_value
 from app.domain.resources import ResolvedModelConfiguration, ResolvedToolResourceConfiguration
 from app.domain.schema_contract import validate_value
-from app.domain.tool_contracts import PluginRelease, ToolCatalog
+from app.domain.tool_contracts import PluginRelease, ToolCatalog, canonical_digest
 
 
 class LaunchStore(Protocol):
+    def get_run(self, run_id: str) -> RunDetail | None: ...
+
     def get_run_by_launch_id(self, launch_id: str) -> RunDetail | None: ...
 
     def get_package(
@@ -54,10 +57,17 @@ class LaunchService:
         launch_id: str | None = None,
         origin: LaunchOrigin | None = None,
         revision_hash: str | None = None,
+        binding_token: str | None = None,
     ) -> RunSummary:
         if launch_id is not None:
             previous = self.store.get_run_by_launch_id(launch_id)
             if previous is not None:
+                if revision_hash is not None and revision_hash != previous.package_hash:
+                    raise ApplicationError(
+                        "launch_identity_conflict",
+                        "Launch identity has a different package revision",
+                        status=409,
+                    )
                 # Retry the original command before touching mutable resource/catalog state.
                 # The store still checks the caller's intent and rejects identity conflicts.
                 requested = previous.spec.model_copy(
@@ -84,6 +94,21 @@ class LaunchService:
         workflow = compiled.package.workflows[workflow_key]
         validate_value(workflow.input_schema, parameters, "$.parameters")
         models, resources, releases = self._resolve(compiled, workflow_key)
+        if binding_token is not None and binding_token != canonical_digest(
+            binding_value(
+                compiled.content_hash,
+                workflow_key,
+                parameters,
+                models,
+                resources,
+                [release.model_dump(mode="json", by_alias=True) for release in releases],
+            )
+        ):
+            raise ApplicationError(
+                "binding_changed",
+                "Effective settings changed; review them before starting",
+                status=409,
+            )
         catalog = ToolCatalog(tuple(releases))
         grants = tuple(sorted({tool.tool_id for release in releases for tool in release.tools}))
         aliases = {
@@ -110,14 +135,26 @@ class LaunchService:
         )
         return self.store.create_run(spec, launch_id or str(uuid4()))
 
-    def _resource(self, resource_id: str, kind: str) -> dict[str, Any]:
-        record = self.store.get_resource(resource_id)
+    def _resource(
+        self,
+        resource_id: str,
+        kind: str,
+        records: dict[str, dict[str, Any] | None] | None = None,
+    ) -> dict[str, Any]:
+        record = (
+            self.store.get_resource(resource_id) if records is None else records.get(resource_id)
+        )
         if record is None or record["kind"] != kind:
             raise ApplicationError("resource_unavailable", "A required resource is unavailable")
         return record
 
     def _resolve(
-        self, compiled: CompiledPackage, workflow_key: str
+        self,
+        compiled: CompiledPackage,
+        workflow_key: str,
+        *,
+        resource_records: dict[str, dict[str, Any] | None] | None = None,
+        plugin_records: list[dict[str, Any]] | None = None,
     ) -> tuple[dict[str, Any], dict[str, Any], list[PluginRelease]]:
         workflow = compiled.package.workflows[workflow_key]
         agents = {
@@ -129,7 +166,7 @@ class LaunchService:
         # cannot take ownership of a general read or an unrelated launch.
         releases = [
             PluginRelease.model_validate(item["release"])
-            for item in self.store.list_plugins()
+            for item in (self.store.list_plugins() if plugin_records is None else plugin_records)
             if item["enabled"] and item["pluginId"] in required_plugins
         ]
         catalog = ToolCatalog(tuple(releases))
@@ -138,13 +175,13 @@ class LaunchService:
         for agent in agents.values():
             if isinstance(agent.strategy, ModelStrategy):
                 key = agent.strategy.model_ref
-                record = self._resource(key, "model")
+                record = self._resource(key, "model", resource_records)
                 model = ResolvedModelConfiguration.model_validate(
                     {**record["config"], "credentialRevision": record["credentialRevision"]}
                 )
                 models[key] = model.model_dump(mode="json", by_alias=True)
             for resource_id in agent.resources:
-                record = self._resource(resource_id, "tool")
+                record = self._resource(resource_id, "tool", resource_records)
                 resource = ResolvedToolResourceConfiguration.model_validate(
                     {**record["config"], "credentialRevision": record["credentialRevision"]}
                 )

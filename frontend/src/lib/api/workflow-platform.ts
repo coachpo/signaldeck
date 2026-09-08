@@ -91,6 +91,9 @@ export const workflowPlatformApi = {
       {
         method: body.id ? "PATCH" : "POST",
         body: {
+          ...(!body.id && body.creationId
+            ? { requestId: body.creationId }
+            : {}),
           name: body.name,
           packageKey: body.packageKey,
           workflowKey: body.workflowKey,

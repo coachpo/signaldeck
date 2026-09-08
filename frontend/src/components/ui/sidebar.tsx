@@ -232,6 +232,20 @@ function SidebarHeader({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
+function SidebarFooter({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="sidebar-footer"
+      data-sidebar="footer"
+      className={cn(
+        "flex flex-col gap-1.5 border-t border-sidebar-border p-1.5",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
 function SidebarContent({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
@@ -391,6 +405,7 @@ function SidebarMenuButton({
 export {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,

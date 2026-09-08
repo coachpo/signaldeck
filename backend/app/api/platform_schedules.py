@@ -12,16 +12,19 @@ from app.db.engine import get_session_factory
 from app.domain.compiler import compile_package
 from app.domain.execution import ApplicationError
 from app.domain.schedules import (
+    ScheduleCalendar,
     ScheduleDefinition,
     ScheduleFireRecord,
+    SchedulePreview,
     ScheduleRecord,
     ScheduleTriggerReceipt,
 )
 from app.domain.schema_contract import validate_value
 from app.infrastructure.core_artifacts import task_queue
+from app.infrastructure.schedule_preview import preview_calendar, preview_saved
 from app.infrastructure.schedule_store import ScheduleStore
 from app.infrastructure.temporal_client import connect_client
-from app.infrastructure.temporal_schedules import TemporalScheduleService
+from app.infrastructure.temporal_schedules import TemporalScheduleService, _failure
 from app.schemas.common import CamelModel
 
 router = APIRouter(prefix="/schedules", tags=["schedules"])
@@ -33,6 +36,10 @@ class ScheduleList(CamelModel):
 
 class FireList(CamelModel):
     items: list[ScheduleFireRecord]
+
+
+class ScheduleCreationRequest(ScheduleDefinition):
+    request_id: str | None = Field(default=None, min_length=1, max_length=200)
 
 
 class TriggerRequest(CamelModel):
@@ -80,9 +87,33 @@ def list_schedules(store: Store) -> ScheduleList:
 
 
 @router.post("", response_model=ScheduleRecord, status_code=201)
-async def create_schedule(payload: ScheduleDefinition, service: Service) -> ScheduleRecord:
-    _validate_definition(payload)
-    return await service.save(payload)
+async def create_schedule(payload: ScheduleCreationRequest, service: Service) -> ScheduleRecord:
+    definition = ScheduleDefinition.model_validate(payload.model_dump(exclude={"request_id"}))
+    # Recover a committed creation before consulting a mutable package revision.
+    # The store still rejects a reused identity carrying different settings.
+    if payload.request_id is None or service.store.get(payload.request_id) is None:
+        _validate_definition(definition)
+    return await service.save(
+        definition, payload.request_id, create_only=payload.request_id is not None
+    )
+
+
+@router.post("/preview", response_model=SchedulePreview)
+async def preview_schedule(payload: ScheduleCalendar, service: Service) -> SchedulePreview:
+    try:
+        return await preview_calendar(service, payload)
+    except Exception as exc:
+        raise _failure(exc) from None
+
+
+@router.get("/{schedule_id}/preview", response_model=SchedulePreview)
+async def preview_applied_schedule(schedule_id: str, service: Service) -> SchedulePreview:
+    try:
+        return await preview_saved(service, schedule_id)
+    except ApplicationError:
+        raise
+    except Exception as exc:
+        raise _failure(exc) from None
 
 
 @router.get("/{schedule_id}", response_model=ScheduleRecord)
@@ -97,7 +128,13 @@ def get_schedule(schedule_id: str, store: Store) -> ScheduleRecord:
 async def update_schedule(
     schedule_id: str, payload: ScheduleDefinition, service: Service
 ) -> ScheduleRecord:
-    _validate_definition(payload)
+    existing = service.store.get(schedule_id)
+    # Timing/pause repair remains available when a referenced task was removed.
+    if existing is None or any(
+        getattr(existing, field) != getattr(payload, field)
+        for field in ("package_key", "workflow_key", "parameters")
+    ):
+        _validate_definition(payload)
     return await service.save(payload, schedule_id)
 
 

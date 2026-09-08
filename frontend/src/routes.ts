@@ -52,23 +52,44 @@ function route(
 }
 const packageParent = {
   href: "/workflow-packages",
-  title: "Workflow Packages",
+  title: "工作流制作",
 } as const;
 const scheduleParent = {
   href: "/scheduled-tasks",
-  title: "Scheduled Tasks",
+  title: "自动执行",
 } as const;
 const children: Definition[] = [
   route(
+    "tasks",
+    "任务",
+    "ClipboardList",
+    async () => ({
+      Component: (await import("./pages/platform/tasks")).TasksPage,
+    }),
+    { sidebar: false },
+  ),
+  route(
+    "tasks/new",
+    "填写任务",
+    "ClipboardList",
+    async () => ({
+      Component: (await import("./pages/platform/tasks")).TaskPage,
+    }),
+    { parent: { href: "/", title: "任务" } },
+  ),
+  route("settings", "设置", "Database", async () => ({
+    Component: (await import("./pages/platform/settings")).SettingsPage,
+  })),
+  route(
     "",
-    "Dashboard",
+    "任务",
     "LayoutDashboard",
     async () => ({
-      Component: (await import("./pages/platform/dashboard")).DashboardPage,
+      Component: (await import("./pages/platform/tasks")).TasksPage,
     }),
-    { testId: "dashboard" },
+    { testId: "tasks" },
   ),
-  route("workflow-packages", "Workflow Packages", "Workflow", async () => ({
+  route("workflow-packages", "工作流制作", "Workflow", async () => ({
     Component: (await import("./pages/platform/package-list")).PackagesPage,
   })),
   route(
@@ -98,13 +119,13 @@ const children: Definition[] = [
     }),
     { parent: packageParent, fullHeight: true },
   ),
-  route("resources", "Resources", "Database", async () => ({
+  route("resources", "资源配置", "Database", async () => ({
     Component: (await import("./pages/platform/resources")).ResourcesPage,
   })),
-  route("plugins", "Plugins", "Puzzle", async () => ({
+  route("plugins", "插件管理", "Puzzle", async () => ({
     Component: (await import("./pages/platform/plugins")).PluginsPage,
   })),
-  route("scheduled-tasks", "Scheduled Tasks", "ClipboardList", async () => ({
+  route("scheduled-tasks", "自动执行", "ClipboardList", async () => ({
     Component: (await import("./pages/platform/schedule-list")).SchedulesPage,
   })),
   route(
@@ -125,17 +146,17 @@ const children: Definition[] = [
     }),
     { parent: scheduleParent, fullHeight: true },
   ),
-  route("runs", "Runs", "PlayCircle", async () => ({
+  route("runs", "结果", "PlayCircle", async () => ({
     Component: (await import("./pages/platform/runs")).RunsPage,
   })),
   route(
     "runs/:runId",
-    "Run Detail",
+    "结果详情",
     "PlayCircle",
     async () => ({
       Component: (await import("./pages/platform/runs")).RunPage,
     }),
-    { parent: { href: "/runs", title: "Runs" }, fullHeight: true },
+    { parent: { href: "/runs", title: "结果" }, fullHeight: true },
   ),
   route(
     "*",

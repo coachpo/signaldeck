@@ -39,7 +39,8 @@ export function updateSource(
 ): string {
   parseDefinition(source);
   const document = parseDocument(source, { uniqueKeys: true });
-  document.setIn(path, value);
+  if (value === undefined) document.deleteIn(path);
+  else document.setIn(path, value);
   return document.toString();
 }
 export function parseObject(value: string): JsonObject {

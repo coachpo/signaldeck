@@ -1,6 +1,7 @@
 # Local/demo SD-TARGET-001 stack. Dedicated host data never reuses legacy volumes.
 x-core-environment: &core-environment
   SIGNALDECK_RUNTIME_MODE: local
+  SIGNALDECK_CONNECTION_PRESETS_FILE: /etc/signaldeck/connection-presets.json
   DATABASE_URL: postgresql+psycopg://signaldeck_core:${CORE_DB_PASSWORD:-core-local-password}@db:5432/signaldeck_core
   AGENT_PLATFORM_ENCRYPTION_KEY: ${AGENT_PLATFORM_ENCRYPTION_KEY:-signaldeck-agent-platform-dev-key}
   SIGNALDECK_API_TOKEN: ${SIGNALDECK_API_TOKEN:-}
@@ -12,6 +13,12 @@ x-core-environment: &core-environment
   UV_CACHE_DIR: /data/uv-cache
 
 x-core-volumes: &core-volumes
+  - type: bind
+    source: ${SIGNALDECK_CONNECTION_PRESETS_FILE:-./docker/connection-presets.local.json}
+    target: /etc/signaldeck/connection-presets.json
+    read_only: true
+    bind:
+      create_host_path: false
   - ${SIGNALDECK_DATA_DIR:-./.signaldeck-target}/artifacts:/data/artifacts
   - ${SIGNALDECK_DATA_DIR:-./.signaldeck-target}/core:/data/core
   - ${SIGNALDECK_DATA_DIR:-./.signaldeck-target}/core-environments:/data/core-environments

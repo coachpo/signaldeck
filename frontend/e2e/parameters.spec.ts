@@ -66,6 +66,9 @@ test("array input uses the same definition for manual and scheduled launches wit
     )
     .toBe("succeeded");
   await page
+    .getByRole("link", { name: "技术详情与调用证据", exact: true })
+    .click();
+  await page
     .getByRole("tab", { name: "Immutable snapshot", exact: true })
     .click();
   expect(
@@ -74,26 +77,28 @@ test("array input uses the same definition for manual and scheduled launches wit
     ).parameters,
   ).toEqual(["alpha", "beta"]);
   await page.goto("/scheduled-tasks/new");
-  await page.getByLabel("Schedule name").fill(`Array schedule ${key}`);
-  await page.getByRole("combobox", { name: "Package", exact: true }).click();
+  await page.getByRole("switch", { name: "专家模式" }).check();
+  await page.getByLabel("安排名称").fill(`Array schedule ${key}`);
+  await page.getByRole("combobox", { name: "任务包", exact: true }).click();
   await page.getByRole("option", { name: `Array ${key}`, exact: true }).click();
-  await page.getByRole("combobox", { name: "Workflow", exact: true }).click();
+  await page.getByRole("combobox", { name: "任务", exact: true }).click();
   await page
     .getByRole("option", { name: "Array workflow", exact: true })
     .click();
-  await page.getByLabel("Schedule parameters JSON").fill("[]");
+  await page.getByLabel("Parameters JSON", { exact: true }).fill("[]");
   await page
-    .getByRole("combobox", { name: "Schedule status", exact: true })
+    .getByRole("button", { name: "Apply parameters JSON", exact: true })
     .click();
-  await page.getByRole("option", { name: "Paused", exact: true }).click();
+  await page
+    .getByRole("combobox", { name: "自动执行状态", exact: true })
+    .click();
+  await page.getByRole("option", { name: "已暂停", exact: true }).click();
   const saving = page.waitForResponse(
     (response) =>
       response.url() === `${apiBase}/schedules` &&
       response.request().method() === "POST",
   );
-  await page
-    .getByRole("button", { name: "Save schedule", exact: true })
-    .click();
+  await page.getByRole("button", { name: "启用自动执行", exact: true }).click();
   const created = await saving;
   expect(created.ok(), await created.text()).toBeTruthy();
   const scheduleId = (await created.json()).id as string;
@@ -110,10 +115,8 @@ test("array input uses the same definition for manual and scheduled launches wit
     (await (await request.get(`${apiBase}/schedules/${scheduleId}`)).json())
       .parameters,
   ).toEqual([]);
-  await page.getByRole("button", { name: "Run now", exact: true }).click();
-  await expect(
-    page.getByText("Trigger accepted", { exact: true }),
-  ).toBeVisible();
+  await page.getByRole("button", { name: "立即执行", exact: true }).click();
+  await expect(page.getByText("已接受执行请求", { exact: true })).toBeVisible();
   let scheduledId = "";
   await expect
     .poll(

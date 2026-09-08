@@ -47,9 +47,13 @@ class TemporalScheduleService:
         self.client, self.store, self.task_queue = client, store, task_queue
 
     async def save(
-        self, definition: ScheduleDefinition, schedule_id: str | None = None
+        self,
+        definition: ScheduleDefinition,
+        schedule_id: str | None = None,
+        *,
+        create_only: bool = False,
     ) -> ScheduleRecord:
-        record = self.store.save(definition, schedule_id)
+        record = self.store.save(definition, schedule_id, create_only=create_only)
         return await self.store.synchronize(record.id, self._apply)
 
     async def delete(self, schedule_id: str) -> None:

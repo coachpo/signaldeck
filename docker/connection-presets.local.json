@@ -1,0 +1,41 @@
+{
+  "items": [
+    {
+      "id": "local-finance-market-data",
+      "name": "本地市场资料",
+      "description": "本地 Compose 的 finance 配置选择；声明本身不证明插件在线。",
+      "resourceId": "finance-market-data",
+      "kind": "tool",
+      "config": {
+        "name": "Finance market data",
+        "pluginId": "signaldeck/finance",
+        "scope": {
+          "allowedSymbols": [
+            "MSFT",
+            "AAPL"
+          ]
+        },
+        "maxConcurrentCalls": 4,
+        "requestsPerSecond": 4.0
+      },
+      "credentialFields": []
+    },
+    {
+      "id": "local-notes-workspace",
+      "name": "本地研究笔记",
+      "description": "本地 Compose 的 notes 配置选择；声明本身不证明插件在线。",
+      "resourceId": "notes-workspace",
+      "kind": "tool",
+      "config": {
+        "name": "Research notes",
+        "pluginId": "example/notes",
+        "scope": {
+          "collection": "research"
+        },
+        "maxConcurrentCalls": 4,
+        "requestsPerSecond": 10.0
+      },
+      "credentialFields": []
+    }
+  ]
+}

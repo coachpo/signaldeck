@@ -50,12 +50,15 @@ class PackageList(CamelModel):
 
 
 class LaunchRequest(CamelModel):
+    revision_hash: str | None = None
+    binding_token: str | None = None
     workflow_key: str = Field(min_length=1, max_length=120)
     parameters: JsonValue = Field(default_factory=dict)
     launch_id: str | None = Field(default=None, min_length=1, max_length=200)
 
 
 class RerunRequest(CamelModel):
+    binding_token: str | None = None
     launch_id: str | None = Field(default=None, min_length=1, max_length=200)
 
 

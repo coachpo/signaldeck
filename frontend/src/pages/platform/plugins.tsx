@@ -20,6 +20,7 @@ import { parseObject } from "@/lib/platform-authoring/package-source";
 import type { PluginRelease } from "@/lib/types/workflow-platform";
 import { PluginHealth } from "./plugin-health";
 import { RequestError } from "./feedback";
+import { CopyButton } from "@/components/shared/copy-button";
 
 export function PluginsPage() {
   const query = usePlugins();
@@ -65,6 +66,16 @@ export function PluginsPage() {
                   {plugin.release.artifactDigest}
                 </code>
                 <div className="flex flex-wrap gap-2">
+                  <CopyButton
+                    value={plugin.pluginId}
+                    text="复制插件 ID"
+                    label={`复制插件 ID ${plugin.pluginId}`}
+                  />
+                  <CopyButton
+                    value={plugin.release.releaseId}
+                    text="复制发布 ID"
+                    label={`复制发布 ID ${plugin.pluginId}`}
+                  />
                   <ResourceStatusBadge
                     label={plugin.enabled ? "Enabled" : "Disabled"}
                   />
@@ -93,6 +104,14 @@ export function PluginsPage() {
                   )}
                 </div>
                 <PluginHealth health={plugin.health} />
+                <details>
+                  <summary className="cursor-pointer text-sm">
+                    完整发布描述
+                  </summary>
+                  <pre className="overflow-auto text-xs">
+                    {JSON.stringify(plugin.release, null, 2)}
+                  </pre>
+                </details>
                 <details>
                   <summary className="cursor-pointer text-sm">
                     Tool contracts ({plugin.release.tools.length})

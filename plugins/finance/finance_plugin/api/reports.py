@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, File, Form, Query, Response, UploadFile, status
 from finance_plugin.dependencies import (
@@ -25,6 +25,8 @@ _MAX_UPLOAD_SIZE = 2 * 1024 * 1024  # 2 MB
 @router.get("", response_model=list[ReportRead])
 def list_reports(
     service: ReportServiceDependency,
+    q: Annotated[str | None, Query(max_length=500)] = None,
+    sort: Annotated[Literal["newest", "oldest", "name"], Query()] = "newest",
     ticker: Annotated[str | None, Query()] = None,
     tag: Annotated[str | None, Query()] = None,
     review_type: Annotated[str | None, Query(alias="reviewType")] = None,
@@ -33,6 +35,8 @@ def list_reports(
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> list[ReportRead]:
     return service.list_reports(
+        q=q,
+        sort=sort,
         ticker=ticker,
         tag=tag,
         review_type=review_type,
@@ -56,7 +60,9 @@ def create_report(
 
 
 @router.post(
-    "/compile/{template_id}", response_model=ReportRead, status_code=status.HTTP_201_CREATED
+    "/compile/{template_id}",
+    response_model=ReportRead,
+    status_code=status.HTTP_201_CREATED,
 )
 def compile_report(
     template_id: int,
@@ -69,6 +75,15 @@ def compile_report(
     compiled = compiler_service.compile(
         template.content, inputs=payload.inputs if payload else None
     )
+    if payload is not None and (
+        (payload.expected_content is not None and payload.expected_content != template.content)
+        or (payload.expected_compiled is not None and payload.expected_compiled != compiled)
+    ):
+        raise ApiError(
+            status_code=409,
+            code="preview_changed",
+            message="格式或引用报告已变化，请重新预览后生成。",
+        )
     metadata = payload.metadata if payload is not None else None
     return report_service.create_from_template(template, compiled, metadata=metadata)
 
@@ -135,7 +150,7 @@ async def upload_report(
 
     metadata = {
         "author": author.strip() if author and author.strip() else None,
-        "description": description.strip() if description and description.strip() else None,
+        "description": (description.strip() if description and description.strip() else None),
         "tags": parsed_tags,
     }
 
@@ -145,6 +160,14 @@ async def upload_report(
         name=filename,
         metadata=metadata,
     )
+
+
+@router.get("/by-id/{report_id:int}", response_model=ReportRead)
+def get_report_by_id(
+    report_id: int,
+    service: ReportServiceDependency,
+) -> ReportRead:
+    return service.get_report(report_id)
 
 
 @router.get("/{slug}", response_model=ReportRead)

@@ -78,3 +78,32 @@ Core 对同 operation 的活跃执行互斥，重叠 Activity 在原 deadline �
 升级使用新不可变制品和新 endpoint。安装新发布只移动当前指针；已有 Run 固定原 descriptor，必须在其恢复需求结束前保留旧服务和制品。原地换掉旧 endpoint 会导致明确 release mismatch，不能自动回退到新代码。
 
 当前可运行示例和验证入口为 [`plugins/notes`](../plugins/notes/)、[`test_independent_plugins.py`](../backend/tests/test_independent_plugins.py)、[`test_tool_gateway_target.py`](../backend/tests/test_tool_gateway_target.py) 和 [`test_plugin_wire_contracts.py`](../backend/tests/test_plugin_wire_contracts.py)。插件级契约与完整 Core/Worker/Compose 行为的验收标准见 [`产品说明`](产品说明.md)，已执行验收记录见 [`STATUS.md`](../STATUS.md)。
+
+## 普通模式的连接选择
+
+Core 的 `GET /api/connection-presets` 读取部署方提供的非敏感配置文件，供普通任务就地选择连接。该入口只验证配置格式，不部署服务、不探测在线状态，也不会仅因存在预设而改写资源。操作人确认选择后才保存资源；真正启动仍核对当前绑定。最近调用成功/失败是带时间的历史观测，不代表当前在线。
+
+本地 `./start.sh` 和根 Compose 默认将 [`docker/connection-presets.local.json`](../docker/connection-presets.local.json) 只读挂载到 `/etc/signaldeck/connection-presets.json`。默认内容来自 [`docker/plugin-defaults.json`](../docker/plugin-defaults.json)：Notes 的 `notes-workspace` 保存到 `research`，Finance 的 `finance-market-data` 仅允许 `MSFT`、`AAPL`。这些只是本地部署选择，插件是否启用由 Compose profile、bootstrap 和实际调用结果决定。
+
+部署方可通过宿主机环境变量 `SIGNALDECK_CONNECTION_PRESETS_FILE=/absolute/path/connections.json` 替换该文件；启动、停止、状态与刷新命令沿用相同环境。路径必须指向既有普通文件，挂载缺失时不会创建空目录。直接运行 API（不经 Compose）时，此变量就是 API 进程可读取的文件路径。
+
+文件根为 `{"items": [...]}`。每项包含 `id`、用户可辨认的 `name`、`description`、与任务定义一致的 `resourceId`、`kind`（`model` 或 `tool`）、按资源合同验证的 `config`，以及 `credentialFields`。凭据字段只声明 `key`、`label`、`required`，不包含值。以下是部署方填写模型选择时的结构说明，**不是可以直接使用或已经在线的模型配置**：
+
+```json
+{
+  "id": "verified-research-service",
+  "name": "部署方确认的研究服务名称",
+  "description": "说明服务归属、账户及使用范围",
+  "resourceId": "research-model",
+  "kind": "model",
+  "config": {
+    "name": "部署方确认的研究服务名称",
+    "baseUrl": "https://replace-with-verified-service.example/v1",
+    "modelId": "replace-with-verified-model",
+    "apiStyle": "chat_completions"
+  },
+  "credentialFields": [{"key": "apiKey", "label": "服务密钥", "required": true}]
+}
+```
+
+首批研究任务都引用 `research-model`；仓库不提供虚构供应商、账户、密钥或默认模型。部署方应先确认服务支持的协议、地址、模型和所需凭据，再把填好的项加入文件的 `items`；需要保留本地工具选择时一起复制默认两项。普通用户按业务名称明确选择，核对账户/范围/保存位置后输入密钥。密钥只由资源加密存储处理，不能进入该文件、描述、scope 或日志；成功保存后浏览器密码框清空，留空更新保留既有凭据。

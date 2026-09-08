@@ -1,6 +1,8 @@
 import { expect, test } from "@playwright/test";
+import { mkdirSync } from "node:fs";
+import { resolve } from "node:path";
 const routes = [
-  { path: "/", label: "Dashboard", nav: "dashboard" },
+  { path: "/", label: "任务", nav: "tasks" },
   {
     path: "/workflow-packages",
     label: "Workflow Packages",
@@ -8,17 +10,15 @@ const routes = [
   },
   { path: "/resources", label: "Resources", nav: "resources" },
   { path: "/plugins", label: "Plugins", nav: "plugins" },
-  {
-    path: "/scheduled-tasks",
-    label: "Scheduled Tasks",
-    nav: "scheduled-tasks",
-  },
-  { path: "/runs", label: "Runs", nav: "runs" },
+  { path: "/settings", label: "设置", nav: "settings" },
+  { path: "/runs", label: "结果", nav: "runs" },
 ];
 test("generic navigation owns one route shell without embedded finance pages", async ({
   page,
 }) => {
   await page.goto("/");
+  await expect(page.getByTestId("nav-workflow-packages")).toHaveCount(0);
+  await page.getByRole("switch", { name: "专家模式", exact: true }).check();
   for (const route of routes) {
     await page.getByTestId(`nav-${route.nav}`).click();
     await expect(page).toHaveURL(route.path);
@@ -39,7 +39,11 @@ for (const width of [375, 768, 1024, 1440])
     page,
   }, testInfo) => {
     await page.setViewportSize({ width, height: 900 });
+    const directory = resolve("../output/playwright/shell-experience");
+    mkdirSync(directory, { recursive: true });
     for (const path of [
+      "/",
+      "/settings",
       "/workflow-packages/new",
       "/resources",
       "/scheduled-tasks/new",
@@ -50,12 +54,20 @@ for (const width of [375, 768, 1024, 1440])
       await expect(page.getByRole("main")).toBeVisible();
       if (path === "/workflow-packages/new") {
         await expect(page.getByLabel("Workflow Package YAML")).toBeVisible();
-        await page.screenshot({
-          path: testInfo.outputPath(`editor-${width}.png`),
-          fullPage: true,
-          animations: "disabled",
-        });
       }
+      const screenshot = resolve(
+        directory,
+        `${path.replaceAll("/", "-") || "tasks"}-${width}.png`,
+      );
+      await page.screenshot({
+        path: screenshot,
+        fullPage: true,
+        animations: "disabled",
+      });
+      await testInfo.attach(`${path}-${width}`, {
+        path: screenshot,
+        contentType: "image/png",
+      });
       await expect
         .poll(() =>
           page.evaluate(

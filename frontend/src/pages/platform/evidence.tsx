@@ -1,5 +1,6 @@
 import { findArtifacts } from "./artifact-references";
-import { Link } from "react-router";
+import { runSearch } from "./result-navigation";
+import { Link, useSearchParams } from "react-router";
 import { Button } from "@/components/ui/button";
 import { FieldGroup } from "@/components/shared/form-field";
 import { ResourceStatusBadge } from "@/components/shared/resource-status-strip";
@@ -10,6 +11,7 @@ import type { ExecutionEvidence, Json } from "@/lib/types/workflow-platform";
 import { useArtifact } from "@/hooks/use-workflow-platform";
 import { useState } from "react";
 import { RequestError } from "./feedback";
+import { CopyButton } from "@/components/shared/copy-button";
 
 export function ArtifactValue({
   value,
@@ -87,6 +89,7 @@ export function EvidenceTree({
   evidence: ExecutionEvidence[];
   selected?: string | null;
 }) {
+  const [search] = useSearchParams();
   const ids = new Set(evidence.map((e) => e.id));
   const roots = evidence.filter((e) => !e.parentId || !ids.has(e.parentId));
   const childrenByParent = new Map<string, ExecutionEvidence[]>();
@@ -109,7 +112,9 @@ export function EvidenceTree({
                   asChild
                   variant={selected === e.id ? "secondary" : "outline"}
                 >
-                  <Link to={`?tab=evidence&target=${encodeURIComponent(e.id)}`}>
+                  <Link
+                    to={`?${runSearch(search, { tab: "evidence", target: e.id })}`}
+                  >
                     {e.kind} · {e.nodeId} · attempt {e.attempt}
                   </Link>
                 </Button>
@@ -117,6 +122,18 @@ export function EvidenceTree({
                   label={e.status}
                   tone={e.status === "failed" ? "danger" : "neutral"}
                 />
+                <CopyButton
+                  value={e.id}
+                  text="复制证据 ID"
+                  label={`复制证据 ID ${e.id}`}
+                />
+                {e.operationId && (
+                  <CopyButton
+                    value={e.operationId}
+                    text="复制操作 ID"
+                    label={`复制操作 ID ${e.operationId}`}
+                  />
+                )}
                 {e.operationId && (
                   <code className="break-all text-xs">{e.operationId}</code>
                 )}

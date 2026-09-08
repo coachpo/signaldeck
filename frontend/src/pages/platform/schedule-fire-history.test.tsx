@@ -50,12 +50,13 @@ it("distinguishes failed launch receipts from linked successful executions", asy
       </MemoryRouter>
     </QueryClientProvider>,
   );
-  expect(await screen.findByText("launch_failed")).toBeVisible();
-  expect(screen.getByText("Run not created")).toBeVisible();
+  expect(await screen.findByText("未能启动")).toBeVisible();
+  expect(screen.getByText("尚未生成结果")).toBeVisible();
   expect(screen.getByText("package_not_found")).toBeVisible();
-  expect(
-    screen.getByRole("link", { name: "Inspect run run-2" }),
-  ).toHaveAttribute("href", "/runs/run-2");
-  expect(screen.getByText(/execution engine-1/)).toBeVisible();
-  expect(screen.getByText(/execution engine-2/)).toBeVisible();
+  expect(screen.getByRole("link", { name: "查看结果" })).toHaveAttribute(
+    "href",
+    "/runs/run-2",
+  );
+  expect(screen.getByText(/execution engine-1/)).toBeInTheDocument();
+  expect(screen.getByText(/execution engine-2/)).toBeInTheDocument();
 });

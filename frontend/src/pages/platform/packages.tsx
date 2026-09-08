@@ -41,6 +41,8 @@ function PackageEditor({ pkg }: { pkg?: WorkflowPackage }) {
   } | null>(null);
   const [tab, setTab] = useState("source");
   const sourceRef = useRef<HTMLTextAreaElement>(null);
+  const importRef = useRef<HTMLInputElement>(null);
+  const [importError, setImportError] = useState("");
   const navigate = useNavigate();
   const mutations = usePlatformMutations();
   const [sectionDrafts, setSectionDrafts] = useState({
@@ -96,6 +98,53 @@ function PackageEditor({ pkg }: { pkg?: WorkflowPackage }) {
           }
           actions={
             <div className="flex flex-wrap gap-2">
+              <input
+                ref={importRef}
+                type="file"
+                accept=".yaml,.yml,text/yaml,application/yaml"
+                aria-label="选择导入文件"
+                className="sr-only"
+                disabled={busy || unapplied}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  void file
+                    .text()
+                    .then((text) => {
+                      setSource(text);
+                      setValidation(null);
+                      setTab("source");
+                      setImportError("");
+                    })
+                    .catch(() => setImportError("无法读取所选 YAML 文件。"));
+                  e.target.value = "";
+                }}
+              />
+              <Button
+                variant="outline"
+                disabled={busy || unapplied}
+                onClick={() => importRef.current?.click()}
+              >
+                导入并替换 YAML
+              </Button>
+              <Button
+                variant="outline"
+                disabled={unapplied}
+                onClick={() => {
+                  const url = URL.createObjectURL(
+                    new Blob([source], {
+                      type: "application/yaml;charset=utf-8",
+                    }),
+                  );
+                  const link = document.createElement("a");
+                  link.href = url;
+                  link.download = `${pkg?.key ?? "workflow-package"}.yaml`;
+                  link.click();
+                  setTimeout(() => URL.revokeObjectURL(url), 0);
+                }}
+              >
+                导出当前 YAML
+              </Button>
               <Button
                 variant="outline"
                 disabled={busy || unapplied}
@@ -127,6 +176,7 @@ function PackageEditor({ pkg }: { pkg?: WorkflowPackage }) {
         <RequestError
           error={mutations.validate.error || mutations.savePackage.error}
         />
+        {importError && <p role="alert">{importError}</p>}
         {blocker.state === "blocked" && (
           <InventoryStatePanel
             tone="warning"

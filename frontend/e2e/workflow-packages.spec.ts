@@ -25,9 +25,17 @@ test("YAML and structure persist one definition and graph displays all edge sour
     page.getByText("Definition validated", { exact: true }),
   ).toBeVisible();
   await page.getByRole("tab", { name: "Graph", exact: true }).click();
-  await expect(page.getByText("first → second")).toBeVisible();
+  await expect(
+    page
+      .getByRole("list", { name: "Dependency edges" })
+      .getByText("first → second", { exact: true }),
+  ).toBeVisible();
   for (const source of ["control", "input", "condition"])
-    await expect(page.getByText(source, { exact: true })).toBeVisible();
+    await expect(
+      page
+        .getByRole("list", { name: "Dependency edges" })
+        .getByText(source, { exact: true }),
+    ).toBeVisible();
   await page.screenshot({
     path: testInfo.outputPath("definition-graph.png"),
     fullPage: true,
@@ -97,6 +105,9 @@ test("launch validates applied inputs and retained evidence survives browser clo
     .toBe("succeeded");
   const inspection = await context.newPage();
   await inspection.goto(`/runs/${runId}`);
+  await inspection
+    .getByRole("link", { name: "技术详情与调用证据", exact: true })
+    .click();
   await inspection.getByRole("tab", { name: "Call evidence" }).click();
   await expect(inspection.getByLabel("Call ownership tree")).toBeVisible();
   await expect(
@@ -113,8 +124,12 @@ test("launch validates applied inputs and retained evidence survives browser clo
   );
   expect(snapshot.parameters).toEqual({ summary: "Launch evidence" });
   expect(JSON.stringify(snapshot)).not.toContain("fake-local-key");
+  await inspection.getByRole("link", { name: "返回结果", exact: true }).click();
   await inspection
-    .getByRole("button", { name: "Rerun frozen snapshot" })
+    .getByRole("button", { name: "再运行一次", exact: true })
+    .click();
+  await inspection
+    .getByRole("button", { name: "确认并开始新运行", exact: true })
     .click();
   await expect(inspection).not.toHaveURL(new RegExp(`${runId}$`));
 });

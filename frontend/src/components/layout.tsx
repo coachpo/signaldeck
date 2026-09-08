@@ -20,10 +20,13 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "./ui/breadcrumb";
+import { useDisplayMode } from "@/hooks/use-display-mode";
+import { Switch } from "./ui/switch";
 import { ThemeToggle } from "./theme-toggle";
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -47,9 +50,7 @@ type RouteArchetype =
   | "unknown";
 type RouteShellMode = "scroll" | "fullHeight";
 export type RouteWidthMode = "wide" | "full" | "compact" | "readable";
-export type RouteNavGroup =
-  | "Agent Platform"
-  | "System";
+export type RouteNavGroup = "Agent Platform" | "System";
 type RouteNavIconName =
   | "Briefcase"
   | "ClipboardList"
@@ -146,13 +147,13 @@ function isRouteHandle(handle: unknown): handle is RouteHandle {
 
 function isRootRouteHandle(handle: unknown): handle is RootRouteHandle {
   return (
-    typeof handle === "object" &&
-    handle !== null &&
-    "sidebarGroups" in handle
+    typeof handle === "object" && handle !== null && "sidebarGroups" in handle
   );
 }
 
-function activeRouteHandle(matches: readonly { handle: unknown }[]): RouteHandle {
+function activeRouteHandle(
+  matches: readonly { handle: unknown }[],
+): RouteHandle {
   for (let index = matches.length - 1; index >= 0; index -= 1) {
     const handle = matches[index]?.handle;
 
@@ -198,22 +199,37 @@ function assembleNavGroups(sidebarGroups: readonly RouteNavGroupHandle[]) {
 
 function isNavItemActive(pathname: string, item: NavItem) {
   return item.to === "/"
-    ? pathname === "/"
+    ? pathname === "/" ||
+        pathname === "/tasks" ||
+        pathname.startsWith("/tasks/") ||
+        pathname === "/scheduled-tasks" ||
+        pathname.startsWith("/scheduled-tasks/")
     : pathname === item.to || pathname.startsWith(`${item.to}/`);
 }
 
 function AppSidebar() {
   const location = useLocation();
   const matches = useMatches();
-  const navGroups = assembleNavGroups(rootRouteHandle(matches).sidebarGroups);
+  const { expert } = useDisplayMode();
+  const navGroups = assembleNavGroups(
+    rootRouteHandle(matches).sidebarGroups,
+  ).map((group) => ({
+    ...group,
+    items: group.items.filter(
+      (item) =>
+        item.to !== "/settings" &&
+        item.to !== "/scheduled-tasks" &&
+        (expert || item.to === "/" || item.to === "/runs"),
+    ),
+  }));
   const { isMobile, open, setOpenMobile } = useSidebar();
   const showExpandedContent = open || isMobile;
 
   return (
-    <Sidebar variant="inset">
+    <Sidebar variant="sidebar">
       <SidebarHeader className="h-[var(--ui-layout-header-height)] justify-center border-b border-sidebar-border/70 px-3 py-0">
         <div className="flex items-center gap-2">
-          <div className="flex size-8 items-center justify-center rounded-xl border border-sidebar-primary/15 bg-sidebar-primary/10 text-sidebar-primary shadow-ui-xs">
+          <div className="flex size-8 items-center justify-center rounded-md border border-sidebar-primary/15 bg-sidebar-primary/10 text-sidebar-primary shadow-ui-xs">
             <img
               alt=""
               aria-hidden="true"
@@ -234,7 +250,9 @@ function AppSidebar() {
         {navGroups.map((group) => (
           <SidebarGroup key={group.label}>
             {showExpandedContent ? (
-              <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+              <SidebarGroupLabel>
+                {expert ? "专家工作区" : "日常操作"}
+              </SidebarGroupLabel>
             ) : null}
             <SidebarGroupContent>
               <SidebarMenu>
@@ -271,6 +289,25 @@ function AppSidebar() {
           </SidebarGroup>
         ))}
       </SidebarContent>
+      <SidebarFooter>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              asChild
+              isActive={location.pathname === "/settings"}
+            >
+              <NavLink
+                to="/settings"
+                data-testid="nav-settings"
+                onClick={() => setOpenMobile(false)}
+              >
+                <Database className="size-4" />
+                <span>设置</span>
+              </NavLink>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
     </Sidebar>
   );
 }
@@ -291,6 +328,7 @@ export function Layout() {
   const matches = useMatches();
   const routeMetadata = activeRouteHandle(matches);
   const breadcrumbMetadata = routeMetadata.breadcrumb;
+  const { expert, setExpert } = useDisplayMode();
   const usesFullHeightShell = routeMetadata.shellMode === "fullHeight";
 
   return (
@@ -332,6 +370,14 @@ export function Layout() {
               </BreadcrumbList>
             </Breadcrumb>
           </div>
+          <label className="flex shrink-0 items-center gap-2 text-sm">
+            <Switch
+              aria-label="专家模式"
+              checked={expert}
+              onCheckedChange={setExpert}
+            />
+            专家模式
+          </label>
           <ThemeToggle />
         </header>
 
@@ -339,7 +385,9 @@ export function Layout() {
           id="app-main"
           className="min-h-0 min-w-0 flex-1 overflow-hidden"
           data-route-shell-mode={routeMetadata.shellMode}
-          data-route-width-mode={usesFullHeightShell ? "full" : routeMetadata.widthMode}
+          data-route-width-mode={
+            usesFullHeightShell ? "full" : routeMetadata.widthMode
+          }
           data-testid={routeMetadata.testId}
         >
           {usesFullHeightShell ? (
@@ -351,7 +399,9 @@ export function Layout() {
               className="h-full min-w-0 overflow-x-hidden overflow-y-auto"
               data-slot="layout-scroll-viewport"
             >
-              <div className={routeWidthWrapperClassName(routeMetadata.widthMode)}>
+              <div
+                className={routeWidthWrapperClassName(routeMetadata.widthMode)}
+              >
                 <Outlet />
               </div>
             </div>

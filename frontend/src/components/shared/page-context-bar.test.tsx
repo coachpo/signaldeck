@@ -113,7 +113,8 @@ describe("PageContextBar", () => {
       .closest("[data-slot='page-context-actions']");
 
     expect(root).toHaveClass("sm:flex-row", "sm:items-start");
-    expect(actionRegion).toHaveClass("sm:ml-3", "sm:justify-end");
+    expect(actionRegion).toHaveClass("max-w-full", "sm:justify-end");
+    expect(actionRegion).not.toHaveClass("sm:shrink-0");
     expect(
       screen.getByText("Ready").closest("[role='list']"),
     ).toBeInTheDocument();
@@ -145,5 +146,32 @@ describe("PageContextBar", () => {
     expect(meta.parentElement).toHaveClass("lg:justify-center");
     expect(status).toBeInTheDocument();
     expect(screen.getByText("3 results returned")).toBeInTheDocument();
+  });
+
+  it("allows a multi-action group to wrap within the available header width", () => {
+    render(
+      <PageContextBar
+        title="An editable workflow with a descriptive title"
+        actions={
+          <div className="flex flex-wrap gap-2">
+            <button>Validate graph</button>
+            <button>Save package</button>
+            <button>Launch saved package</button>
+          </div>
+        }
+      />,
+    );
+    const actionGroup = screen.getByRole("button", {
+      name: "Save package",
+    }).parentElement!;
+    expect(actionGroup.parentElement).toHaveClass(
+      "min-w-0",
+      "max-w-full",
+      "flex-wrap",
+    );
+    expect(actionGroup.parentElement).not.toHaveClass("shrink-0");
+    expect(
+      screen.getByRole("heading").closest("[data-slot='page-context-bar']"),
+    ).toHaveClass("sm:flex-wrap");
   });
 });

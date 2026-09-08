@@ -20,6 +20,8 @@
 
 ## 专项文档
 
+- [`planning/sprint-backlog.md`](planning/sprint-backlog.md)：简化操作 S1–S6 的稳定待办和 P/UX 追溯，末尾记录本轮自动化验收方式调整。
+- [`planning/sprint-delivery.md`](planning/sprint-delivery.md)：23 项交付、实际验证和待验收范围；不替代规范文档或 SD-TARGET-001 历史。
 - [`data-model.md`](data-model.md)：Core/插件数据归属、PostgreSQL 表、不可变运行快照、凭据版本和内容寻址存储。
 - [`writing-extensions.md`](writing-extensions.md)：独立进程插件的发布、MCP/工具/schema、资源/效果合同与升级方式；保留原文件路径。
 - [`执行引擎比较.md`](执行引擎比较.md)：Temporal、Prefect、Hatchet 的同场景比较、实际证据范围及选型结论；不替代平台整体验收。

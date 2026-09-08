@@ -23,21 +23,21 @@ export function ThemeToggle() {
           ) : (
             <Monitor className="size-4" />
           )}
-          <span className="sr-only">Toggle theme</span>
+          <span className="sr-only">切换外观</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem onSelect={() => setTheme("light")}>
           <Sun className="size-4" />
-          Light
+          浅色
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => setTheme("dark")}>
           <Moon className="size-4" />
-          Dark
+          深色
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => setTheme("system")}>
           <Monitor className="size-4" />
-          System
+          跟随系统
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

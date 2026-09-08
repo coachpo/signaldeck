@@ -26,7 +26,7 @@ const rootClassByDensity: Record<PageContextBarDensity, string> = {
 function PageContextTitle({ children }: { children: ReactNode }) {
   return (
     <h1
-      className="min-w-0 text-2xl font-semibold leading-tight tracking-tight text-foreground sm:text-[1.75rem]"
+      className="min-w-0 break-words text-2xl font-semibold leading-tight tracking-tight text-foreground sm:text-[1.75rem]"
       data-slot="page-context-title"
     >
       {children}
@@ -45,12 +45,13 @@ export function PageContextBar({
   title,
   toolbarMetaPlacement = "below",
 }: PageContextBarProps) {
-  const placesMetaInMiddle = layout === "toolbar" && toolbarMetaPlacement === "middle";
+  const placesMetaInMiddle =
+    layout === "toolbar" && toolbarMetaPlacement === "middle";
 
   return (
     <div
       className={cn(
-        "flex min-w-0 flex-col",
+        "flex min-w-0 flex-col sm:flex-wrap",
         placesMetaInMiddle
           ? "lg:flex-row lg:items-center lg:justify-between"
           : "sm:flex-row sm:items-start sm:justify-between",
@@ -61,11 +62,11 @@ export function PageContextBar({
     >
       <div
         className={cn(
-          "flex min-w-0 flex-1 flex-col gap-2",
+          "flex min-w-0 flex-1 flex-col gap-2 sm:basis-64",
           placesMetaInMiddle ? "lg:basis-0" : undefined,
         )}
       >
-        <div className="flex min-w-0 flex-col gap-1.5 md:flex-row md:items-baseline md:gap-4">
+        <div className="flex min-w-0 flex-col gap-1.5 md:flex-row md:flex-wrap md:items-baseline md:gap-4">
           <PageContextTitle>{title}</PageContextTitle>
           {description ? (
             <p
@@ -77,7 +78,10 @@ export function PageContextBar({
           ) : null}
         </div>
         {meta && !placesMetaInMiddle ? (
-          <div className="min-w-0 text-xs text-muted-foreground" data-slot="page-context-meta">
+          <div
+            className="min-w-0 text-xs text-muted-foreground"
+            data-slot="page-context-meta"
+          >
             {meta}
           </div>
         ) : null}
@@ -90,16 +94,20 @@ export function PageContextBar({
           {meta}
         </div>
       ) : null}
-      {(status || actions) ? (
+      {status || actions ? (
         <div
           className={cn(
-            "flex min-w-0 flex-wrap items-center gap-2 sm:ml-3 sm:shrink-0 sm:justify-end",
-            placesMetaInMiddle ? "lg:ml-3" : undefined,
+            "flex min-w-0 max-w-full flex-wrap items-center gap-2 sm:justify-end",
+            placesMetaInMiddle ? "lg:justify-end" : undefined,
           )}
           data-slot="page-context-actions"
         >
           {status ? <div className="min-w-0">{status}</div> : null}
-          {actions ? <div className="shrink-0">{actions}</div> : null}
+          {actions ? (
+            <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2">
+              {actions}
+            </div>
+          ) : null}
         </div>
       ) : null}
     </div>

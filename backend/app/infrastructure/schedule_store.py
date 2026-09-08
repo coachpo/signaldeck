@@ -109,7 +109,11 @@ class ScheduleStore:
         )
 
     def save(
-        self, definition: ScheduleDefinition, schedule_id: str | None = None
+        self,
+        definition: ScheduleDefinition,
+        schedule_id: str | None = None,
+        *,
+        create_only: bool = False,
     ) -> ScheduleRecord:
         schedule_id = schedule_id or str(uuid4())
         with self.session_factory() as session, session.begin():
@@ -126,6 +130,13 @@ class ScheduleStore:
                     updated_at=datetime.now(UTC),
                 )
                 session.add(row)
+            elif create_only:
+                if row.definition != payload:
+                    raise ApplicationError(
+                        "schedule_identity_conflict",
+                        "This creation request already has different settings",
+                        status=409,
+                    )
             else:
                 row.definition = payload
                 row.revision += 1

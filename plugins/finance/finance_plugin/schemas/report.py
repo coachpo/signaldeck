@@ -107,6 +107,8 @@ class ReportReadMetadata(ReportMetadata):
 
 
 class ReportCompileCreate(CamelModel):
+    expected_content: str | None = None
+    expected_compiled: str | None = None
     metadata: ReportMetadata = Field(default_factory=ReportMetadata)
     inputs: dict[str, str] = Field(default_factory=dict)
 

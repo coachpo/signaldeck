@@ -1,3 +1,5 @@
+import { scheduleFireLabel } from "@/lib/schedule-frequency";
+import { useDisplayMode } from "@/hooks/use-display-mode";
 import { Link } from "react-router";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,25 +15,23 @@ import { useScheduleFires } from "@/hooks/use-workflow-platform";
 import { RequestError } from "./feedback";
 export function ScheduleFireHistory({ scheduleId }: { scheduleId: string }) {
   const query = useScheduleFires(scheduleId);
+  const { expert } = useDisplayMode();
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Fire history</CardTitle>
+        <CardTitle>执行记录</CardTitle>
         <CardDescription>
-          Each fire retains its own identity, launch outcome and linked
-          execution.
+          每次执行保留独立来源、实际状态和对应结果。
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
         <Button variant="outline" onClick={() => void query.refetch()}>
-          Refresh fire history
+          刷新执行记录
         </Button>
         <RequestError error={query.error} />
-        {query.isPending && (
-          <InventoryStatePanel title="Loading fire history…" />
-        )}
+        {query.isPending && <InventoryStatePanel title="正在读取执行记录…" />}
         {query.data?.items.length === 0 && (
-          <InventoryStatePanel title="No fires recorded" />
+          <InventoryStatePanel title="暂无执行记录" />
         )}
         {query.data?.items.map((fire) => (
           <article
@@ -40,7 +40,7 @@ export function ScheduleFireHistory({ scheduleId }: { scheduleId: string }) {
           >
             <div className="flex flex-wrap items-center gap-2">
               <ResourceStatusBadge
-                label={fire.status}
+                label={scheduleFireLabel(fire.status)}
                 tone={
                   ["failed", "launch_failed"].includes(fire.status)
                     ? "danger"
@@ -53,20 +53,23 @@ export function ScheduleFireHistory({ scheduleId }: { scheduleId: string }) {
               {fire.runId ? (
                 <Button asChild variant="outline">
                   <Link to={`/runs/${encodeURIComponent(fire.runId)}`}>
-                    Inspect run {fire.runId}
+                    查看结果
                   </Link>
                 </Button>
               ) : (
                 <span className="text-sm text-muted-foreground">
-                  Run not created
+                  尚未生成结果
                 </span>
               )}
             </div>
-            <code className="break-all text-xs">Fire {fire.triggerId}</code>
-            <p className="break-all text-xs text-muted-foreground">
-              Engine workflow {fire.engineWorkflowId} · execution{" "}
-              {fire.engineRunId}
-            </p>
+            <details open={expert}>
+              <summary className="cursor-pointer text-xs">技术来源</summary>
+              <code className="break-all text-xs">Fire {fire.triggerId}</code>
+              <p className="break-all text-xs text-muted-foreground">
+                Engine workflow {fire.engineWorkflowId} · execution{" "}
+                {fire.engineRunId}
+              </p>
+            </details>
             {fire.errorCode && (
               <p className="text-sm text-destructive">{fire.errorCode}</p>
             )}

@@ -9,6 +9,7 @@ from typing import Any
 from sqlalchemy import select, text
 from sqlalchemy.orm import Session, sessionmaker
 
+from app.application.result_projection import run_title
 from app.domain.execution import (
     ApplicationError,
     ExecutionEvidence,
@@ -33,6 +34,7 @@ class PlatformRunStore(PlatformProjectionStore):
         return RunSummary.model_validate(
             dict(
                 id=row.id,
+                title=run_title(row.spec),
                 package_key=row.spec["packageKey"],
                 workflow_key=row.spec["workflowKey"],
                 package_hash=row.spec["packageHash"],
@@ -102,8 +104,13 @@ class PlatformRunStore(PlatformProjectionStore):
             evidence = session.scalars(
                 select(EvidenceRow).where(EvidenceRow.run_id == run_id).order_by(EvidenceRow.id)
             ).all()
+            summary = self._summary(row)
+            summary.has_unknown_effects = any(
+                item.payload.get("status") == "unknown" and item.payload.get("kind") != "attempt"
+                for item in evidence
+            )
             return RunDetail(
-                **self._summary(row).model_dump(),
+                **summary.model_dump(),
                 spec=ResolvedRunSpec.model_validate(row.spec),
                 output=deepcopy(row.output),
                 error_code=row.error_code,

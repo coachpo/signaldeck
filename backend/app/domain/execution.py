@@ -25,7 +25,7 @@ type EvidenceKind = Literal["node", "agent", "model", "tool", "attempt"]
 
 
 class LaunchOrigin(CamelModel):
-    kind: Literal["manual", "rerun", "schedule"] = "manual"
+    kind: Literal["manual", "rerun", "reuse", "schedule"] = "manual"
     source_run_id: str | None = None
     schedule_id: str | None = None
     trigger_id: str | None = None
@@ -50,6 +50,8 @@ class ResolvedRunSpec(CamelModel):
 
 
 class RunSummary(CamelModel):
+    title: str = ""
+    has_unknown_effects: bool = False
     id: str
     package_key: str
     workflow_key: str

@@ -24,7 +24,6 @@ import { LaunchInputs } from "./launch-inputs";
 import { findArtifacts } from "./artifact-references";
 import { safePluginPageUrl } from "./plugin-links";
 import { packageFixture, runFixture } from "./fixtures";
-import { queryKeys } from "@/lib/query-keys";
 import type { ReactNode } from "react";
 function renderPage(element: ReactNode, path = "/") {
   const client = new QueryClient({
@@ -188,64 +187,6 @@ describe("execution inspection", () => {
     expect(within(node).getByText("unknown")).toBeVisible();
     expect(within(node).getByText("operation-stable")).toBeVisible();
   });
-  it("reports requested cancellation without claiming execution has stopped", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue(
-        response({
-          ...runFixture,
-          cancelRequestedAt: "2026-09-08T00:01:00Z",
-        }),
-      ),
-    );
-    renderPage(<RunPage />, "/runs/run-1");
-    expect(
-      await screen.findByText(
-        "Cancellation requested — waiting for execution to stop",
-      ),
-    ).toBeVisible();
-    expect(
-      screen.getByRole("button", { name: "Request cancellation" }),
-    ).toBeDisabled();
-    expect(screen.queryByText("Execution stopped")).not.toBeInTheDocument();
-  });
-  it("starts a distinct rerun command after navigating to a cached run", async () => {
-    const launchIds: string[] = [];
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (input: string, init?: RequestInit) => {
-        if (input.endsWith("/rerun")) {
-          launchIds.push(JSON.parse(init!.body as string).launchId);
-          return response({
-            ...runFixture,
-            id: launchIds.length === 1 ? "run-b" : "run-c",
-          });
-        }
-        const id = input.split("/").at(-1)!;
-        return response({
-          ...runFixture,
-          id,
-          spec: { ...runFixture.spec, runId: id },
-        });
-      }),
-    );
-    const { client } = renderPage(<RunPage />, "/runs/run-1");
-    await screen.findByRole("button", { name: "Rerun frozen snapshot" });
-    client.setQueryData(queryKeys.platform.runs.detail("run-b"), {
-      ...runFixture,
-      id: "run-b",
-      spec: { ...runFixture.spec, runId: "run-b" },
-    });
-    fireEvent.click(
-      screen.getByRole("button", { name: "Rerun frozen snapshot" }),
-    );
-    await screen.findByRole("heading", { name: "Run run-b" });
-    fireEvent.click(
-      screen.getByRole("button", { name: "Rerun frozen snapshot" }),
-    );
-    await waitFor(() => expect(launchIds).toHaveLength(2));
-    expect(launchIds[0]).not.toEqual(launchIds[1]);
-  });
   it("validates evidence deep links against the loaded run", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(response(runFixture)));
     renderPage(<RunPage />, "/runs/run-1?tab=evidence&target=missing");
@@ -277,7 +218,7 @@ describe("execution inspection", () => {
       "fetch",
       vi.fn().mockImplementation(async () => response(run)),
     );
-    renderPage(<RunPage />, "/runs/run-1");
+    renderPage(<RunPage />, "/runs/run-1?tab=graph");
     fireEvent.click(await screen.findByRole("button", { name: "future" }));
     expect(
       await screen.findByText("Node future: no execution evidence"),

@@ -632,3 +632,95 @@ def test_engine_time_zone_and_catchup_window_after_restart(stores, tmp_path):
             await environment.shutdown()
 
     asyncio.run(scenario())
+
+
+def test_calendar_preview_uses_temporal_without_launching(stores):
+    from app.domain.schedules import ScheduleCalendar
+    from app.infrastructure.schedule_preview import preview_calendar, preview_saved
+
+    async def scenario():
+        async with stack(stores) as (client, service):
+            preview = await preview_calendar(
+                service, ScheduleCalendar(cron="30 9 * * 1", time_zone="Europe/Helsinki")
+            )
+            assert preview.scope == "draft"
+            assert len(preview.times) == 5
+            for instant in preview.times:
+                local = instant.astimezone(ZoneInfo("Europe/Helsinki"))
+                assert (local.weekday(), local.hour, local.minute) == (0, 9, 30)
+            assert stores[1].list() == []
+            remaining = [item async for item in await client.list_schedules()]
+            assert not [item for item in remaining if item.id.startswith("signaldeck-preview:")]
+            record = await service.save(definition())
+            applied = await preview_saved(service, record.id)
+            assert applied.scope == "applied"
+            assert applied.desired_revision == applied.synced_revision == record.revision
+            assert applied.applied_note == f"SignalDeck revision {record.revision}"
+            pending = service.store.save(
+                definition().model_copy(update={"time_zone": "America/New_York"}), record.id
+            )
+            still_applied = await preview_saved(service, record.id)
+            assert still_applied.desired_revision == pending.revision
+            assert still_applied.synced_revision == record.revision
+            assert still_applied.time_zone == "UTC"
+            assert still_applied.applied_note == f"SignalDeck revision {record.revision}"
+            await service.delete(record.id)
+
+    asyncio.run(scenario())
+
+
+def test_calendar_preview_dst_matches_installed_temporal(stores):
+    from app.domain.schedules import ScheduleCalendar
+    from app.infrastructure.schedule_preview import preview_calendar
+
+    async def scenario():
+        async with stack(stores) as (_, service):
+            calendar = ScheduleCalendar(cron="30 3 * * *", time_zone="Europe/Helsinki")
+            spring = await preview_calendar(
+                service, calendar, start_at=datetime(2030, 3, 30, tzinfo=UTC)
+            )
+            autumn = await preview_calendar(
+                service, calendar, start_at=datetime(2030, 10, 26, tzinfo=UTC)
+            )
+            assert spring.times[:2] == [
+                datetime(2030, 3, 30, 1, 30, tzinfo=UTC),
+                datetime(2030, 4, 1, 0, 30, tzinfo=UTC),
+            ]
+            # The installed server skips the missing spring time and chooses the
+            # second instance of Helsinki's repeated autumn wall-clock time once.
+            assert autumn.times[:3] == [
+                datetime(2030, 10, 26, 0, 30, tzinfo=UTC),
+                datetime(2030, 10, 27, 1, 30, tzinfo=UTC),
+                datetime(2030, 10, 28, 1, 30, tzinfo=UTC),
+            ]
+
+    asyncio.run(scenario())
+
+
+def test_creation_identity_survives_failed_sync_without_duplicate_schedule(stores, monkeypatch):
+    async def scenario():
+        async with stack(stores) as (_, service):
+            actual_apply = service._apply
+
+            async def unavailable(_):
+                raise ApplicationError("schedule_sync_failed", "Unavailable", status=503)
+
+            monkeypatch.setattr(service, "_apply", unavailable)
+            with pytest.raises(ApplicationError):
+                await service.save(definition(), "stable-creation", create_only=True)
+            pending = service.store.get("stable-creation")
+            assert pending.sync_status == "failed"
+            monkeypatch.setattr(service, "_apply", actual_apply)
+            saved = await service.save(definition(), "stable-creation", create_only=True)
+            assert saved.revision == 1
+            assert saved.sync_status == "synced"
+            assert len(service.store.list()) == 1
+            with pytest.raises(ApplicationError, match="different settings"):
+                await service.save(
+                    definition().model_copy(update={"name": "Changed"}),
+                    "stable-creation",
+                    create_only=True,
+                )
+            await service.delete(saved.id)
+
+    asyncio.run(scenario())

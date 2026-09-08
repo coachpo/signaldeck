@@ -10,6 +10,7 @@ v2 数据模型替换旧 workflow/step/extension 表合同；本文不描述旧�
 | --- | --- |
 | `platform_package_revisions` | `(package_key, package_hash)` 主键；保存规范化 YAML、定义、所有 Workflow compiled plans 和创建时间。同身份的内容必须一致。 |
 | `platform_packages` | 当前包指针：每个 `package_key` 指向一个已有内容 hash。历史修订不随指针更新而改写。 |
+| `platform_task_presets` | 可选命名输入组合及任务收藏：稳定 ID、名称、package/workflow key、校验时 package hash、JSON 输入 parameters、收藏/置顶和时间戳。与包、运行、计划无级联删除关系；不充当执行定义。 |
 | `platform_resources` | model/tool 资源；非敏感 config、加密且默认 deferred 的 credentials、presence 和 credential revision。 |
 | `platform_plugin_releases` | `(plugin_id, artifact_digest)` 主键；保存不可变发布描述及工具契约。 |
 | `platform_plugins` | 插件当前发布指针和 enabled 状态；不保存插件业务实例。 |
@@ -21,6 +22,18 @@ v2 数据模型替换旧 workflow/step/extension 表合同；本文不描述旧�
 Run 创建、身份冲突检查、取消请求和投递确认由 [`PlatformRunStore`](../backend/app/infrastructure/platform_run_store.py) 管理；证据写入与成功结果保护由 [`evidence_records.py`](../backend/app/infrastructure/evidence_records.py) 和 [`evidence_store.py`](../backend/app/infrastructure/evidence_store.py) 管理。不可变性由事务、身份锁及写入边界校验共同实现，不应表述为所有 JSONB 列均具数据库 immutable constraint。
 
 Run status 为 `queued`、`running`、`succeeded`、`failed`、`cancelled`；evidence status 还包括 `pending`、`blocked`、`skipped`、`timed_out`、`unknown`。取消请求只设置请求时间并产生 command，不能直接把正在执行的 Run 改成 cancelled。最终 projection 消费引擎终态，不拥有调度权。
+
+## 常用配置与收藏
+
+[`task_preset_store.py`](../backend/app/infrastructure/task_preset_store.py) 定义独立新增表 `platform_task_presets`；初始化注册到同一 Core metadata，再由现有加锁 `create_all` 创建缺失表，不修改已有表或处置实例数据。`/api/task-presets` 提供列表、创建、读取、完整更新与删除。
+
+API 使用 `hasParameters` 区分命名业务输入与无输入收藏：为 `true` 时，`parameters` 可以是符合 Workflow input schema 的对象、数组、标量或显式 JSON `null`；为 `false` 时只收藏任务，不能同时携带非 null 输入。创建和完整更新沿用同一规则。为兼容既有请求，省略 `hasParameters` 时根据非 null 的 `parameters` 推断为 `true`；参数缺失或为 null 则推断为 `false`。要保存有效的 JSON null 输入，必须明确发送 `hasParameters: true`。
+
+存储继续使用原有可空 JSONB `parameters` 列，不新增 `hasParameters` 列。既有无输入收藏保存为 JSONB 的 JSON null；显式有效 JSON null 输入保存为 SQL NULL；其他 JSON 值原样保存。读取通过原值及 `parameters IS NULL` 查询投影推导 `hasParameters`，保留既有收藏含义，不重解释或重写旧记录。
+
+保存时锁定当前包指针并核对调用者的 `packageHash`；有输入时按现有闭合 input schema 完整校验并拒绝凭据字段，不读取或复制资源凭据。读取会按当前定义重校验并返回当前 hash、`hasParameters`、`needsRevalidation`、安全诊断和验证状态；无输入收藏在定义可用时为 `not_applicable`，显式 null 输入仍参与 schema 校验。定义变化不会丢弃字段或改写原输入，版本不符的保存返回 409，待用户核对当前版本后再次保存。列表按置顶、收藏、更新时间排序。
+
+保存与删除配置均不创建运行或计划，也不改写包、既有运行快照或结果。配置仅提供重新填入业务表单的输入来源，执行仍通过 Workflow Package/v2 和既有启动边界完成。
 
 ## 计划与限流/缓存
 
@@ -45,7 +58,7 @@ Run status 为 `queued`、`running`、`succeeded`、`failed`、`cancelled`；evi
 
 编辑资源配置而不提交 credentials 会保留凭据 revision；显式写入新的 credentials 会生成新 revision。I/O 使用 `resolve_bound_credentials` 核对固定 revision；旧 revision 被轮换后不再可用，返回 `resource_binding_changed`。系统没有历史凭据归档，也不允许旧 Run 默默使用当前新凭据。历史快照和证据读取仍不依赖解密或外部服务。
 
-新 Run 默认使用当前包及绑定；rerun 使用原包修订和参数，但重新解析当前资源/插件/Core 并生成新 deadline 与 Run ID，origin 保存 `sourceRunId`。新运行不继承原运行结果。schedule origin 还保存 schedule、trigger 和 scheduled time。
+新 Run 默认使用当前包及绑定；rerun 使用原包修订和参数，但重新解析当前资源/插件/Core 并生成新 deadline 与 Run ID，origin 保存 `sourceRunId`。修改输入复用同样固定原包修订，保存用户修改后的参数，origin.kind 为 `reuse` 且记录 `sourceRunId`。新运行不继承原运行结果。schedule origin 还保存 schedule、trigger 和 scheduled time。
 
 ## 执行证据与内容寻址存储
 

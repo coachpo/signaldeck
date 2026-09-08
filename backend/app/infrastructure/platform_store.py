@@ -30,6 +30,8 @@ class PlatformStore(PlatformRunStore):
         self.artifacts = artifacts
 
     def initialize(self) -> None:
+        from app.infrastructure.task_preset_store import TaskPresetRow  # noqa: F401
+
         with self.session_factory() as session, session.begin():
             lock_identity(session, "platform-schema-initialization")
             PlatformBase.metadata.create_all(session.connection())

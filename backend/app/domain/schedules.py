@@ -9,16 +9,9 @@ from pydantic import Field, JsonValue, field_validator
 from app.schemas.common import CamelModel
 
 
-class ScheduleDefinition(CamelModel):
-    name: str = Field(min_length=1, max_length=200)
-    package_key: str = Field(min_length=1)
-    workflow_key: str = Field(min_length=1)
-    parameters: JsonValue = Field(default_factory=dict)
+class ScheduleCalendar(CamelModel):
     cron: str = Field(min_length=1, max_length=256)
     time_zone: str = "UTC"
-    overlap_policy: Literal["skip", "buffer_one", "allow"] = "skip"
-    catchup_window_seconds: int = Field(default=60, ge=10)
-    paused: bool = False
 
     @field_validator("time_zone")
     @classmethod
@@ -36,6 +29,27 @@ class ScheduleDefinition(CamelModel):
         if "TZ=" in value or "\n" in value or "\r" in value:
             raise ValueError("Set the time zone separately from the cron expression")
         return value
+
+
+class SchedulePreview(CamelModel):
+    time_zone: str
+    times: list[datetime]
+    observed_at: datetime
+    scope: Literal["draft", "applied"]
+    desired_revision: int | None = None
+    synced_revision: int | None = None
+    applied_note: str | None = None
+    paused: bool = False
+
+
+class ScheduleDefinition(ScheduleCalendar):
+    name: str = Field(min_length=1, max_length=200)
+    package_key: str = Field(min_length=1)
+    workflow_key: str = Field(min_length=1)
+    parameters: JsonValue = Field(default_factory=dict)
+    overlap_policy: Literal["skip", "buffer_one", "allow"] = "skip"
+    catchup_window_seconds: int = Field(default=60, ge=10)
+    paused: bool = False
 
 
 class ScheduleRecord(ScheduleDefinition):
