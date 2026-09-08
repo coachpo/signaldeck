@@ -54,7 +54,9 @@ Backend pytest 的数据库 fixture 优先使用 `TEST_DATABASE_URL`，其次使
 
 Playwright 使用 `DATABASE_URL`（不读取 `TEST_DATABASE_URL`，缺省为 backend 的本地 25432 地址），要求 PostgreSQL 已可连接并具备同样的建库/删库权限。还需安装上述固定版本的 Temporal CLI；可通过 `TEMPORAL_CLI` 指定可执行文件，否则启动器依次查找 `/tmp/sd-temporal-bin/temporal` 和 PATH 中的 `temporal`，版本不匹配会拒绝启动。
 
-E2E 启动器创建独立的 `signaldeck_e2e_*` 库和临时目录，启动 Temporal（默认 RPC 17233）、fake OpenAI-compatible provider（18081）、dispatcher、固定制品 worker、backend（8001）和 frontend preview（4173）。`SIGNALDECK_E2E_TEMPORAL_PORT` 与 `SIGNALDECK_FAKE_PROVIDER_PORT` 可改写前两者端口。测试使用 fake provider，不需要真实 LLM key；结束时清理所拥有的进程、临时目录和临时库，不复用已有 web server。测试约束见 [`backend/tests/AGENTS.md`](backend/tests/AGENTS.md)，三引擎比较的范围和复现入口见 [`docs/执行引擎比较.md`](docs/执行引擎比较.md)。
+E2E 启动器创建独立的 `signaldeck_e2e_*` Core 库、Notes/Finance/Oracle 插件库和临时目录，启动 Temporal（默认 RPC 17233）、fake OpenAI-compatible provider（18081）、Notes（18082）、Finance（18083）、Oracle（18084）、dispatcher、固定制品 worker、backend（8001）和 frontend preview（4173）。Temporal 与模型端口由 `SIGNALDECK_E2E_TEMPORAL_PORT`、`SIGNALDECK_FAKE_PROVIDER_PORT` 改写；插件端口分别由 `SIGNALDECK_E2E_NOTES_PORT`、`SIGNALDECK_E2E_FINANCE_PORT`、`SIGNALDECK_E2E_ORACLE_PORT` 改写。
+
+启动器提供测试专用的普通连接预设，插件使用受控业务端点，模型使用 fake provider，不需要真实 LLM key。结束时清理所拥有的进程、临时目录和临时库，不复用已有 web server；测试输出的截图和报告保存在 Git 忽略的目录中。测试约束见 [`backend/tests/AGENTS.md`](backend/tests/AGENTS.md) 和 [`frontend/e2e/AGENTS.md`](frontend/e2e/AGENTS.md)，三引擎比较的范围和复现入口见 [`docs/执行引擎比较.md`](docs/执行引擎比较.md)。
 
 ### 本地数据保留
 
@@ -82,6 +84,14 @@ Frontend：
 (cd frontend && pnpm exec playwright install --with-deps chromium)
 (cd frontend && pnpm test:e2e)
 ```
+
+涉及取消后的未知写效果、插件离线或执行服务停止后的历史读取时，补充独立故障配置：
+
+```bash
+(cd frontend && pnpm exec playwright test --config playwright.fault.config.ts)
+```
+
+该配置串行运行 `faults.spec.ts`，在插件关闭后停止启动器自己创建的 Temporal，再核对历史结果和调用证据。普通 E2E 同样覆盖该用例的插件离线分支，但不停止 Temporal；两个配置应分别运行。Finance 自有页面、模板和报告的专项回归入口见 [`plugins/finance/README.md`](plugins/finance/README.md#验证)。
 
 若变更了根 Dockerfile，补充运行：
 

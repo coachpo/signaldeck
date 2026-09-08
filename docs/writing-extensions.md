@@ -41,7 +41,7 @@ Finance、Digital Oracle 和非金融 Notes 的构建、配置及本地运行入
 
 当前示例服务的 `GET /release` 提供描述，`GET /health` 提供运行发布身份。通过 Core `POST /api/plugins` 安装描述，`PATCH /api/plugins/{publisher}/{plugin}` 修改 enabled。同 plugin/artifact 身份不能登记不同描述。目录读取仅返回保存的描述和已有 operation health observation，不连接插件；禁用的无关插件不参与 launch 解析。
 
-每次调用 `_meta["signaldeck/release"]` 携带四字段精确身份：pluginId、releaseId、artifactDigest、contractDigest。MCP adapter 验证协议、工具集合与发布绑定，插件也拒绝身份不符的业务调用。当前插件的制品摘要覆盖 VERSION、发布代码、web assets、Dockerfile 和锁文件；Oracle 还绑定已解析的非敏感部署设置。
+每次调用 `_meta["signaldeck/release"]` 携带四字段精确身份：pluginId、releaseId、artifactDigest、contractDigest。MCP adapter 验证协议、工具集合与发布绑定，插件也拒绝身份不符的业务调用。当前插件的制品摘要覆盖插件目录及共享 runtime 下的全部分发文件，包括 VERSION、发布代码、web assets、Dockerfile、锁文件及随包文档（排除 `__pycache__`、`.venv` 和 `.git`）；Finance 和 Oracle 还绑定已解析的非敏感 provider 设置。修改随包文档同样会改变新进程启动时计算的制品身份。
 
 ## 资源、凭据与业务数据
 

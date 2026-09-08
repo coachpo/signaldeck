@@ -19,9 +19,11 @@ v2 数据模型替换旧 workflow/step/extension 表合同；本文不描述旧�
 | `platform_evidence` | 调用证据 ID、Run ID、parent ID 和 payload。payload 区分 node、agent、model、tool、attempt，并含 status、输入输出、时间和安全 metadata。 |
 | `platform_tool_operations` | 与工具 evidence ID 对应的 operation 状态机；保存 effect、输入摘要、参数、调用上下文和已确认结果。 |
 
-Run 创建、身份冲突检查、取消请求和投递确认由 [`PlatformRunStore`](../backend/app/infrastructure/platform_run_store.py) 管理；证据写入与成功结果保护由 [`evidence_records.py`](../backend/app/infrastructure/evidence_records.py) 和 [`evidence_store.py`](../backend/app/infrastructure/evidence_store.py) 管理。不可变性由事务、身份锁及写入边界校验共同实现，不应表述为所有 JSONB 列均具数据库 immutable constraint。
+Run 创建、身份冲突检查、取消请求和投递确认由 [`PlatformRunStore`](../backend/app/infrastructure/platform_run_store.py) 管理；证据写入、调用身份及已确认终态保护由 [`evidence_records.py`](../backend/app/infrastructure/evidence_records.py) 和 [`evidence_store.py`](../backend/app/infrastructure/evidence_store.py) 管理。不可变性由事务、身份锁及写入边界校验共同实现，不应表述为所有 JSONB 列均具数据库 immutable constraint。
 
 Run status 为 `queued`、`running`、`succeeded`、`failed`、`cancelled`；evidence status 还包括 `pending`、`blocked`、`skipped`、`timed_out`、`unknown`。取消请求只设置请求时间并产生 command，不能直接把正在执行的 Run 改成 cancelled。最终 projection 消费引擎终态，不拥有调度权。
+
+业务标题从固定 spec 的参数和定义派生，`hasUnknownEffects` 从非 `attempt` evidence 的 `unknown` 状态派生；它们没有独立持久列。业务结果阅读模型由 Run 输出和已确认的节点/工具输出投影，不另存结果表。历史筛选、计数与排序在数据库完成；分页的 `snapshotAt` 仅限制 Run 创建时间上界。查询与阅读边界见 [`架构说明`](架构说明.md#前端与-http)。
 
 ## 常用配置与收藏
 
@@ -47,6 +49,8 @@ API 使用 `hasParameters` 区分命名业务输入与无输入收藏：为 `tru
 | `platform_read_tool_cache` | cache key 指向已确认只读工具 operation，保存 fetched/expiry 时间；不另存可变结果副本。 |
 
 计划表是期望配置和查询来源，Temporal Schedule 负责日历、时区、重叠和补触发。fire action 等待完整 Run 结束；投影修复关联与终态不启动新执行。删除计划记录删除意图并同步引擎，保留其本地记录、triggers、fires 和历史 Run。相关实现为 [`schedule_store.py`](../backend/app/infrastructure/schedule_store.py)、[`schedule_fires.py`](../backend/app/infrastructure/schedule_fires.py)。
+
+创建请求提供 `requestId` 时，该值作为持久 schedule ID；同身份、同定义重试复用原记录并继续同步，不增加 revision，不同定义返回 409 `schedule_identity_conflict`。HTTP 创建恢复先检查已提交的身份，再决定是否校验当前包，因此包暂不可用或 schema 已改变不会阻断原创建请求的重试。
 
 读缓存必须由 Agent 的 `toolCache` 显式声明，只支持 read 工具。缓存键绑定 release、input 和 resource 身份；读取使用原 operation 的不可变输出与来源。`cacheProvenance` 保存 hit、cacheKey、sourceRunId、sourceOperationId、fetchedAt 和 expiresAt，实际有效期同时受来源记录和当前请求 TTL 限制。当前 Run 的确认恢复不通过跨 Run cache。参见 [`tool_cache_store.py`](../backend/app/infrastructure/tool_cache_store.py)。
 
@@ -93,4 +97,4 @@ Finance 的普通 report API 与 Agent report 写入有不同生命周期：Agen
 
 根 Compose 使用独立 `.signaldeck-target` 数据目录和独立 Core/Finance/Notes 数据库，不读取、重置或迁移旧模型连接、工作流、运行、模板及报告表。切换到该数据布局需要按 STATUS 数据政策处理；初始化路径不提供旧数据迁移。
 
-持久化回归入口包括 [`test_platform_persistence.py`](../backend/tests/test_platform_persistence.py)、[`test_execution_projection.py`](../backend/tests/test_execution_projection.py)、[`test_artifact_store_target.py`](../backend/tests/test_artifact_store_target.py)、[`test_target_seeds.py`](../backend/tests/test_target_seeds.py)、[`test_independent_plugins.py`](../backend/tests/test_independent_plugins.py) 和 [`test_terminal_projection_cancellation.py`](../backend/tests/test_terminal_projection_cancellation.py)。这些入口与实际 Temporal/Worker 集成验收的完成记录一同由 [`STATUS.md`](../STATUS.md) 关联。
+持久化回归入口包括 [`test_platform_persistence.py`](../backend/tests/test_platform_persistence.py)、[`test_execution_projection.py`](../backend/tests/test_execution_projection.py)、[`test_artifact_store_target.py`](../backend/tests/test_artifact_store_target.py)、[`test_target_seeds.py`](../backend/tests/test_target_seeds.py)、[`test_independent_plugins.py`](../backend/tests/test_independent_plugins.py) 和 [`test_terminal_projection_cancellation.py`](../backend/tests/test_terminal_projection_cancellation.py)。常用配置、派生结果和计划创建身份分别见 [`test_task_presets.py`](../backend/tests/test_task_presets.py)、[`test_task_experience.py`](../backend/tests/test_task_experience.py) 和 [`test_target_schedules.py`](../backend/tests/test_target_schedules.py)。这些入口与实际 Temporal/Worker 集成验收的完成记录一同由 [`STATUS.md`](../STATUS.md) 关联。

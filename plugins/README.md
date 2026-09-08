@@ -4,7 +4,7 @@ These services are separately built Python artifacts. No service imports the Cor
 
 | Artifact | Business ownership | MCP endpoint | Additional surface |
 | --- | --- | --- | --- |
-| `finance` | Templates, Reports, market quotes/history/OHLCV/indicators/fundamentals/news/social sentiment/insider data | `/mcp/` | Finance page `/`; own `/api/templates` and `/api/reports` |
+| `finance` | Templates, Reports, market quotes/history/OHLCV/indicators/fundamentals/news/social sentiment/insider data | `/mcp/` | [Report workspace](finance/README.md) at `/`; own `/api/templates` and `/api/reports` |
 | `digital_oracle` | Prediction markets, SEC filings, market sentiment, macro rates, crypto derivatives, CFTC positioning and options providers | `/mcp/` | Stateless provider service |
 | `notes` | Non-financial immutable notes and collection search | `/mcp/` | Own PostgreSQL business records |
 
@@ -54,7 +54,7 @@ The Gateway sends only the granted resource scopes in `_meta["signaldeck/context
 
 ## Operations and upgrades
 
-Each business invocation carries the exact four-field release identity in `_meta["signaldeck/release"]`: `pluginId`, `releaseId`, `artifactDigest`, `contractDigest`. A process rejects a different binding. `VERSION`, distributed code, web assets, Dockerfile and lockfile bytes determine artifact identity; Oracle additionally binds its resolved non-sensitive deployment settings to that identity; the contract digest independently covers all advertised tool definitions.
+Each business invocation carries the exact four-field release identity in `_meta["signaldeck/release"]`: `pluginId`, `releaseId`, `artifactDigest`, `contractDigest`. A process rejects a different binding. All distributed files under the plugin and shared runtime directories determine artifact identity, including `VERSION`, code, web assets, Dockerfile, lockfiles and packaged documentation; only `__pycache__`, `.venv` and `.git` are excluded. Finance and Oracle also bind their resolved non-sensitive provider settings to that identity. The contract digest independently covers all advertised tool definitions. Packaged documentation changes therefore affect the artifact identity computed when a new process starts.
 
 Release upgrades use a **new immutable artifact and endpoint**. Retain the old image/process and old endpoint while frozen Runs still reference them. Changing a running endpoint to a new release causes old requests to fail explicitly; it does not substitute new code. The independent upgrade test runs Notes 1.0.0 and 1.1.0 simultaneously, confirms distinct artifact identity, rejects a mismatched binding, and continues calls to the original release.
 

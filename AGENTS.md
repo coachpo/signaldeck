@@ -11,11 +11,11 @@ SignalDeck is a trusted single-user Agent workflow platform: YAML Workflow Packa
 
 | Change | Start here |
 | --- | --- |
-| Backend APIs, definitions, persistence, and execution | [backend/app/AGENTS.md](backend/app/AGENTS.md); HTTP composition starts in `backend/app/main.py`, domain contracts in `backend/app/domain/`, application ports in `backend/app/application/`, adapters in `backend/app/infrastructure/`. |
+| Backend APIs, definitions, persistence, and execution | [backend/app/AGENTS.md](backend/app/AGENTS.md); HTTP composition starts in `backend/app/main.py`, domain contracts in `backend/app/domain/`, use cases and ports in `backend/app/application/`, adapters in `backend/app/infrastructure/`. |
 | Independent plugins, providers, Templates, and Reports | [plugin integration](docs/writing-extensions.md) and [plugin artifacts](plugins/README.md); Finance owns Templates and Reports under `plugins/finance/`. |
 | Worker recovery, launch delivery, and schedules | `backend/app/workers/artifact_worker.py`, `command_dispatcher.py` and `schedule_fire.py`; Temporal adapters live in `backend/app/infrastructure/`. |
 | Backend regression coverage | [backend/tests/AGENTS.md](backend/tests/AGENTS.md). |
-| Frontend routes, authoring, and run inspection | [frontend/AGENTS.md](frontend/AGENTS.md); route ownership starts in `frontend/src/routes.ts`, with local guides under affected features and E2E. |
+| Frontend tasks, results, settings, and expert authoring | [frontend/AGENTS.md](frontend/AGENTS.md); route ownership starts in `frontend/src/routes.ts`, with local guides under affected features and E2E. |
 | Workflow Package examples | [demo/AGENTS.md](demo/AGENTS.md); check corresponding bundled seeds and package contract tests. |
 | Documentation | [docs/AGENTS.md](docs/AGENTS.md) and the canonical navigation below. |
 | Product behavior and architecture | [Product specification](docs/产品说明.md), [architecture](docs/架构说明.md) and [development rules](docs/开发规范.md); completed iteration history is in [STATUS.md](STATUS.md#已完成迭代). |

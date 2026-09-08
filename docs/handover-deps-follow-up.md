@@ -14,6 +14,22 @@
 
 FastAPI 封顶仍在仓库中；当前锁文件尚未采用解除封顶要求的 OpenTelemetry 版本组合。这个状态不代表当前 PyPI 发布状态。
 
+## 当前工具链与独立锁文件
+
+最近的依赖更新已进入 Core 与前端的 manifest 和锁文件：
+
+| 范围 | 当前锁定版本 | 依据 |
+| --- | --- | --- |
+| Core HTTP 与持久化 | Uvicorn `0.51.0`、SQLAlchemy `2.0.52` | [`backend/pyproject.toml`](../backend/pyproject.toml)、[`backend/uv.lock`](../backend/uv.lock) |
+| 后端格式化 | Black `26.5.1`、isort `8.0.1` | 同上；声明分别为 `>=26.5.1,<27.0`、`>=8.0.1,<9.0` |
+| 前端运行库 | React / React DOM `19.2.8`、React Router `8.2.0`、TanStack Query `5.102.8` | [`frontend/package.json`](../frontend/package.json)、[`frontend/pnpm-lock.yaml`](../frontend/pnpm-lock.yaml) |
+| 前端构建与样式 | TypeScript `6.0.3`、Vite `8.2.2`、Tailwind CSS `4.3.3` | 同上 |
+| 前端检查与测试 | ESLint `10.7.0`、typescript-eslint `8.68.0`、Vitest `4.1.11`、Playwright `1.62.1` | 同上 |
+
+独立插件保留各自的 manifest 和冻结锁文件，不能由 Core 的升级推断它们已同步升级。Finance、Digital Oracle 和 Notes 当前均固定 Uvicorn `0.42.0`、SQLAlchemy `2.0.51`；其余插件依赖与构建入口见 [`plugins/README.md`](../plugins/README.md#build-and-run)。
+
+[`CI`](../.github/workflows/ci.yml) 使用 Node 24、`actions/setup-node@v7` 和 `pnpm/action-setup@v6.0.10`；前端要求 Node `>=24.0.0`，package manager 仍为 `pnpm@10.30.1`。镜像的 Node 26 构建阶段另见下文。安装和检查命令以 [`CONTRIBUTING.md`](../CONTRIBUTING.md) 为准。
+
 ## 已完成：恢复 React Hooks 规则
 
 [`frontend/eslint.config.js`](../frontend/eslint.config.js) 使用 `reactHooks.configs.recommended.rules`，已移除 `react-hooks/set-state-in-effect` 的 `warn` 覆盖。相关 effect 重构与规则恢复可追溯到本地提交 `6f40db5e`。

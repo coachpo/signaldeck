@@ -6,7 +6,7 @@ SignalDeck 是供可信单用户使用的自托管 Agent 工作流平台：选�
 
 当前开发档位为 **MVP**，围绕本地内网个人使用验证工作流的端到端闭环，并保持现有数据、密钥与运行快照约束。此处只是派生摘要，完整状态以 [`STATUS.md`](STATUS.md) 为准。
 
-**SD-TARGET-001 已实现并完成本地闭环验收**，详见 [`STATUS.md`](STATUS.md#已完成迭代)。当前产品合同和技术边界已融入正式文档；本地验收不代表生产部署验证。
+**SD-TARGET-001 与简化操作 S1–S6 均已完成本地闭环验收**，详见 [`STATUS.md`](STATUS.md#已完成迭代)。当前产品合同和技术边界已融入正式文档；本地验收不代表生产部署验证。
 
 ## 快速开始
 
@@ -58,7 +58,7 @@ SIGNALDECK_CONNECTION_PRESETS_FILE=/absolute/path/connections.json ./start.sh --
 - 专家工作区：同一 YAML 的属性编辑、编译诊断、图视口、完整资源/插件配置及运行快照与调用证据。
 - Finance：独立插件提供已有格式生成报告、具体报告阅读/下载，以及专家模板制作；Core 不拥有模板或报告数据。
 
-此次简化操作的 23 项交付和未验收范围见 [`Sprint 交付对照`](docs/planning/sprint-delivery.md)。
+当前流程与验收要求见 [`产品说明`](docs/产品说明.md)，简化操作的历史验证结果与范围见 [`Sprint 独立验收索引`](docs/planning/sprint-verification.md)。
 
 ## 文档
 
