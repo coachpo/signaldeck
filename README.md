@@ -1,12 +1,12 @@
 # SignalDeck
 
-SignalDeck 是一个面向 LLM agent 的自托管流水线运行器：用 YAML 定义 Workflow Package，手动或按计划启动多 agent 工作流，并在统一的单用户界面中查看运行证据、输出、模板和报告。
+SignalDeck 是供可信单用户使用的自托管 Agent 工作流平台：用 YAML 定义可复用 Agent 和声明式 DAG，通过 Temporal 手动或定时执行，并检查运行证据、产物及独立插件提供的业务结果。
 
 ## 当前状态
 
 当前开发档位为 **MVP**，围绕本地内网个人使用验证工作流的端到端闭环，并保持现有数据、密钥与运行快照约束。此处只是派生摘要，完整状态以 [`STATUS.md`](STATUS.md) 为准。
 
-迭代围绕 **SD-TARGET-001** 冻结基线推进，见 [`迭代目标`](docs/迭代目标.md)；冻结提交、补充决定和验收状态见 [`STATUS.md`](STATUS.md#冻结迭代目标)。下列启动方式和能力描述对应当前实现，不代表全部目标验收已完成。
+**SD-TARGET-001 已实现并完成本地闭环验收**，详见 [`STATUS.md`](STATUS.md#已完成迭代)。当前产品合同和技术边界已融入正式文档；本地验收不代表生产部署验证。
 
 ## 快速开始
 
@@ -55,7 +55,6 @@ SIGNALDECK_PLUGINS=notes ./start.sh --detach
 - [`docs/README.md`](docs/README.md)：文档索引与权威边界。
 - [`docs/产品说明.md`](docs/产品说明.md)：产品范围、流程、需求和验收。
 - [`docs/架构说明.md`](docs/架构说明.md)：当前组件、数据流、部署边界和架构例外。
-- [`docs/迭代目标.md`](docs/迭代目标.md)：已接受的终态设计、选型待验证项与目标验收。
 - [`CONTRIBUTING.md`](CONTRIBUTING.md)：开发环境、启动、检查、测试、工作流和完成定义。
 - [`docs/开发规范.md`](docs/开发规范.md)：项目特有的技术和实现规则。
 - [`docs/源代码规模与职责规则.md`](docs/源代码规模与职责规则.md)：通用的规模与职责规则。

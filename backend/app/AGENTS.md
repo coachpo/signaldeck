@@ -1,15 +1,15 @@
 # Backend App Guide
 
-These boundaries describe the current SD-TARGET-001 implementation. Use the frozen target referenced by [STATUS.md](../../STATUS.md#冻结迭代目标) for acceptance; current source structure alone does not prove completion.
+Use the [product specification](../../docs/产品说明.md) for supported execution behavior and [architecture](../../docs/架构说明.md) for module ownership. The paths below route changes to the implemented backend.
 
 ## Change Boundaries
 
 - `domain/` owns definition, graph, schema, resource and tool contracts; `application/` owns use cases and narrow ports. Keep HTTP, SQLAlchemy, Temporal, MCP and plugin business implementation out of those contracts. Concrete adapters and transaction ownership belong in `infrastructure/`; do not pass ORM rows or Sessions through application ports.
 - `main.py` owns middleware, errors, health and router mounting; `api/platform_dependencies.py` composes launch and persistence adapters. `workers/command_dispatcher.py` delivers committed commands and schedule updates; `workers/artifact_worker.py` supervises immutable core bundles and launches `workers/durable_worker.py` on the matching artifact queue.
-- `infrastructure/temporal_workflows.py` and `temporal_agent.py` own durable DAG and Agent execution. Keep confirmed model/tool results, independent node progress, cancellation and the original deadline recoverable through the engine; query projection in `application/execution_projection.py` only observes terminal facts.
+- `infrastructure/temporal_workflows.py` and `temporal_agent.py` own durable DAG and Agent execution; `temporal_cancellation.py` supplies their shared cancellation wait boundary. Preserve terminal evidence commits through repeated cancellation, confirmed model/tool results, independent node progress and the original deadline. Query projection in `application/execution_projection.py` only observes terminal facts.
 - `infrastructure/platform_store.py` initializes PostgreSQL under an advisory lock. `create_all` does not alter existing tables; `infrastructure/package_seeds.py` inserts only missing package keys. Preserve atomic Run/snapshot/start-command persistence and immutable revision conflicts in the store adapters. Model changes must agree with [the data model](../../docs/data-model.md).
 - `core/encryption.py` owns credential envelopes; `infrastructure/secret_storage.py` supplies `EncryptedJSONB`. Preserve failure on wrong keys, non-empty plaintext payloads and unsupported envelope versions. Keep credential revisions in bindings and resolve values only in I/O adapters.
-- `application/tool_gateway.py` enforces the frozen catalog, grants, schema, operation identity and result evidence before/after `infrastructure/mcp_transport.py` calls independent plugins. Provider business adapters and Finance persistence belong in the repository's `plugins/` directory, outside the core import closure.
+- `application/tool_gateway.py` enforces the frozen catalog, grants, schema, exclusive operation ownership and result evidence before/after `infrastructure/mcp_transport.py` calls independent plugins. An unsuccessful replay must not erase an earlier unknown write effect; bounded cancellation notification delivery belongs in `infrastructure/mcp_cancellation.py`. Provider business adapters and Finance persistence belong in the repository's `plugins/` directory, outside the core import closure.
 
 ## Read and Validation Boundaries
 

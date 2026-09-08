@@ -10,6 +10,8 @@ Finance、Digital Oracle 和非金融 Notes 的构建、配置及本地运行入
 
 每个工具声明 owner、description、inputSchema、outputSchema、`effect: read|write`、resourceRequirements、timeoutSeconds 和 maxAttempts。输入输出均为 object schema。确定性 Agent 的所选工具必须同时出现在其 tools grant 中；模型 Agent 只能看见其授权工具。Gateway 在最终调用前仍校验授权与参数，不依赖模型遵守指令。
 
+有效工具由启用发布、Agent tools 选择及其 resource grants 共同决定。模型侧使用构造时注册的稳定 DynamicToolset，具体声明从本 Run 的冻结目录生成；插件更新通过发布制品和配置接入，不为每个业务工具向 Core Worker 注册 Python 函数。
+
 合同以 [`tool_contracts.py`](../backend/app/domain/tool_contracts.py) 和 [`schema_contract.py`](../backend/app/domain/schema_contract.py) 为 Core 依据，插件 wire/dispatch 实现见 [`plugins/runtime/plugin_runtime`](../plugins/runtime/plugin_runtime/)。模型声明和插件实现不得另行维护一份不同约束的 schema。
 
 ## 固定协议与 schema 子集
@@ -55,6 +57,8 @@ Core 与插件只交换值合同，不交换 ORM、Session 或万能 Context。F
 
 发送网络请求前，Core 保留 operation 和 attempt。插件必须准确声明 effect；不要把写操作声明为 read 来获得自动重试或缓存。写响应丢失、超时或取消可能已有外部效果，Core 会保留 `unknown` 并使用同一个 operationId 查询或去重。
 
+Core 对同 operation 的活跃执行互斥，重叠 Activity 在原 deadline 内等待既有结果；这不能替代插件在自身业务事务中的去重。旧写效果仍未核实时，本次重投的凭据或发布检查失败也不能把旧效果改成已知失败。查询 `not_found` 必须能证明该操作没有产生效果，不能把仍在处理或暂时不可见解释为不存在。
+
 当前 Finance Agent-report 写入和 Notes 写入用同一 PostgreSQL 事务保存业务效果及不可变 operation result，operation advisory lock 防止并发重复。相同 ID 携带不同参数、工具或资源 scope 会被拒绝。`signaldeck/operations/query` 在事务进行中返回 unknown，提交后返回原成功结果，确认回滚/不存在后返回 not_found，并再次校验调用归属与 scope。
 
 这种去重只覆盖插件实现的事务效果，不能宣称任意外部远程写都恰好执行一次。不能确认的效果保持 unknown；取消和 deadline 也不能证明已经撤销。Agent 产出的 Finance 报告与 Notes 记录不可覆盖；后续修改应产生新的业务记录/操作。
@@ -73,4 +77,4 @@ Core 与插件只交换值合同，不交换 ORM、Session 或万能 Context。F
 
 升级使用新不可变制品和新 endpoint。安装新发布只移动当前指针；已有 Run 固定原 descriptor，必须在其恢复需求结束前保留旧服务和制品。原地换掉旧 endpoint 会导致明确 release mismatch，不能自动回退到新代码。
 
-当前可运行示例和验证入口为 [`plugins/notes`](../plugins/notes/)、[`test_independent_plugins.py`](../backend/tests/test_independent_plugins.py)、[`test_tool_gateway_target.py`](../backend/tests/test_tool_gateway_target.py) 和 [`test_plugin_wire_contracts.py`](../backend/tests/test_plugin_wire_contracts.py)。插件级验证不替代完整 Core/Worker/Compose 的 A01–A18 验收。
+当前可运行示例和验证入口为 [`plugins/notes`](../plugins/notes/)、[`test_independent_plugins.py`](../backend/tests/test_independent_plugins.py)、[`test_tool_gateway_target.py`](../backend/tests/test_tool_gateway_target.py) 和 [`test_plugin_wire_contracts.py`](../backend/tests/test_plugin_wire_contracts.py)。插件级契约与完整 Core/Worker/Compose 行为的验收标准见 [`产品说明`](产品说明.md)，已执行验收记录见 [`STATUS.md`](../STATUS.md)。

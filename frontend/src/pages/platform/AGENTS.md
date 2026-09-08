@@ -1,6 +1,6 @@
 # Workflow Platform UI
 
-These pages own the SD-TARGET-001 definition, resource, plugin, schedule and execution surfaces. API calls and invalidation live in `../../hooks/use-workflow-platform.ts`; wire types are in `../../lib/types/workflow-platform.ts`.
+These pages own the platform's definition, resource, plugin, schedule and execution surfaces. API calls and invalidation live in `../../hooks/use-workflow-platform.ts`; wire types are in `../../lib/types/workflow-platform.ts`.
 
 - `packages.tsx` hydrates drafts from the persisted YAML source. `package-structure.tsx` updates the same YAML document through `package-source.ts`; incomplete JSON drafts must be applied or discarded before validation/save/navigation. Server compilation owns schema and graph semantics. Display all diagnostic paths/locations and merged dependency edge sources.
 - `launch.tsx` explicitly selects a workflow from the saved package. `launch-inputs.tsx` keeps object forms and applied JSON on one payload (scalar/array/null roots use JSON without object wrapping), blocks launch for unapplied JSON, and resets when the workflow/schema changes. Preserve stable launch identity through uncertain responses.

@@ -2,7 +2,7 @@
 
 当前 Core PostgreSQL 表由 [`platform_models.py`](../backend/app/infrastructure/platform_models.py) 及相应 infrastructure store 定义。Finance、Notes 使用独立数据库和角色，Temporal 保存自己的执行历史，文件内容寻址存储保存大产物与 Core closure。产品生命周期见 [`产品说明.md`](产品说明.md)，数据和兼容政策以 [`STATUS.md`](../STATUS.md) 为准。
 
-v2 数据模型替换旧 workflow/step/extension 表合同；本文不描述旧表的兼容读取或无损迁移。冻结目标与整体完成判定独立于表结构。
+v2 数据模型替换旧 workflow/step/extension 表合同；本文不描述旧表的兼容读取或无损迁移。交付与验收记录由 [`STATUS.md`](../STATUS.md) 索引。
 
 ## Core 配置与运行表
 
@@ -35,7 +35,7 @@ Run status 为 `queued`、`running`、`succeeded`、`failed`、`cancelled`；evi
 
 计划表是期望配置和查询来源，Temporal Schedule 负责日历、时区、重叠和补触发。fire action 等待完整 Run 结束；投影修复关联与终态不启动新执行。删除计划记录删除意图并同步引擎，保留其本地记录、triggers、fires 和历史 Run。相关实现为 [`schedule_store.py`](../backend/app/infrastructure/schedule_store.py)、[`schedule_fires.py`](../backend/app/infrastructure/schedule_fires.py)。
 
-读缓存必须由 Agent 的 `toolCache` 显式声明，只支持 read 工具。缓存键绑定 release、input 和 resource 身份；读取使用原 operation 的不可变输出与来源。当前 Run 的确认恢复不通过跨 Run cache。参见 [`tool_cache_store.py`](../backend/app/infrastructure/tool_cache_store.py)。
+读缓存必须由 Agent 的 `toolCache` 显式声明，只支持 read 工具。缓存键绑定 release、input 和 resource 身份；读取使用原 operation 的不可变输出与来源。`cacheProvenance` 保存 hit、cacheKey、sourceRunId、sourceOperationId、fetchedAt 和 expiresAt，实际有效期同时受来源记录和当前请求 TTL 限制。当前 Run 的确认恢复不通过跨 Run cache。参见 [`tool_cache_store.py`](../backend/app/infrastructure/tool_cache_store.py)。
 
 ## 快照与凭据版本
 
@@ -51,6 +51,19 @@ Run status 为 `queued`、`running`、`succeeded`、`failed`、`cancelled`；evi
 
 工具 operation 的身份、上下文和输入摘要在网络发送前保留；每次 execute/query/cache validation 是独立 attempt。已成功 operation 不允许被不同内容覆盖，写效果不确定时保留 `unknown`。模型成功与其网络 attempt 成功批量原子确认，避免部分确认。
 
+同一 operation 的执行所有权使用会话级 PostgreSQL advisory lock，不增设另一张待执行队列表。操作记录与网络尝试仍是持久证据；锁只防止存活调用的重叠执行，不能证明外部写一定没有发生。重叠调用的等待、未知结果核实和恢复边界见 [`架构说明`](架构说明.md#modeltool-gateway)。
+
+证据的调用归属按下表校验，父记录必须属于同一 Run 和节点；它与编译计划的依赖 DAG 分开保存。
+
+| evidence kind | 调用归属 |
+| --- | --- |
+| `node` | 直接属于 Run，parentId 为空。 |
+| `agent` | parentId 指向本节点的一条 node evidence。 |
+| `model`、`tool` | parentId 指向本次 Agent attempt；工具另保存 operationId 和限定 toolId。 |
+| `attempt` | parentId 指向模型调用或工具 operation；attempt 序号及 networkKind 记录实际网络尝试。 |
+
+多上游汇聚节点只有一个 Run/节点/Agent 归属，通过计划中的边和输入/输出引用关联多个来源，不伪造多个调用父级。终态 Agent/节点投影完成提交后才传播恰逢提交的取消；Run 的 cancelled 状态可以与已完成节点的 succeeded 证据并存。引擎补投影只处理尚未终结的 Run，不能取代终态证据本身的可靠提交。
+
 大输入/输出和 Temporal payload 通过 [`artifact_store.py`](../backend/app/infrastructure/artifact_store.py)、[`evidence_payloads.py`](../backend/app/infrastructure/evidence_payloads.py) 和 [`temporal_payloads.py`](../backend/app/infrastructure/temporal_payloads.py) 保存。公开引用包括 digest、sizeBytes 和 mediaType，内部 `$artifact` 字段为保留 envelope。读取核验完整内容，拒绝缺失、篡改和非普通文件；已确认结果不能指向可覆盖的普通文件路径。
 
 Core closure 使用另一目录，manifest 固定文件字节、锁文件和 Python 版本。运行所需 PostgreSQL、Temporal 历史、artifact 目录、Core closure 及其可核验环境必须共同保留；单独备份查询表不足以恢复执行。当前没有自动 Run/产物保留清理或 package/Run 删除 API。
@@ -65,6 +78,6 @@ Finance 的普通 report API 与 Agent report 写入有不同生命周期：Agen
 
 `create_all` 在初始化锁下只创建当前 metadata，不升级已有表。demo seed 仅安装缺失 package，保留已存在的操作者版本。数据库初始化不再将过期 lease 的 Run 直接标记失败；恢复由 Temporal 的历史和固定 Worker 执行。
 
-根 Compose 使用独立 `.signaldeck-target` 数据目录和独立 Core/Finance/Notes 数据库，不读取、重置或迁移旧模型连接、工作流、运行、模板及报告表。切换到该数据布局需要按 STATUS 数据政策处理；本轮代码和初始化路径不构成旧数据迁移工具。
+根 Compose 使用独立 `.signaldeck-target` 数据目录和独立 Core/Finance/Notes 数据库，不读取、重置或迁移旧模型连接、工作流、运行、模板及报告表。切换到该数据布局需要按 STATUS 数据政策处理；初始化路径不提供旧数据迁移。
 
-持久化回归依据包括 [`test_platform_persistence.py`](../backend/tests/test_platform_persistence.py)、[`test_execution_projection.py`](../backend/tests/test_execution_projection.py)、[`test_artifact_store_target.py`](../backend/tests/test_artifact_store_target.py)、[`test_target_seeds.py`](../backend/tests/test_target_seeds.py) 与 [`test_independent_plugins.py`](../backend/tests/test_independent_plugins.py)。这些测试各自证明其覆盖边界；完整恢复还须有实际 Temporal/Worker 集成结果。
+持久化回归入口包括 [`test_platform_persistence.py`](../backend/tests/test_platform_persistence.py)、[`test_execution_projection.py`](../backend/tests/test_execution_projection.py)、[`test_artifact_store_target.py`](../backend/tests/test_artifact_store_target.py)、[`test_target_seeds.py`](../backend/tests/test_target_seeds.py)、[`test_independent_plugins.py`](../backend/tests/test_independent_plugins.py) 和 [`test_terminal_projection_cancellation.py`](../backend/tests/test_terminal_projection_cancellation.py)。这些入口与实际 Temporal/Worker 集成验收的完成记录一同由 [`STATUS.md`](../STATUS.md) 关联。

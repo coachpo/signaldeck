@@ -111,7 +111,7 @@ claim that those boundaries remain unimplemented in the product.
 - Full application domain contracts, immutable output store, UI and Compose.
 
 Temporal is now the selected product engine, following the user decision recorded
-in [STATUS](../../../../STATUS.md#冻结迭代目标). The three-candidate evidence and
+in [STATUS](../../../../STATUS.md#已完成迭代). The three-candidate evidence and
 its limits are consolidated in the [engine comparison](../../../../docs/执行引擎比较.md).
 The native Pydantic AI call boundary and observed hard-restart behavior informed
 that decision. Selection does not turn this probe into full A16 or A01–A18
