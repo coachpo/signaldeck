@@ -51,7 +51,8 @@ def _files(root: Path) -> dict[str, bytes]:
     files: dict[str, bytes] = {}
     for path in sorted([*(root / name for name in _ROOT_FILES), *(root / "app").rglob("*")]):
         relative = PurePosixPath(path.relative_to(root).as_posix())
-        if not _allowed(relative):
+        # README remains allowed when verifying retained artifacts from older publishers.
+        if not _allowed(relative) or str(relative) == "README.md":
             continue
         if path.is_symlink() or any(
             parent.is_symlink() for parent in path.parents if parent != root

@@ -181,7 +181,6 @@ function TaskForm({
       if (checked?.changedBindings.length) return;
     }
     if (!checked?.ready || !checked.bindingToken) return;
-    drafts.set(draftKey, draft);
     try {
       setError(null);
       setUncertain(true);
@@ -294,18 +293,20 @@ function TaskForm({
           </>
         )}
         <div className="flex flex-wrap gap-2">
-          <Button
-            variant="outline"
-            disabled={
-              dirty ||
-              preparation.isFetching ||
-              uncertain ||
-              (!supported && !expert)
-            }
-            onClick={() => void prepare()}
-          >
-            {preparation.isFetching ? "正在核对…" : "核对连接与本次设置"}
-          </Button>
+          {(expert || dirty || !!error || !!preparation.error || !prepared?.ready) && (
+            <Button
+              variant="outline"
+              disabled={
+                dirty ||
+                preparation.isFetching ||
+                uncertain ||
+                (!supported && !expert)
+              }
+              onClick={() => void prepare()}
+            >
+              {preparation.isFetching ? "正在核对…" : "核对连接与本次设置"}
+            </Button>
+          )}
           {(!prepared || prepared.ready) && (
             <Button
               disabled={dirty || mutations.launch.isPending || (!supported && !expert) || (!uncertain && (preparation.isFetching || !!prepared && prepared.packageHash !== packageHash))}

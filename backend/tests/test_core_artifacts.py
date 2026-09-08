@@ -3,10 +3,17 @@ from __future__ import annotations
 import platform
 import subprocess
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
-from app.infrastructure.core_artifacts import CoreArtifactError, CoreArtifactStore, task_queue
+from app.infrastructure.core_artifacts import (
+    CoreArtifactError,
+    CoreArtifactStore,
+    CoreBundle,
+    _files,
+    task_queue,
+)
 from app.workers.artifact_worker import _environment_files, worker_command
 
 
@@ -45,6 +52,64 @@ def source(tmp_path: Path) -> Path:
         'source = { virtual = "." }\n'
     )
     return root
+
+
+def publish_legacy_readme_bundle(store: CoreArtifactStore) -> CoreBundle:
+    """Publish the pre-exclusion file set with the unchanged format-1 manifest writer."""
+
+    def legacy_files(root: Path) -> dict[str, bytes]:
+        return {**_files(root), "README.md": (root / "README.md").read_bytes()}
+
+    with patch("app.infrastructure.core_artifacts._files", legacy_files):
+        return store.publish()
+
+
+def test_readme_changes_do_not_publish_another_executable_closure(tmp_path: Path) -> None:
+    root = source(tmp_path)
+    store = CoreArtifactStore(tmp_path / "artifacts", root)
+    bundle = store.publish()
+    readme = root / "README.md"
+    for content in ["# Core documentation\n", "# Updated documentation\n"]:
+        readme.write_text(content)
+        assert store.publish() == bundle
+    readme.unlink()
+    assert store.current_digest() == bundle.digest
+    assert "README.md" not in bundle.manifest["files"]
+    assert not (bundle.path / "README.md").exists()
+    assert list(store.root.iterdir()) == [bundle.path]
+
+
+@pytest.mark.parametrize("name", ["app/workers/durable_worker.py", "pyproject.toml", "uv.lock"])
+def test_execution_source_project_and_lock_remain_in_core_identity(
+    tmp_path: Path, name: str
+) -> None:
+    root = source(tmp_path)
+    store = CoreArtifactStore(tmp_path / "artifacts", root)
+    old = store.publish()
+    path = root / name
+    original = path.read_bytes()
+    path.write_bytes(original + b"\n# changed executable closure\n")
+    new = store.publish()
+    assert new.digest != old.digest
+    assert store.verify(old.digest).path.joinpath(name).read_bytes() == original
+    assert store.verify(new.digest).path.joinpath(name).read_bytes() == path.read_bytes()
+
+
+def test_historical_readme_remains_readable_and_integrity_checked(tmp_path: Path) -> None:
+    root = source(tmp_path)
+    (root / "README.md").write_text("# Retained documentation\n")
+    store = CoreArtifactStore(tmp_path / "artifacts", root)
+    old = publish_legacy_readme_bundle(store)
+    new = store.publish()
+    assert old.digest != new.digest
+    assert "README.md" in store.verify(old.digest).manifest["files"]
+    retained = old.path / "README.md"
+    assert retained.read_text() == "# Retained documentation\n"
+    assert "README.md" not in new.manifest["files"]
+    retained.chmod(0o644)
+    retained.write_text("# Tampered documentation\n")
+    with pytest.raises(CoreArtifactError, match="content digest"):
+        store.verify(old.digest)
 
 
 def test_deterministic_closure_excludes_runtime_secrets_and_retains_old_code(

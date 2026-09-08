@@ -3,7 +3,7 @@ import { MemoryRouter } from "react-router";
 import { useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { beforeEach, expect, it, vi } from "vitest";
-import { TaskPage } from "./tasks";
+import { TaskPage, TasksPage } from "./tasks";
 import { ApiRequestError } from "@/lib/api-client";
 import type { ReuseInput, TaskPreset } from "@/lib/types/task-experience";
 import type { Json, JsonObject } from "@/lib/types/workflow-platform";
@@ -19,6 +19,9 @@ const mocks = vi.hoisted(() => ({
 }));
 vi.mock("@/hooks/use-display-mode", () => ({
   useDisplayMode: () => ({ expert: mocks.expert }),
+}));
+vi.mock("@/hooks/use-results", () => ({
+  useResultHistory: () => ({ data: { items: [] } }),
 }));
 vi.mock("@/hooks/use-workflow-platform", () => ({
   usePackages: () => ({
@@ -70,7 +73,7 @@ function Page({ path = "/tasks/new?packageKey=research_notes&workflowKey=capture
         path,
       ]}
     >
-      <TaskPage />
+      {path === "/tasks" ? <TasksPage /> : <TaskPage />}
     </MemoryRouter>
     </QueryClientProvider>
   );
@@ -93,6 +96,32 @@ beforeEach(() => {
     previousBindings: {},
   });
   mocks.launch.mockReset();
+});
+it("shows the catalog authoring entry only in expert mode while keeping ordinary tasks", () => {
+  const view = render(<Page path="/tasks" />);
+  const taskHref = "/tasks/new?packageKey=research_notes&workflowKey=capture";
+  expect(screen.getByRole("link", { name: "选择任务" })).toHaveAttribute("href", taskHref);
+  expect(screen.queryByRole("link", { name: "全部任务定义与专家制作" })).not.toBeInTheDocument();
+  mocks.expert = true;
+  view.rerender(<Page path="/tasks" />);
+  expect(screen.getByRole("link", { name: "全部任务定义与专家制作" })).toHaveAttribute("href", "/workflow-packages");
+  expect(screen.getByRole("link", { name: "选择任务" })).toHaveAttribute("href", taskHref);
+  mocks.expert = false;
+  view.rerender(<Page path="/tasks" />);
+  expect(screen.queryByRole("link", { name: "全部任务定义与专家制作" })).not.toBeInTheDocument();
+  expect(mocks.prepare).not.toHaveBeenCalled();
+  expect(mocks.launch).not.toHaveBeenCalled();
+  expect(mocks.save).not.toHaveBeenCalled();
+});
+it("keeps the expert execution fallback for a customized task in ordinary mode", () => {
+  mocks.schema = {
+    type: "object",
+    properties: { title: { type: "string" }, text: { type: "string" }, extra: { type: "string" } },
+    required: ["title", "text", "extra"],
+  };
+  render(<Page path="/tasks" />);
+  expect(screen.getByRole("link", { name: "专家执行" })).toHaveAttribute("href", "/workflow-packages/research_notes/run");
+  expect(screen.queryByRole("link", { name: "全部任务定义与专家制作" })).not.toBeInTheDocument();
 });
 it.each([
   [null, { type: ["string", "null"], default: "authored default" }],
@@ -151,10 +180,46 @@ it("shows effective settings automatically and starts with one user action", asy
   expect(await screen.findByRole("region", { name: "本次有效设置" })).toBeVisible();
   const start = screen.getByRole("button", { name: "开始任务" });
   await waitFor(() => expect(start).toBeEnabled());
+  expect(screen.queryByRole("button", { name: "核对连接与本次设置" })).not.toBeInTheDocument();
   expect(mocks.launch).not.toHaveBeenCalled();
   fireEvent.click(start);
   await waitFor(() => expect(mocks.launch).toHaveBeenCalledTimes(1));
   expect(mocks.launch.mock.calls[0][0].parameters).toEqual({ title: "一次开始", text: "保留业务原文" });
+});
+it("lets experts recheck ready settings without changing the ordinary task input", async () => {
+  const view = render(<Page />);
+  await prepare();
+  mocks.expert = true;
+  view.rerender(<Page />);
+  const callsBefore = mocks.prepare.mock.calls.length;
+  const recheck = screen.getByRole("button", { name: "核对连接与本次设置" });
+  expect(recheck).toBeEnabled();
+  fireEvent.click(recheck);
+  await waitFor(() => expect(mocks.prepare).toHaveBeenCalledTimes(callsBefore + 1));
+  await waitFor(() => expect(screen.getByRole("button", { name: "核对连接与本次设置" })).toBeEnabled());
+  mocks.expert = false;
+  view.rerender(<Page />);
+  expect(screen.queryByRole("button", { name: "核对连接与本次设置" })).not.toBeInTheDocument();
+  expect(screen.getByLabelText("标题")).toHaveValue("不变的标题");
+  expect(screen.getByLabelText("原文")).toHaveValue("原始内容");
+  expect(mocks.launch).not.toHaveBeenCalled();
+});
+it("lets an automatic preparation failure be retried before starting", async () => {
+  const prepared = await mocks.prepare();
+  mocks.prepare.mockReset().mockRejectedValue(new Error("Preparation unavailable"));
+  render(<Page />);
+  fireEvent.change(screen.getByLabelText("标题"), { target: { value: "保留标题" } });
+  fireEvent.change(screen.getByLabelText("原文"), { target: { value: "保留原文" } });
+  expect(await screen.findByText("Preparation unavailable")).toBeVisible();
+  const recheck = screen.getByRole("button", { name: "核对连接与本次设置" });
+  expect(recheck).toBeEnabled();
+  mocks.prepare.mockResolvedValue(prepared);
+  fireEvent.click(recheck);
+  expect(await screen.findByRole("region", { name: "本次有效设置" })).toBeVisible();
+  await waitFor(() => expect(screen.queryByRole("button", { name: "核对连接与本次设置" })).not.toBeInTheDocument());
+  expect(screen.getByLabelText("标题")).toHaveValue("保留标题");
+  expect(screen.getByLabelText("原文")).toHaveValue("保留原文");
+  expect(mocks.launch).not.toHaveBeenCalled();
 });
 it("requires visible confirmation for automatically discovered binding changes", async () => {
   const prepared = await mocks.prepare();
@@ -176,6 +241,7 @@ it("automatically exposes missing connections without starting or changing input
   fireEvent.change(screen.getByLabelText("标题"), { target: { value: "保留标题" } });
   fireEvent.change(screen.getByLabelText("原文"), { target: { value: "保留原文" } });
   expect(await screen.findByText("尚需完成以下准备。填写的业务信息会保留。")).toBeVisible();
+  expect(screen.getByRole("button", { name: "核对连接与本次设置" })).toBeEnabled();
   expect(screen.queryByRole("button", { name: "开始任务" })).not.toBeInTheDocument();
   expect(screen.getByLabelText("标题")).toHaveValue("保留标题");
   expect(screen.getByLabelText("原文")).toHaveValue("保留原文");
@@ -190,20 +256,28 @@ async function prepare() {
   });
   await waitFor(() => expect(screen.getByRole("button", { name: "开始任务" })).toBeEnabled());
 }
-it("retries uncertain submissions with the same identity and prevents editing the submitted input", async () => {
+it("restores an uncertain submission after remount and retries the same identity without input edits", async () => {
   mocks.launch.mockRejectedValue(new TypeError("Network response lost"));
-  render(<Page />);
+  const view = render(<Page />);
   await prepare();
   fireEvent.click(screen.getByRole("button", { name: "开始任务" }));
   await screen.findByRole("button", { name: "使用同一请求重试" });
+  view.unmount();
+  render(<Page />);
+  expect(screen.getByRole("button", { name: "使用同一请求重试" })).toBeEnabled();
   expect(screen.getByLabelText("标题")).toBeDisabled();
+  expect(screen.getByLabelText("标题")).toHaveValue("不变的标题");
+  expect(screen.getByLabelText("原文")).toHaveValue("原始内容");
   fireEvent.click(screen.getByRole("button", { name: "使用同一请求重试" }));
   await waitFor(() => expect(mocks.launch).toHaveBeenCalledTimes(2));
   expect(mocks.launch.mock.calls[0][0]).toEqual(mocks.launch.mock.calls[1][0]);
 });
 it("retains an unapplied expert draft through ordinary mode and requires applying it", async () => {
-  mocks.expert = true;
   const view = render(<Page />);
+  await prepare();
+  expect(screen.queryByRole("button", { name: "核对连接与本次设置" })).not.toBeInTheDocument();
+  mocks.expert = true;
+  view.rerender(<Page />);
   fireEvent.click(screen.getByRole("tab", { name: "Advanced JSON" }));
   fireEvent.change(screen.getByLabelText("Parameters JSON"), {
     target: { value: '{"title":"draft"' },

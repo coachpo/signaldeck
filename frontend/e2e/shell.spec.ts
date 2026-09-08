@@ -18,6 +18,20 @@ test("generic navigation owns one route shell without embedded finance pages", a
 }) => {
   await page.goto("/");
   await expect(page.getByTestId("nav-workflow-packages")).toHaveCount(0);
+  const expertEntry = page.getByRole("link", {
+    name: "全部任务定义与专家制作",
+    exact: true,
+  });
+  await expect(expertEntry).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "选择任务", exact: true })).toHaveCount(4);
+  await page.getByRole("switch", { name: "专家模式", exact: true }).check();
+  await expect(expertEntry).toBeVisible();
+  await expertEntry.click();
+  await expect(page).toHaveURL("/workflow-packages");
+  await page.getByTestId("nav-tasks").click();
+  await page.getByRole("switch", { name: "专家模式", exact: true }).uncheck();
+  await expect(expertEntry).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "选择任务", exact: true })).toHaveCount(4);
   await page.getByRole("switch", { name: "专家模式", exact: true }).check();
   for (const route of routes) {
     await page.getByTestId(`nav-${route.nav}`).click();
@@ -52,6 +66,11 @@ for (const width of [375, 768, 1024, 1440])
     ]) {
       await page.goto(path);
       await expect(page.getByRole("main")).toBeVisible();
+      if (path === "/") {
+        await expect(
+          page.getByRole("link", { name: "选择任务", exact: true }),
+        ).toHaveCount(4);
+      }
       if (path === "/workflow-packages/new") {
         await expect(page.getByLabel("Workflow Package YAML")).toBeVisible();
       }
@@ -68,6 +87,32 @@ for (const width of [375, 768, 1024, 1440])
         path: screenshot,
         contentType: "image/png",
       });
+      if (path === "/") {
+        const expertEntry = page.getByRole("link", {
+          name: "全部任务定义与专家制作",
+          exact: true,
+        });
+        await expect(expertEntry).toHaveCount(0);
+        await page.getByRole("switch", { name: "专家模式", exact: true }).check();
+        await expertEntry.click({ trial: true });
+        const bounds = await expertEntry.boundingBox();
+        expect(bounds).not.toBeNull();
+        expect(bounds!.x).toBeGreaterThanOrEqual(-1);
+        expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width + 1);
+        expect(bounds!.y).toBeGreaterThanOrEqual(-1);
+        expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(901);
+        const expertScreenshot = resolve(directory, `home-expert-${width}.png`);
+        await page.screenshot({
+          path: expertScreenshot,
+          fullPage: true,
+          animations: "disabled",
+        });
+        await testInfo.attach(`home-expert-${width}`, {
+          path: expertScreenshot,
+          contentType: "image/png",
+        });
+        await page.getByRole("switch", { name: "专家模式", exact: true }).uncheck();
+      }
       await expect
         .poll(() =>
           page.evaluate(

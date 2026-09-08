@@ -1,6 +1,7 @@
 import {TaskRecent} from "./task-recent";
 import { useState } from "react";
 import { Link } from "react-router";
+import { useDisplayMode } from "@/hooks/use-display-mode";
 import { usePackages } from "@/hooks/use-workflow-platform";
 import { useTaskMutations, useTaskPresets } from "@/hooks/use-task-experience";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,7 @@ import { RequestError } from "./feedback";
 import { availableTasks } from "./task-catalog";
 import type { TaskPreset } from "@/lib/types/task-experience";
 export function TasksPage() {
+  const { expert } = useDisplayMode();
   const packages = usePackages();
   const presets = useTaskPresets();
   const { deletePreset, savePreset } = useTaskMutations();
@@ -166,9 +168,11 @@ export function TasksPage() {
             </p>
           )}
         </section>
-        <Button variant="outline" className="self-start" asChild>
-          <Link to="/workflow-packages">全部任务定义与专家制作</Link>
-        </Button>
+        {expert && (
+          <Button variant="outline" className="self-start" asChild>
+            <Link to="/workflow-packages">全部任务定义与专家制作</Link>
+          </Button>
+        )}
       </div>
     </WorkspacePageShell>
   );

@@ -124,6 +124,12 @@ test("UX01/03/06: four ordinary tasks execute with real plugins and retain reusa
         "Original business evidence retained unchanged.",
       );
     }
+    await expect(
+      page.getByRole("button", { name: "开始任务", exact: true }),
+    ).toBeEnabled();
+    await expect(
+      page.getByRole("button", { name: "核对连接与本次设置", exact: true }),
+    ).toHaveCount(0);
     visualEvidence.push(
       ...(await captureResponsiveEvidence(
         page,
