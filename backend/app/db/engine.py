@@ -20,6 +20,8 @@ def _normalize_database_url(url: str) -> str:
     for bare_scheme in ("postgresql://", "postgres://"):
         if url.startswith(bare_scheme):
             return "postgresql+psycopg://" + url[len(bare_scheme) :]
+    if not url.startswith("postgresql+psycopg://"):
+        raise ValueError("SignalDeck requires PostgreSQL with the psycopg driver")
     return url
 
 

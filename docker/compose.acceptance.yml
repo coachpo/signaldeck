@@ -1,0 +1,9 @@
+# Only for isolated local acceptance; never included by start.sh.
+services:
+  fake-model:
+    image: ${SIGNALDECK_LOCAL_IMAGE_PREFIX:-signaldeck-target}-app:local
+    entrypoint: ["python", "/fixtures/fake_openai_provider.py", "--host", "0.0.0.0", "--port", "8001"]
+    volumes:
+      - ./backend/tests/fake_openai_provider.py:/fixtures/fake_openai_provider.py:ro
+    healthcheck:
+      disable: true

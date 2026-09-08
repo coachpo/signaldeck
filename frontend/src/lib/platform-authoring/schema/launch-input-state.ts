@@ -408,7 +408,12 @@ function validatePayloadNodeForDraft(
           );
         }
         return field.required !== false
-          ? [{ field: runtimeInputField(fieldPath), issue: "Field is required." }]
+          ? [
+              {
+                field: runtimeInputField(fieldPath),
+                issue: "Field is required.",
+              },
+            ]
           : [];
       });
       return [...extraIssues, ...fieldIssues];
@@ -437,6 +442,21 @@ function validateLaunchPayloadForDraft(
     payload,
     [],
     nullablePathSet(state),
+  );
+}
+
+export function validateLaunchValueForSchema(
+  inputSchema: unknown,
+  payload: unknown,
+): LaunchInputApplyIssue[] {
+  const normalized = normalizeNullableSchemaNode(inputSchema, []);
+  const parsed = parseSchemaJsonObject(normalized.schema);
+  if (!parsed.builder) return [];
+  return validatePayloadNodeForDraft(
+    parsed.builder,
+    payload,
+    [],
+    new Set(normalized.nullablePathKeys),
   );
 }
 

@@ -12,3 +12,10 @@
 **/dist
 **/playwright-report
 **/test-results
+
+.steward
+backend/.data
+backend/.cache
+backend/experiments
+plugins
+.signaldeck-target

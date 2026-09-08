@@ -4,10 +4,10 @@
 
 ## 开发环境与依赖
 
-- Backend：`backend/pyproject.toml` 要求 Python >=3.13；CI 使用 Python 3.13、uv 0.9.8，根镜像与 backend 镜像使用 Python 3.14。
+- Backend：`backend/pyproject.toml` 要求 Python >=3.13；CI、根镜像、backend 镜像及固定 Core 执行环境使用 Python 3.13.13，CI 与镜像使用 uv 0.11.7。
 - Frontend：`frontend/package.json` 要求 Node >=24，并固定 pnpm 10.30.1；CI 使用 Node 24，镜像构建使用 Node 26。
 - 依赖以 `backend/uv.lock` 和 `frontend/pnpm-lock.yaml` 为准；按现有锁文件安装，不在普通环境准备中升级依赖。
-- 完整本地栈需要 Docker Compose v2，使用 PostgreSQL/pgvector；普通安装与启动见 [`README.md`](README.md#快速开始)。
+- 完整本地栈需要 Docker Compose v2，使用 PostgreSQL 16 和 Temporal；普通安装与启动见 [`README.md`](README.md#快速开始)。
 
 安装依赖：
 
@@ -18,37 +18,47 @@
 
 ## 开发启动
 
-完整本地/演示组合栈使用 [`start.sh`](start.sh)，启动与停止命令见 [`README.md`](README.md#快速开始)。它只向宿主机发布应用端口，不能直接用 Compose 内的 `db:5432` 作为宿主机进程的数据库地址。
+完整本地/演示栈使用 [`start.sh`](start.sh)，启动、插件选择和停止命令见 [`README.md`](README.md#快速开始)。默认目标数据放在 `.signaldeck-target/`，独立于旧实例。Compose 不向宿主机发布 PostgreSQL 或 Temporal RPC 端口，不能直接将 `db:5432` 或 `temporal:7233` 用于宿主机进程。
 
-需要热更新时，先准备可从宿主机访问的 PostgreSQL，并在 backend 与 scheduler 的终端中设置相同的 `DATABASE_URL`；保持 `AGENT_PLATFORM_ENCRYPTION_KEY` 一致，以读取已有加密配置。在仓库根目录分别打开三个终端执行：
+需要热更新时，准备独立且可从宿主机访问的 PostgreSQL，以及 Temporal CLI **1.8.3（内含 Server 1.31.2）**。API、dispatcher 和 worker 的终端必须设置相同的 `DATABASE_URL`、`AGENT_PLATFORM_ENCRYPTION_KEY`、`TEMPORAL_ADDRESS` 和下列绝对目录；worker 还需可用的 uv 和 Python 3.13.13。目录应属于本次开发实例，不指向旧版或不可丢弃数据。
 
 ```bash
+export SIGNALDECK_RUNTIME_MODE=local
+export TEMPORAL_ADDRESS=127.0.0.1:7233
+export SIGNALDECK_ARTIFACT_DIR="$PWD/.signaldeck-dev/artifacts"
+export SIGNALDECK_CORE_ARTIFACT_DIR="$PWD/.signaldeck-dev/core"
+export SIGNALDECK_CORE_ENV_DIR="$PWD/.signaldeck-dev/core-environments"
+export SIGNALDECK_CORE_PYTHON_VERSION=3.13.13
+mkdir -p "$PWD/.signaldeck-dev/temporal"
+```
+
+在仓库根目录分别打开终端执行（Temporal 已在运行时复用其地址）：
+
+```bash
+temporal server start-dev --ip 127.0.0.1 --port 7233 --db-filename "$PWD/.signaldeck-dev/temporal/target.db"
 (cd backend && uv run uvicorn app.main:app --reload --host 127.0.0.1 --port 8000)
-(cd backend && uv run python -m app.workers.run_scheduler)
+(cd backend && uv run python -m app.workers.command_dispatcher)
+(cd backend && uv run python -m app.workers.artifact_worker --serve)
 (cd frontend && pnpm dev --host 127.0.0.1)
 ```
 
-Vite 默认使用 5173 端口，开发 API client 默认访问 `http://127.0.0.1:8000/api` 并派生 `/api/v1` 扩展地址；只有改用其他 backend 地址时才需设置 `VITE_API_BASE_URL`。API 进程负责入队，scheduler 进程负责执行，单独启动 API 不会消费队列。
+Vite 默认使用 5173 端口，开发 API client 默认访问 `http://127.0.0.1:8000/api`；改用其他 backend 地址时设置 `VITE_API_BASE_URL`。API 原子保存 Run、快照和启动命令，dispatcher 投递命令并同步投影，Temporal 与固定制品 worker 执行工作流。API 重载发布新 Core 制品，已有运行继续使用其绑定制品；保留的制品和产物目录是恢复所需数据，不应随源码更新清空。
 
-根镜像同时运行 Nginx、FastAPI 和 scheduler，仅用于本地/演示。拆分部署使用 backend、frontend 两类镜像，scheduler 复用 backend 镜像；环境变量与运行边界见 [`docs/架构说明.md`](docs/架构说明.md) 和 [`docker/compose.production.example.yml`](docker/compose.production.example.yml)。
+根镜像运行 Nginx 和 FastAPI；本地 Compose 另启 dispatcher、worker、Temporal 和可选插件。拆分部署的 dispatcher/worker 复用 backend 镜像；环境变量与边界见 [`docs/架构说明.md`](docs/架构说明.md) 和 [`docker/compose.production.example.yml`](docker/compose.production.example.yml)。插件应使用从对应调用进程可达的 endpoint；宿主机开发不会自动注册 Compose 内网地址的插件。
 
 ### 测试数据库与 E2E 环境
 
-Backend pytest 的数据库 fixture 优先使用 `TEST_DATABASE_URL`，其次使用 `DATABASE_URL`。两者均未设置时，fixture 会启动或复用 `signaldeck-local-postgres` 容器，默认分配宿主机随机端口，可通过 `LOCAL_POSTGRES_PORT` 指定端口。它与根 Compose 的数据库是不同的启动路径。
+Backend pytest 的数据库 fixture 优先使用 `TEST_DATABASE_URL`，其次使用 `DATABASE_URL`。两者均未设置时，fixture 会启动或复用 `signaldeck-target-test-postgres` 容器，默认分配宿主机随机端口，可通过 `LOCAL_POSTGRES_PORT` 指定端口。容器使用 `pgvector/pgvector:pg16`，数据库文件默认保存在 `backend/.data/test-postgres/`，可通过 `SIGNALDECK_TEST_POSTGRES_DIR` 改写。它与根 Compose 的数据库是不同的启动路径。
 
-测试连接需要有权限访问 `postgres` 管理库并创建、删除临时 database；每个数据库 fixture 创建独立的 `signaldeck_test_*` 库并在结束时删除。自动创建的本地容器和数据卷会保留，测试不把应用数据库当作临时库清空。
+测试连接需要有权限访问 `postgres` 管理库并创建、删除临时 database；每个数据库 fixture 创建独立的 `signaldeck_test_*` 库并在结束时删除。自动创建的本地容器和数据目录会保留，测试不把应用数据库当作临时库清空。
 
-Playwright 使用 `DATABASE_URL`（不读取 `TEST_DATABASE_URL`，缺省为 backend 的本地 25432 地址），要求 PostgreSQL 已可连接并具备同样的建库/删库权限。启动脚本创建独立的 `signaldeck_e2e_*` 库，并启动 fake OpenAI-compatible provider、scheduler、8001 端口的 backend 和 4173 端口的 frontend preview；结束时清理所拥有的进程与临时库。E2E 默认使用 deterministic quote provider，不需要真实 LLM key，且不复用已有 web server。
+Playwright 使用 `DATABASE_URL`（不读取 `TEST_DATABASE_URL`，缺省为 backend 的本地 25432 地址），要求 PostgreSQL 已可连接并具备同样的建库/删库权限。还需安装上述固定版本的 Temporal CLI；可通过 `TEMPORAL_CLI` 指定可执行文件，否则启动器依次查找 `/tmp/sd-temporal-bin/temporal` 和 PATH 中的 `temporal`，版本不匹配会拒绝启动。
 
-### 本地数据重置
+E2E 启动器创建独立的 `signaldeck_e2e_*` 库和临时目录，启动 Temporal（默认 RPC 17233）、fake OpenAI-compatible provider（18081）、dispatcher、固定制品 worker、backend（8001）和 frontend preview（4173）。`SIGNALDECK_E2E_TEMPORAL_PORT` 与 `SIGNALDECK_FAKE_PROVIDER_PORT` 可改写前两者端口。测试使用 fake provider，不需要真实 LLM key；结束时清理所拥有的进程、临时目录和临时库，不复用已有 web server。测试约束见 [`backend/tests/AGENTS.md`](backend/tests/AGENTS.md)，三引擎比较的范围和复现入口见 [`docs/执行引擎比较.md`](docs/执行引擎比较.md)。
 
-只有明确允许丢弃根 Compose 的 PostgreSQL 数据时才运行：
+### 本地数据保留
 
-```bash
-docker compose -f docker-compose.yml down -v
-```
-
-这会删除 Compose 数据卷；普通停止使用不带 `-v` 的 `docker compose down`。数据与兼容政策以 [`STATUS.md`](STATUS.md) 为准。
+普通停止和容器移除使用 `./start.sh stop` 或 `./start.sh down`；两者均保留目标数据。当前 Compose 使用宿主机 bind mount，`docker compose down -v` 不会清除这些目录，不能作为目标数据重置命令。需要一套空白实例时，指定新的 `COMPOSE_PROJECT_NAME`、`SIGNALDECK_DATA_DIR` 及不冲突端口；旧数据的删除、重置或迁移须另行明确授权。数据与兼容政策以 [`STATUS.md`](STATUS.md) 为准。
 
 ## 检查、测试与构建
 

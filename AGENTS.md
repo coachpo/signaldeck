@@ -1,6 +1,6 @@
 # SignalDeck Agent Guide
 
-SignalDeck is a trusted single-user workflow runner: YAML Workflow Packages define agent pipelines, manual or scheduled launches enqueue runs, and operators inspect execution evidence and outputs. Product scope and the development tier are owned by [STATUS.md](STATUS.md) and the [product specification](docs/产品说明.md).
+SignalDeck is a trusted single-user Agent workflow platform: YAML Workflow Packages define reusable Agents and declarative DAGs, manual or scheduled launches create durable runs, and operators inspect execution evidence and outputs. Product scope and the development tier are owned by [STATUS.md](STATUS.md) and the [product specification](docs/产品说明.md).
 
 ## Communication
 
@@ -11,8 +11,9 @@ SignalDeck is a trusted single-user workflow runner: YAML Workflow Packages defi
 
 | Change | Start here |
 | --- | --- |
-| Backend APIs, schemas, persistence, and runtime | [backend/app/AGENTS.md](backend/app/AGENTS.md); HTTP composition starts in `backend/app/main.py`, execution in `backend/app/services/`, scheduler in `backend/app/workers/run_scheduler.py`. |
-| Static tools, providers, Templates, and Reports | [backend/app/extensions/AGENTS.md](backend/app/extensions/AGENTS.md); `backend/app/extensions/registry.py` is the composition root. |
+| Backend APIs, definitions, persistence, and execution | [backend/app/AGENTS.md](backend/app/AGENTS.md); HTTP composition starts in `backend/app/main.py`, domain contracts in `backend/app/domain/`, application ports in `backend/app/application/`, adapters in `backend/app/infrastructure/`. |
+| Independent plugins, providers, Templates, and Reports | [plugin integration](docs/writing-extensions.md) and [plugin artifacts](plugins/README.md); Finance owns Templates and Reports under `plugins/finance/`. |
+| Worker recovery, launch delivery, and schedules | `backend/app/workers/artifact_worker.py`, `command_dispatcher.py` and `schedule_fire.py`; Temporal adapters live in `backend/app/infrastructure/`. |
 | Backend regression coverage | [backend/tests/AGENTS.md](backend/tests/AGENTS.md). |
 | Frontend routes, authoring, and run inspection | [frontend/AGENTS.md](frontend/AGENTS.md); route ownership starts in `frontend/src/routes.ts`, with local guides under affected features and E2E. |
 | Workflow Package examples | [demo/AGENTS.md](demo/AGENTS.md); check corresponding bundled seeds and package contract tests. |
@@ -22,15 +23,15 @@ SignalDeck is a trusted single-user workflow runner: YAML Workflow Packages defi
 
 ## Cross-Cutting Boundaries
 
-- Use current architecture for maintenance; use the accepted frozen target for goal-directed replacement. Read its target and acceptance identifiers before implementation and report the covered criteria. Current static extension and scheduler wiring are implementation facts, not permanent target constraints. Do not add compatibility shims or legacy paths to constrain the target; Workflow Packages remain the executable workflow authoring root.
+- Use current architecture for maintenance; use the accepted frozen target for goal-directed replacement. Read its target and acceptance identifiers before implementation and report the covered criteria. Do not add compatibility shims or legacy paths to constrain the target; Workflow Packages remain the executable workflow authoring root.
 - DAG execution, Agent Runtime redesign and independently deployed plugins are within the accepted target. Do not add auth/RBAC product surfaces, multi-tenant accounts, a plugin marketplace, Studio, Tryout, memory, fork, portfolio, simulations, backtests or restore historical orchestration/runtime-v2 product entry points unless explicitly re-scoped. Preserve Finance ownership of Templates and Reports.
 - Preserve external camelCase through `CamelModel`, API-owned `{code, message, details[]}` errors, and string serialization for money, quantities, and market values. Apply [development rules](docs/开发规范.md) across both API producers and browser consumers; authentication middleware has its own documented 401 response.
 - Secret values must never appear in reads, exports, run details, logs, diagnostics, API error details, or metadata. Use existing encryption and safe projection boundaries; internal runtime payloads are not browser response models.
-- Keep YAML source safety and graph semantics in the manifest parser, deterministic ordering and hashes in the compiler, and distinct validation/launch/strict-readiness diagnostics in preflight. Package schemas stay closed; do not introduce `additionalProperties`, `allowAdditionalProperties`, or `patternProperties`.
+- Keep YAML source safety and source locations in `domain/definition_parser.py`, graph semantics and deterministic hashes in `domain/compiler.py`, and launch resource/tool resolution in `application/launch.py` (paths relative to `backend/app/`). Package schemas stay closed; do not introduce `additionalProperties`, `allowAdditionalProperties`, or `patternProperties`, or silently discard unsupported constraints.
 - Execute and rerun from immutable package snapshots. Preserve queue, schedule, and run provenance when changing the corresponding flows.
-- PostgreSQL initialization uses `create_all`, bundled seeds, and startup recovery. There is no migration framework; follow the [data and rebuild policy](STATUS.md) for schema changes.
+- PostgreSQL initialization uses `create_all` and inserts missing bundled packages without overwriting operator revisions. Durable command delivery and Temporal own execution recovery; query projections must not schedule work. There is no migration framework; follow the [data and rebuild policy](STATUS.md) for schema changes.
 - Frontend data access uses feature hooks and `queryKeys`; shared components remain presentational. Follow [frontend/DESIGN.md](frontend/DESIGN.md) for visual changes.
-- Demo YAML is contract material. Review affected parser/compiler/preflight tests, locked hashes, and seeds when changing it.
+- Demo YAML is contract material. Review affected parser/compiler/launch tests, `demo/contracts.json`, and bundled seeds when changing it.
 
 ## Validation and Local Runtime
 

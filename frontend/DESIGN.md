@@ -2,7 +2,7 @@
 
 ## 目的
 
-SignalDeck 是一个用于 Workflow Package、Scheduled Task、Run、Model Connection、Report、Template 和 finance workspace 的高密度管理界面。设计系统在不改变产品行为的前提下保持这些页面一致。当前视觉语言是受 Apple 启发的管理 UI：中性画布、分组 surface、柔和 elevation、精确间距、紧凑排版和清晰 focus。
+SignalDeck 是一个用于 Workflow Package、Agent 定义、资源绑定、Scheduled Task、Run 和 Plugin 目录的高密度管理界面。Finance 的 Template 和 Report 由独立插件页面拥有。设计系统在不改变产品行为的前提下保持这些页面一致。当前视觉语言是受 Apple 启发的管理 UI：中性画布、分组 surface、柔和 elevation、精确间距、紧凑排版和清晰 focus。
 
 ## 系统层次
 

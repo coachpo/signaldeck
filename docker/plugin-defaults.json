@@ -1,0 +1,44 @@
+[
+  {
+    "profile": "finance",
+    "pluginId": "signaldeck/finance",
+    "descriptorUrl": "http://finance:8000/release",
+    "resources": [
+      {
+        "resourceId": "finance-market-data",
+        "kind": "tool",
+        "config": {
+          "name": "Finance market data",
+          "pluginId": "signaldeck/finance",
+          "scope": {"allowedSymbols": ["MSFT", "AAPL"]},
+          "maxConcurrentCalls": 4,
+          "requestsPerSecond": 4.0
+        }
+      }
+    ]
+  },
+  {
+    "profile": "digital-oracle",
+    "pluginId": "signaldeck/digital-oracle",
+    "descriptorUrl": "http://digital-oracle:8000/release",
+    "resources": []
+  },
+  {
+    "profile": "notes",
+    "pluginId": "example/notes",
+    "descriptorUrl": "http://notes:8000/release",
+    "resources": [
+      {
+        "resourceId": "notes-workspace",
+        "kind": "tool",
+        "config": {
+          "name": "Research notes",
+          "pluginId": "example/notes",
+          "scope": {"collection": "research"},
+          "maxConcurrentCalls": 4,
+          "requestsPerSecond": 10.0
+        }
+      }
+    ]
+  }
+]

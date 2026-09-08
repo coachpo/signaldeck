@@ -1,0 +1,317 @@
+{
+  "schemaVersion": 1,
+  "description": "Static existing test-file selection; each invocation executes these tests anew. Historical observations were used only to locate tests, never as execution evidence. Assertion source is extracted from the current source snapshot. Required extra integration checks are dispatched to acceptance_extras.run_extra.",
+  "cases": {
+    "A01": {
+      "coversCriteria": [
+        "C1"
+      ],
+      "pytestFiles": [
+        "backend/tests/test_independent_plugins.py",
+        "backend/tests/test_plugin_wire_contracts.py"
+      ],
+      "requiredFiles": [
+        "observations.json",
+        "checks.txt"
+      ]
+    },
+    "A02": {
+      "coversCriteria": [
+        "C2"
+      ],
+      "pytestFiles": [
+        "backend/tests/test_durable_runtime_dynamic_catalog.py",
+        "backend/tests/test_platform_api.py",
+        "backend/tests/test_platform_persistence.py"
+      ],
+      "requiredFiles": [
+        "observations.json",
+        "checks.txt"
+      ]
+    },
+    "A03": {
+      "coversCriteria": [
+        "C3"
+      ],
+      "pytestFiles": [
+        "backend/tests/test_dag_compiler.py",
+        "backend/tests/test_durable_runtime.py",
+        "backend/tests/test_durable_runtime_budgets.py",
+        "backend/tests/test_agent_deadline_classification.py"
+      ],
+      "requiredFiles": [
+        "observations.json",
+        "checks.txt"
+      ]
+    },
+    "A04": {
+      "coversCriteria": [
+        "C4"
+      ],
+      "pytestFiles": [
+        "backend/tests/test_dag_compiler.py",
+        "backend/tests/test_platform_api.py"
+      ],
+      "requiredFiles": [
+        "observations.json",
+        "checks.txt",
+        "ui.png"
+      ]
+    },
+    "A05": {
+      "coversCriteria": [
+        "C5"
+      ],
+      "pytestFiles": [
+        "backend/tests/test_durable_runtime.py",
+        "backend/tests/test_durable_runtime_budgets.py",
+        "backend/tests/test_durable_runtime_dynamic_catalog.py",
+        "backend/tests/test_resource_limiter.py"
+      ],
+      "requiredFiles": [
+        "observations.json",
+        "checks.txt"
+      ]
+    },
+    "A06": {
+      "coversCriteria": [
+        "C6"
+      ],
+      "pytestFiles": [
+        "backend/tests/test_dag_compiler.py",
+        "backend/tests/test_durable_runtime_boundaries.py",
+        "backend/tests/test_durable_runtime_cancel.py"
+      ],
+      "requiredFiles": [
+        "observations.json",
+        "checks.txt",
+        "ui.png"
+      ]
+    },
+    "A07": {
+      "coversCriteria": [
+        "C7"
+      ],
+      "pytestFiles": [
+        "backend/tests/test_durable_runtime.py",
+        "backend/tests/test_platform_persistence.py",
+        "backend/tests/test_operation_redelivery.py"
+      ],
+      "requiredFiles": [
+        "observations.json",
+        "checks.txt"
+      ]
+    },
+    "A08": {
+      "coversCriteria": [
+        "C8"
+      ],
+      "pytestFiles": [
+        "backend/tests/test_independent_plugins.py",
+        "backend/tests/test_tool_gateway_overlap.py",
+        "backend/tests/test_tool_gateway_target.py",
+        "backend/tests/test_tool_gateway_unknown_reconcile.py",
+        "backend/tests/test_operation_redelivery.py"
+      ],
+      "requiredFiles": [
+        "observations.json",
+        "checks.txt"
+      ]
+    },
+    "A09": {
+      "coversCriteria": [
+        "C9"
+      ],
+      "pytestFiles": [
+        "backend/tests/test_durable_runtime_budgets.py",
+        "backend/tests/test_durable_runtime_cancel.py",
+        "backend/tests/test_durable_runtime_plugin_stop.py",
+        "backend/tests/test_mcp_cancellation.py",
+        "backend/tests/test_agent_initial_projection.py",
+        "backend/tests/test_agent_deadline_classification.py",
+        "backend/tests/test_repeat_workflow_cancellation.py",
+        "backend/tests/test_terminal_projection_cancellation.py"
+      ],
+      "requiredFiles": [
+        "observations.json",
+        "checks.txt"
+      ]
+    },
+    "A10": {
+      "coversCriteria": [
+        "C10"
+      ],
+      "pytestFiles": [
+        "backend/tests/test_core_artifacts.py",
+        "backend/tests/test_durable_runtime_dynamic_catalog.py",
+        "backend/tests/test_platform_persistence.py",
+        "backend/tests/test_target_schedules.py"
+      ],
+      "requiredFiles": [
+        "observations.json",
+        "checks.txt"
+      ]
+    },
+    "A11": {
+      "coversCriteria": [
+        "C11"
+      ],
+      "pytestFiles": [
+        "backend/tests/test_durable_runtime_cache.py",
+        "backend/tests/test_tool_cache.py"
+      ],
+      "requiredFiles": [
+        "observations.json",
+        "checks.txt"
+      ]
+    },
+    "A12": {
+      "coversCriteria": [
+        "C12"
+      ],
+      "pytestFiles": [
+        "backend/tests/test_execution_projection.py",
+        "backend/tests/test_platform_persistence.py",
+        "backend/tests/test_target_schedules.py"
+      ],
+      "requiredFiles": [
+        "observations.json",
+        "checks.txt"
+      ]
+    },
+    "A13": {
+      "coversCriteria": [
+        "C13"
+      ],
+      "pytestFiles": [
+        "backend/tests/test_dag_compiler.py",
+        "backend/tests/test_durable_runtime_dynamic_catalog.py",
+        "backend/tests/test_plugin_wire_contracts.py",
+        "backend/tests/test_tool_gateway_overlap.py",
+        "backend/tests/test_tool_gateway_target.py",
+        "backend/tests/test_tool_gateway_unknown_reconcile.py",
+        "backend/tests/test_operation_redelivery.py"
+      ],
+      "requiredFiles": [
+        "observations.json",
+        "checks.txt"
+      ]
+    },
+    "A14": {
+      "coversCriteria": [
+        "C14"
+      ],
+      "pytestFiles": [
+        "backend/tests/test_durable_runtime_credentials.py",
+        "backend/tests/test_encrypted_jsonb.py",
+        "backend/tests/test_execution_tracing.py",
+        "backend/tests/test_independent_plugins.py",
+        "backend/tests/test_mcp_cancellation.py",
+        "backend/tests/test_platform_api.py",
+        "backend/tests/test_plugin_wire_contracts.py",
+        "backend/tests/test_tool_gateway_target.py"
+      ],
+      "requiredFiles": [
+        "observations.json",
+        "checks.txt"
+      ]
+    },
+    "A15": {
+      "coversCriteria": [
+        "C15"
+      ],
+      "pytestFiles": [
+        "backend/tests/test_artifact_store_target.py",
+        "backend/tests/test_durable_runtime_boundaries.py",
+        "backend/tests/test_execution_tracing.py",
+        "backend/tests/test_platform_persistence.py",
+        "backend/tests/test_agent_initial_projection.py",
+        "backend/tests/test_terminal_projection_cancellation.py"
+      ],
+      "requiredFiles": [
+        "observations.json",
+        "checks.txt",
+        "ui.png"
+      ]
+    },
+    "A16": {
+      "coversCriteria": [
+        "C16"
+      ],
+      "pytestFiles": [
+        "backend/tests/test_durable_runtime.py",
+        "backend/tests/test_durable_runtime_budgets.py",
+        "backend/tests/test_durable_runtime_cache.py",
+        "backend/tests/test_durable_runtime_cancel.py",
+        "backend/tests/test_durable_runtime_dynamic_catalog.py",
+        "backend/tests/test_durable_runtime_injection.py",
+        "backend/tests/test_durable_runtime_plugin_stop.py",
+        "backend/tests/test_target_schedules.py",
+        "backend/tests/test_tool_gateway_overlap.py",
+        "backend/tests/test_tool_gateway_unknown_reconcile.py",
+        "backend/tests/test_agent_initial_projection.py",
+        "backend/tests/test_agent_deadline_classification.py",
+        "backend/tests/test_operation_redelivery.py",
+        "backend/tests/test_repeat_workflow_cancellation.py",
+        "backend/tests/test_terminal_projection_cancellation.py"
+      ],
+      "requiredFiles": [
+        "observations.json",
+        "checks.txt",
+        "engine-comparison.md"
+      ]
+    },
+    "A17": {
+      "coversCriteria": [
+        "C17"
+      ],
+      "pytestFiles": [
+        "backend/tests/test_target_schedules.py"
+      ],
+      "requiredFiles": [
+        "observations.json",
+        "checks.txt"
+      ]
+    },
+    "A18": {
+      "coversCriteria": [
+        "C18"
+      ],
+      "pytestFiles": [
+        "backend/tests/test_durable_runtime_injection.py",
+        "backend/tests/test_execution_projection.py",
+        "backend/tests/test_independent_plugins.py",
+        "backend/tests/test_platform_persistence.py"
+      ],
+      "requiredFiles": [
+        "observations.json",
+        "checks.txt"
+      ]
+    },
+    "local-workflow-loop": {
+      "coversCriteria": [
+        "C4",
+        "C15",
+        "C17",
+        "C19"
+      ],
+      "pytestFiles": [],
+      "requiredFiles": [
+        "observations.json",
+        "checks.txt",
+        "ui.png"
+      ]
+    },
+    "project-completion": {
+      "coversCriteria": [
+        "C19"
+      ],
+      "pytestFiles": [],
+      "requiredFiles": [
+        "observations.json",
+        "checks.txt",
+        "delivery-review.md"
+      ]
+    }
+  }
+}

@@ -1,0 +1,12 @@
+# Workflow Platform UI
+
+These pages own the SD-TARGET-001 definition, resource, plugin, schedule and execution surfaces. API calls and invalidation live in `../../hooks/use-workflow-platform.ts`; wire types are in `../../lib/types/workflow-platform.ts`.
+
+- `packages.tsx` hydrates drafts from the persisted YAML source. `package-structure.tsx` updates the same YAML document through `package-source.ts`; incomplete JSON drafts must be applied or discarded before validation/save/navigation. Server compilation owns schema and graph semantics. Display all diagnostic paths/locations and merged dependency edge sources.
+- `launch.tsx` explicitly selects a workflow from the saved package. `launch-inputs.tsx` keeps object forms and applied JSON on one payload (scalar/array/null roots use JSON without object wrapping), blocks launch for unapplied JSON, and resets when the workflow/schema changes. Preserve stable launch identity through uncertain responses.
+- `runs.tsx` reads immutable snapshots and execution evidence. Keep the invocation ownership tree separate from the dependency/artifact graph, validate evidence deep links, preserve operation/attempt identities, and render unknown/blocked/skipped/timed_out distinctly. Cancellation requested does not mean stopped. Rerun preserves the original package revision and parameters, creates a new Run and resolves current bindings. Explicit cross-run cache hits expose their source Run, operation and freshness timestamps.
+- `resources.tsx` only writes credentials from the current input draft and clears them after a successful save. Reads expose presence only. Never persist credentials to browser storage or include them in package source. Credential revisions are read-only and must not be copied into resource writes.
+- `plugins.tsx` renders independent business-page links from enabled release metadata. Never statically import Finance pages into the core bundle. Allow only HTTP(S) URLs without user information.
+- `schedules.tsx` preserves explicit IANA timezone, overlap policy and missed-trigger window. Pending/failed synchronization must remain visible. Trigger acceptance is not run completion, and deletion must retain existing run provenance. `schedule-fire-history.tsx` reads recorded fire outcomes without initializing the engine.
+
+Run the colocated platform tests and `../../hooks/use-workflow-platform.test.tsx`, API transport tests, then frontend lint/typecheck/test/build. Cross-stack acceptance is in `../../../e2e/`.

@@ -1,5 +1,14 @@
 import { spawn, spawnSync } from "node:child_process";
-import { dirname, resolve } from "node:path";
+import { dirname, resolve, join } from "node:path";
+import {
+  existsSync,
+  mkdtempSync,
+  rmSync,
+  chmodSync,
+  readdirSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { createConnection } from "node:net";
 import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 
@@ -10,8 +19,16 @@ const fakeProviderBaseUrl =
   process.env.SIGNALDECK_FAKE_PROVIDER_BASE_URL ??
   `http://127.0.0.1:${fakeProviderPort}/v1`;
 const children = new Set();
+const runtimeDirectory = mkdtempSync(join(tmpdir(), "signaldeck-e2e-"));
+const temporalCli =
+  process.env.TEMPORAL_CLI ??
+  (existsSync("/tmp/sd-temporal-bin/temporal")
+    ? "/tmp/sd-temporal-bin/temporal"
+    : "temporal");
+const temporalPort = process.env.SIGNALDECK_E2E_TEMPORAL_PORT ?? "17233";
 const e2eDatabaseName = `signaldeck_e2e_${process.pid}_${Date.now()}`;
 let backendEnv = process.env;
+let pythonExecutable;
 let e2eDatabaseCreated = false;
 let shuttingDown = false;
 
@@ -66,7 +83,15 @@ function exitCodeFor(code, signal) {
 function runDatabaseManager(command) {
   const result = spawnSync(
     "uv",
-    ["run", "--frozen", "python", "-c", databaseManagerScript, command, e2eDatabaseName],
+    [
+      "run",
+      "--frozen",
+      "python",
+      "-c",
+      databaseManagerScript,
+      command,
+      e2eDatabaseName,
+    ],
     {
       cwd: backendDir,
       env: process.env,
@@ -101,60 +126,160 @@ function dropE2eDatabase() {
   }
 }
 
-function stopAll(exitCode = 0) {
-  if (shuttingDown) {
-    return;
-  }
+function unlockOwnedDirectories(path) {
+  chmodSync(path, 0o700);
+  for (const entry of readdirSync(path, { withFileTypes: true }))
+    if (entry.isDirectory() && !entry.isSymbolicLink())
+      unlockOwnedDirectories(join(path, entry.name));
+}
+
+async function stopAll(exitCode = 0) {
+  if (shuttingDown) return;
   shuttingDown = true;
   for (const child of children) {
-    child.kill();
+    try {
+      process.kill(-child.pid, "SIGTERM");
+    } catch (error) {
+      if (error.code !== "ESRCH") throw error;
+    }
   }
+  const deadline = Date.now() + 10000;
+  while (
+    [...children].some(
+      (child) => child.exitCode === null && child.signalCode === null,
+    ) &&
+    Date.now() < deadline
+  )
+    await delay(100);
+  for (const child of children)
+    if (child.exitCode === null && child.signalCode === null)
+      try {
+        process.kill(-child.pid, "SIGKILL");
+      } catch (error) {
+        if (error.code !== "ESRCH") throw error;
+      }
   dropE2eDatabase();
+  unlockOwnedDirectories(runtimeDirectory);
+  rmSync(runtimeDirectory, {
+    recursive: true,
+    force: true,
+    maxRetries: 10,
+    retryDelay: 200,
+  });
   process.exit(exitCode);
 }
 
-function spawnOwned(label, args) {
-  const child = spawn("uv", args, {
+function spawnProcess(label, command, args) {
+  const child = spawn(command, args, {
     cwd: backendDir,
     env: backendEnv,
     stdio: "inherit",
+    detached: true,
   });
   children.add(child);
   child.on("error", (error) => {
-    console.error(`${label} failed to start:`, error);
-    stopAll(1);
+    console.error(`${label} failed to start: ${error.message}`);
+    void stopAll(1);
   });
   child.on("exit", (code, signal) => {
     children.delete(child);
-    if (shuttingDown) {
-      return;
-    }
-    console.error(`${label} exited with code ${code ?? "unknown"} signal ${signal ?? "none"}`);
-    stopAll(exitCodeFor(code, signal));
+    if (shuttingDown) return;
+    console.error(
+      `${label} exited with code ${code ?? "unknown"} signal ${signal ?? "none"}`,
+    );
+    void stopAll(exitCodeFor(code, signal));
   });
   return child;
 }
-
-async function waitForWorkerReady(worker) {
-  await delay(750);
-  if (worker.exitCode !== null || worker.signalCode !== null) {
-    throw new Error("scheduler worker exited before backend startup");
+function spawnOwned(label, args) {
+  if (args[0] !== "run" || args[1] !== "--frozen" || args[2] !== "python")
+    throw new Error("Owned services require the verified Python interpreter");
+  return spawnProcess(label, pythonExecutable, args.slice(3));
+}
+async function waitForPort(port, child) {
+  const deadline = Date.now() + 30000;
+  while (Date.now() < deadline) {
+    if (child.exitCode !== null || child.signalCode !== null)
+      throw new Error(`Owned service exited before port ${port} became ready`);
+    const ready = await new Promise((resolvePort) => {
+      const socket = createConnection({
+        host: "127.0.0.1",
+        port: Number(port),
+      });
+      socket.once("connect", () => {
+        socket.destroy();
+        resolvePort(true);
+      });
+      socket.once("error", () => resolvePort(false));
+      socket.setTimeout(500, () => {
+        socket.destroy();
+        resolvePort(false);
+      });
+    });
+    if (ready) return;
+    await delay(100);
   }
+  throw new Error(`Owned service did not listen on port ${port}`);
 }
 
 async function main() {
   const e2eDatabaseUrl = createE2eDatabase();
+  const interpreter = spawnSync(
+    "uv",
+    ["run", "--frozen", "python", "-c", "import sys; print(sys.executable)"],
+    { cwd: backendDir, env: process.env, encoding: "utf8" },
+  );
+  if (interpreter.status !== 0)
+    throw new Error("Cannot resolve the locked Python environment");
+  pythonExecutable = interpreter.stdout.trim();
   backendEnv = {
     ...process.env,
     DATABASE_URL: e2eDatabaseUrl,
     OPENAI_API_KEY: "sk-e2e-fake-provider",
     OPENAI_BASE_URL: fakeProviderBaseUrl,
-    QUOTE_PROVIDER_BACKEND: process.env.QUOTE_PROVIDER_BACKEND ?? "deterministic",
+    TEMPORAL_ADDRESS: `127.0.0.1:${temporalPort}`,
+    SIGNALDECK_ARTIFACT_DIR: join(runtimeDirectory, "artifacts"),
+    SIGNALDECK_CORE_ARTIFACT_DIR: join(runtimeDirectory, "core"),
+    SIGNALDECK_CORE_ENV_DIR: join(runtimeDirectory, "environments"),
+    SIGNALDECK_CORE_PYTHON_VERSION: "3.13.13",
+    SIGNALDECK_RUNTIME_MODE: "test",
+    LOGFIRE_TOKEN: "",
+    LOGFIRE_API_KEY: "",
+    LOGFIRE_CREDENTIALS_DIR: join(runtimeDirectory, "logfire"),
+    LOGFIRE_CONFIG_DIR: join(runtimeDirectory, "logfire"),
+    OTEL_EXPORTER_OTLP_ENDPOINT: "",
+    OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: "",
+    OTEL_EXPORTER_OTLP_METRICS_ENDPOINT: "",
+    OTEL_EXPORTER_OTLP_LOGS_ENDPOINT: "",
     SIGNALDECK_API_TOKEN: "",
     SIGNALDECK_FAKE_PROVIDER_BASE_URL: fakeProviderBaseUrl,
     SIGNALDECK_FAKE_PROVIDER_PORT: fakeProviderPort,
   };
-  spawnOwned("fake OpenAI-compatible provider", [
+  const cliVersion = spawnSync(temporalCli, ["--version"], {
+    encoding: "utf8",
+  });
+  if (
+    cliVersion.status !== 0 ||
+    !/^temporal version 1\.8\.3 \(Server 1\.31\.2[,)]/m.test(cliVersion.stdout)
+  )
+    throw new Error(
+      "E2E requires Temporal CLI 1.8.3 (Server 1.31.2). Set TEMPORAL_CLI to its executable path.",
+    );
+  const temporal = spawnProcess("Temporal dev server", temporalCli, [
+    "server",
+    "start-dev",
+    "--ip",
+    "127.0.0.1",
+    "--port",
+    temporalPort,
+    "--headless",
+    "--db-filename",
+    join(runtimeDirectory, "temporal.sqlite"),
+    "--log-level",
+    "warn",
+  ]);
+  await waitForPort(temporalPort, temporal);
+  const provider = spawnOwned("fake OpenAI-compatible provider", [
     "run",
     "--frozen",
     "python",
@@ -164,18 +289,29 @@ async function main() {
     "--port",
     fakeProviderPort,
   ]);
-  await delay(250);
-  const worker = spawnOwned("scheduler worker", [
+  await waitForPort(fakeProviderPort, provider);
+  spawnOwned("command dispatcher", [
     "run",
     "--frozen",
     "python",
     "-m",
-    "app.workers.run_scheduler",
+    "app.workers.command_dispatcher",
   ]);
-  await waitForWorkerReady(worker);
+  spawnOwned("core artifact worker supervisor", [
+    "run",
+    "--frozen",
+    "python",
+    "-m",
+    "app.workers.artifact_worker",
+    "--serve",
+    "--source",
+    backendDir,
+  ]);
   spawnOwned("backend", [
     "run",
     "--frozen",
+    "python",
+    "-m",
     "uvicorn",
     "app.main:app",
     "--host",

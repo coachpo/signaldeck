@@ -7,7 +7,7 @@ import pytest
 from sqlalchemy.engine import Dialect
 
 from app.core.config import reset_settings_cache
-from app.models.base import EncryptedJSONB
+from app.infrastructure.secret_storage import EncryptedJSONB
 
 _DIALECT = cast(Dialect, object())
 

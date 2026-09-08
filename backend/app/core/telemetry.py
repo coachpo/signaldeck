@@ -13,7 +13,7 @@ def _get_logfire_module() -> Any:
     return importlib.import_module("logfire")
 
 
-def configure_logfire() -> None:
+def configure_logfire(*, service_name: str = "signaldeck-backend") -> None:
     global _LOGFIRE_CONFIGURED, _LOGFIRE_MODULE
     if _LOGFIRE_CONFIGURED:
         return
@@ -24,7 +24,7 @@ def configure_logfire() -> None:
 
         logfire = _get_logfire_module()
         logfire.configure(
-            service_name="signaldeck-backend",
+            service_name=service_name,
             send_to_logfire="if-token-present",
             console=False,
             inspect_arguments=False,

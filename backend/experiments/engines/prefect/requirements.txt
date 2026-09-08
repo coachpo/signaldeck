@@ -1,0 +1,4 @@
+prefect==3.8.5
+pydantic-ai-slim[prefect]==2.40.0
+jsonschema==4.26.0
+fastapi==0.136.3

@@ -1,35 +1,36 @@
 # SignalDeck Backend
 
-SignalDeck 的 FastAPI backend，负责 Workflow Package、Scheduled Task、Model Connection、Run evidence，以及静态扩展提供的 Templates/Reports API。
+SignalDeck 的 FastAPI backend，提供 Workflow Package 定义、资源与插件配置、启动命令、定时配置及运行证据 API。声明式 DAG 由 Temporal 执行；Finance 的 Templates/Reports 属于独立插件。
 
-安装与普通启动见根 [`README.md`](../README.md)；开发环境、独立 API/scheduler 启动和全部验证命令集中在 [`CONTRIBUTING.md`](../CONTRIBUTING.md)。项目开发档位与部署事实以 [`STATUS.md`](../STATUS.md) 为准。
+安装与普通启动见根 [`README.md`](../README.md)；开发环境、各进程启动和全部验证命令集中在 [`CONTRIBUTING.md`](../CONTRIBUTING.md)。项目开发档位与部署事实以 [`STATUS.md`](../STATUS.md) 为准。
 
 ## 入口与运行前提
 
-- API 入口为 `app.main:app`，worker 入口为 `app.workers.run_scheduler`。API 入队后需要 scheduler 才会执行运行。
-- 两个进程共享 PostgreSQL 和 `AGENT_PLATFORM_ENCRYPTION_KEY`。模型 API key 与 package secret binding 静态加密；runtime 配置默认值和生产模式约束见 [`架构说明`](../docs/架构说明.md#接口与安全边界)。
-- `/health` 仅检查进程存活；`/ready` 检查数据库连接，不验证 scheduler 或 provider。
-- 本地组合栈由根 `start.sh` 启动。拆分部署中的 scheduler 复用 backend 镜像，不发布 HTTP 端口。
+- API 入口为 `app.main:app`；启动时初始化核心表、补充缺失示例包，并发布当前 Core 制品。
+- `app.workers.command_dispatcher` 投递持久启动命令、同步定时配置，并更新执行事实的读取投影。`app.workers.artifact_worker --serve` 为保留的 Core 制品启动固定依赖环境的 worker；Temporal 负责执行与定时调度。仅启动 API 不会执行已入队的 Run。
+- API、dispatcher 和 worker 共享 Core PostgreSQL、`AGENT_PLATFORM_ENCRYPTION_KEY`、产物目录和 Core 制品目录；dispatcher 与 worker 还需要相同的 `TEMPORAL_ADDRESS`。插件使用独立进程，Finance 和 Notes 数据保存在各自数据库，核心不挂载 Finance 业务路由。
+- `/health` 仅检查 API 进程存活；`/ready` 检查数据库连接，不验证 Temporal、worker、模型或插件。
+- 本地组合栈由根 `start.sh` 启动；目标数据使用独立目录，不接管旧实例。拆分配置中的 dispatcher 和 worker 复用 backend 镜像，不发布 HTTP 端口。
 
 ## API 与模块导航
 
 | 入口 | 实现责任 |
 | --- | --- |
-| `/api/workflow-packages` | YAML authoring、manifest validation/import/export、secret bindings、preflight 与 launch。 |
-| `/api/schedules` | 计划定义、临时 preview、run-now 和 fire history。 |
-| `/api/model-connections` | 全局模型绑定、connection test 和 capability probe。 |
-| `/api/tools` | 只读的 server-declared tool catalog。 |
-| `/api/runs` | 运行列表、详情、cancel、delete、root-parameter rerun 与 provenance。 |
-| `/api/v1/templates`、`/api/v1/reports` | Finance 静态扩展挂载的模板和报告 API。 |
+| `/api/workflow-packages` | 定义创建/修改、YAML 验证与编译；`/{packageKey}/launches` 保存不可变快照和启动命令。 |
+| `/api/resources` | 模型及工具资源配置、加密凭据写入和安全读取。 |
+| `/api/plugins` | 插件 release 契约注册、启停配置及描述读取。 |
+| `/api/runs` | 运行列表、详情、cancel、rerun、调用证据和来源。 |
+| `/api/artifacts/{digest}` | 按内容摘要读取运行产物。 |
+| `/api/schedules` | cron/时区/重叠/错过策略配置、同步状态、`/{scheduleId}/trigger` 与 fire history。 |
 
-路由契约由 `app/api/` 和 `app/schemas/` 定义；服务、运行时及持久化责任见 [`架构说明`](../docs/架构说明.md)，表与级联关系见 [`数据模型`](../docs/data-model.md)，扩展入口见 [`扩展编写`](../docs/writing-extensions.md)。用户流程与 schedule/rerun 语义以 [`产品说明`](../docs/产品说明.md) 为准。
+HTTP 组合入口为 [`app/api/platform_router.py`](app/api/platform_router.py)，请求与响应模型在相应路由文件及其导入的领域模型中。定义和 DAG 契约位于 `app/domain/`，应用编排位于 `app/application/`，存储、Gateway 与 Temporal 适配位于 `app/infrastructure/`。详见 [`架构说明`](../docs/架构说明.md)、[`数据模型`](../docs/data-model.md) 和 [`插件说明`](../plugins/README.md)。
 
 ## Scheduled Task 请求契约
 
-未保存 preview 使用 `POST /api/schedules/preview`，保存后的 preview 使用 `POST /api/schedules/{scheduleId}/preview`；两者只计算临时结果，不创建 fire 或 run。input template 必须是 JSON object，支持 `schedule`、`fire`、`window`、`lastRun`、`vars` 下允许的 placeholder；完整占位符保留 JSON 类型，嵌入文本的 placeholder 转为字符串，最终结果仍须通过 workflow input schema。
+创建和修改使用 `name`、`packageKey`、`workflowKey`、`parameters`、`cron`、`timeZone`、`overlapPolicy`、`catchupWindowSeconds` 和 `paused`；参数必须符合所选 workflow 的输入 schema。`overlapPolicy` 接受 `skip`、`buffer_one` 或 `allow`；时区单独指定，不嵌入 cron 字符串。
 
-schedule read 省略 `inputTemplate` 和 `templateVars`，客户端需要保留显式 draft。`POST /api/schedules/{scheduleId}/run-now` 要求 `idempotencyKey` 和带时区的 `scheduledFor`，通过相同的 scheduled-run 路径创建 manual fire。请求字段以 [`schemas/schedule.py`](app/schemas/schedule.py) 为准。
+`POST /api/schedules/{scheduleId}/trigger` 接收 `triggerId` 并返回投递回执；实际 fire 和 Run 通过 `GET /api/schedules/{scheduleId}/fires` 检查。配置同步状态与执行状态分开，删除定时配置保留既有 fire/Run 来源。完整契约见 [`app/domain/schedules.py`](app/domain/schedules.py) 和 [`app/api/platform_schedules.py`](app/api/platform_schedules.py)。
 
-## 测试数据库
+## 测试环境
 
-[`tests/conftest.py`](tests/conftest.py) 使用真实 PostgreSQL 和 UUID 隔离的临时数据库，provider 路径使用 mock 或本地 fake server。pytest fixture 与 Playwright backend 启动器的数据库准备不同；环境变量优先级、自动 Docker 启动、数据库权限和运行命令统一见 [`CONTRIBUTING.md`](../CONTRIBUTING.md)。
+[`tests/conftest.py`](tests/conftest.py) 使用真实 PostgreSQL 和 UUID 隔离的临时数据库；模型路径使用 mock 或本地 fake server。Playwright 还启动独立 Temporal dev server、dispatcher 和固定制品 worker。环境变量优先级、Temporal 版本、数据库权限和命令统一见 [`CONTRIBUTING.md`](../CONTRIBUTING.md)。

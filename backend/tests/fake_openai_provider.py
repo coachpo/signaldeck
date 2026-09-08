@@ -5,8 +5,9 @@ import json
 from collections.abc import Iterator
 from contextlib import contextmanager
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from threading import Thread
+from threading import Event, Thread
 from typing import Any, cast
+from urllib.parse import unquote
 
 
 def _string_value(key: str, summary: str) -> str:
@@ -97,11 +98,39 @@ def _schema_value(
     return _string_value(key, summary)
 
 
-def _schema_output(schema: object, summary: str) -> dict[str, object]:
+def _schema_output(schema: object, summary: str) -> object:
     if not isinstance(schema, dict):
         return {"summary": summary}
-    output = _schema_value("summary", schema, summary, schema)
-    return output if isinstance(output, dict) else {"summary": summary}
+    return _schema_value("summary", schema, summary, schema)
+
+
+def _prompted_schema(payload: dict[str, Any]) -> object | None:
+    messages = payload.get("messages", payload.get("input", []))
+    if not isinstance(messages, list):
+        return None
+    for message in reversed(messages):
+        if not isinstance(message, dict) or message.get("role") != "user":
+            continue
+        content = message.get("content")
+        texts = (
+            [content]
+            if isinstance(content, str)
+            else (
+                [part.get("text") for part in content if isinstance(part, dict)]
+                if isinstance(content, list)
+                else []
+            )
+        )
+        for text in texts:
+            if not isinstance(text, str):
+                continue
+            try:
+                value = json.loads(text)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(value, dict) and isinstance(value.get("outputContract"), dict):
+                return value["outputContract"]
+    return None
 
 
 def _responses_schema(payload: dict[str, Any]) -> object | None:
@@ -129,15 +158,23 @@ def _response(
     *,
     include_usage: bool = True,
     schema: object | None = None,
+    model: str = "fake-model",
 ) -> dict[str, Any]:
     output = _schema_output(schema, summary)
     output_text = json.dumps(output)
     body: dict[str, Any] = {
         "id": "fake-response",
+        "object": "response",
+        "created_at": 0,
+        "status": "completed",
+        "model": model,
         "output": [
             {
+                "id": "fake-message",
                 "type": "message",
-                "content": [{"type": "output_text", "text": output_text}],
+                "role": "assistant",
+                "status": "completed",
+                "content": [{"type": "output_text", "text": output_text, "annotations": []}],
             }
         ],
         "output_text": output_text,
@@ -157,7 +194,10 @@ def _normalize_base_path(base_path: str) -> str:
 
 
 class FakeOpenAIProviderServer(ThreadingHTTPServer):
-    request_log: list[dict[str, Any]] = []
+    def __init__(self, address: tuple[str, int], handler: type[BaseHTTPRequestHandler]) -> None:
+        super().__init__(address, handler)
+        self.request_log: list[dict[str, Any]] = []
+        self.held_models: dict[str, Event] = {}
 
 
 @contextmanager
@@ -183,7 +223,28 @@ def run_fake_openai_provider(
 class FakeOpenAIProviderHandler(BaseHTTPRequestHandler):
     server_version = "SignalDeckFakeOpenAI/1.0"
 
+    def do_GET(self) -> None:  # noqa: N802
+        if self.path.startswith("/control/state/"):
+            model = unquote(self.path.removeprefix("/control/state/"))
+            server = cast(FakeOpenAIProviderServer, self.server)
+            entered = sum(item["payload"].get("model") == model for item in server.request_log)
+            self._send_json(200, {"entered": entered})
+            return
+        self._send_json(404, {"error": {"message": "unsupported fake provider route"}})
+
     def do_POST(self) -> None:  # noqa: N802
+        server = cast(FakeOpenAIProviderServer, self.server)
+        if self.path.startswith("/control/hold/"):
+            model = unquote(self.path.removeprefix("/control/hold/"))
+            server.held_models[model] = Event()
+            self._send_json(200, {"held": True})
+            return
+        if self.path.startswith("/control/release/"):
+            model = unquote(self.path.removeprefix("/control/release/"))
+            if model in server.held_models:
+                server.held_models[model].set()
+            self._send_json(200, {"released": True})
+            return
         try:
             length = int(self.headers.get("content-length") or "0")
             payload = json.loads(self.rfile.read(length) or b"{}")
@@ -200,6 +261,9 @@ class FakeOpenAIProviderHandler(BaseHTTPRequestHandler):
             }
         )
 
+        held = server.held_models.get(str(payload.get("model")))
+        if held is not None:
+            held.wait(timeout=120)
         if self.path.endswith("/responses"):
             self._handle_responses(payload)
             return
@@ -213,7 +277,7 @@ class FakeOpenAIProviderHandler(BaseHTTPRequestHandler):
 
     def _handle_responses(self, payload: dict[str, Any]) -> None:
         model = str(payload.get("model") or "")
-        schema = _responses_schema(payload)
+        schema = _responses_schema(payload) or _prompted_schema(payload)
         if "tools-disabled" in model and payload.get("tools"):
             self._send_json(400, {"error": {"message": "tool calls are unsupported"}})
             return
@@ -237,7 +301,7 @@ class FakeOpenAIProviderHandler(BaseHTTPRequestHandler):
 
     def _handle_chat_completions(self, payload: dict[str, Any]) -> None:
         model = str(payload.get("model") or "")
-        schema = _chat_schema(payload)
+        schema = _chat_schema(payload) or _prompted_schema(payload)
         if "tools-disabled" in model and payload.get("tools"):
             self._send_json(400, {"error": {"message": "tool calls are unsupported"}})
             return
@@ -248,7 +312,19 @@ class FakeOpenAIProviderHandler(BaseHTTPRequestHandler):
         summary = "fake chat output" if include_usage else "fake missing usage"
         body: dict[str, Any] = {
             "id": "fake-chat-completion",
-            "choices": [{"message": {"content": json.dumps(_schema_output(schema, summary))}}],
+            "object": "chat.completion",
+            "created": 0,
+            "model": model,
+            "choices": [
+                {
+                    "index": 0,
+                    "finish_reason": "stop",
+                    "message": {
+                        "role": "assistant",
+                        "content": json.dumps(_schema_output(schema, summary)),
+                    },
+                }
+            ],
         }
         if include_usage:
             body["usage"] = {"prompt_tokens": 3, "completion_tokens": 2, "total_tokens": 5}

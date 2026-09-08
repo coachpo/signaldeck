@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const frontendDir = resolve(__dirname, "..");
-const apiBaseUrl = process.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8001/api/v1";
+const apiBaseUrl = process.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8001/api";
 
 function runBuild() {
   return new Promise((resolveBuild, rejectBuild) => {
@@ -24,7 +24,9 @@ function runBuild() {
         return;
       }
 
-      rejectBuild(new Error(`vite build failed with exit code ${code ?? "unknown"}`));
+      rejectBuild(
+        new Error(`vite build failed with exit code ${code ?? "unknown"}`),
+      );
     });
   });
 }
@@ -32,14 +34,26 @@ function runBuild() {
 async function main() {
   await runBuild();
 
-  const child = spawn("npx", ["vite", "preview", "--port", "4173", "--strictPort", "--host", "127.0.0.1"], {
-    cwd: frontendDir,
-    env: {
-      ...process.env,
-      VITE_API_BASE_URL: apiBaseUrl,
+  const child = spawn(
+    "npx",
+    [
+      "vite",
+      "preview",
+      "--port",
+      "4173",
+      "--strictPort",
+      "--host",
+      "127.0.0.1",
+    ],
+    {
+      cwd: frontendDir,
+      env: {
+        ...process.env,
+        VITE_API_BASE_URL: apiBaseUrl,
+      },
+      stdio: "inherit",
     },
-    stdio: "inherit",
-  });
+  );
 
   process.on("SIGTERM", () => child.kill());
   process.on("SIGINT", () => child.kill());

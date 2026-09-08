@@ -1,0 +1,247 @@
+{
+  "digital_oracle_researcher": {
+    "contentHash": "aaa5cb87db7e68dbeab6184beef094d64490f10411fd9c59d9f65318512d506e",
+    "tools": [
+      "signaldeck/digital-oracle/cftc_positioning_lookup",
+      "signaldeck/digital-oracle/crypto_derivatives_lookup",
+      "signaldeck/digital-oracle/macro_rates_lookup",
+      "signaldeck/digital-oracle/market_sentiment_lookup",
+      "signaldeck/digital-oracle/options_lookup",
+      "signaldeck/digital-oracle/prediction_markets_lookup",
+      "signaldeck/digital-oracle/sec_filings_lookup",
+      "signaldeck/finance/reports_create"
+    ],
+    "resources": [],
+    "plans": {
+      "research": {
+        "workflowKey": "research",
+        "nodeOrder": [
+          "company",
+          "macro",
+          "editor",
+          "save"
+        ],
+        "dependencies": {
+          "company": [],
+          "editor": [
+            "company",
+            "macro"
+          ],
+          "macro": [],
+          "save": [
+            "editor"
+          ]
+        },
+        "edges": [
+          {
+            "source": "company",
+            "target": "editor",
+            "sources": [
+              "input"
+            ],
+            "paths": [
+              "$.workflows.research.nodes.editor.inputMapping.object.company.ref"
+            ]
+          },
+          {
+            "source": "editor",
+            "target": "save",
+            "sources": [
+              "input"
+            ],
+            "paths": [
+              "$.workflows.research.nodes.save.inputMapping.ref"
+            ]
+          },
+          {
+            "source": "macro",
+            "target": "editor",
+            "sources": [
+              "input"
+            ],
+            "paths": [
+              "$.workflows.research.nodes.editor.inputMapping.object.macro.ref"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "research_notes": {
+    "contentHash": "436934e8731ed15b83e679e2878bfe6747ec4102b038565a17778a60a3cd38a2",
+    "tools": [
+      "example/notes/create",
+      "example/notes/search"
+    ],
+    "resources": [
+      "notes-workspace"
+    ],
+    "plans": {
+      "capture": {
+        "workflowKey": "capture",
+        "nodeOrder": [
+          "save"
+        ],
+        "dependencies": {
+          "save": []
+        },
+        "edges": []
+      },
+      "research": {
+        "workflowKey": "research",
+        "nodeOrder": [
+          "prior",
+          "edit",
+          "save"
+        ],
+        "dependencies": {
+          "edit": [
+            "prior"
+          ],
+          "prior": [],
+          "save": [
+            "edit",
+            "prior"
+          ]
+        },
+        "edges": [
+          {
+            "source": "edit",
+            "target": "save",
+            "sources": [
+              "input"
+            ],
+            "paths": [
+              "$.workflows.research.nodes.save.inputMapping.object.text.ref"
+            ]
+          },
+          {
+            "source": "prior",
+            "target": "edit",
+            "sources": [
+              "input"
+            ],
+            "paths": [
+              "$.workflows.research.nodes.edit.inputMapping.object.priorNotes.ref"
+            ]
+          },
+          {
+            "source": "prior",
+            "target": "save",
+            "sources": [
+              "control"
+            ],
+            "paths": [
+              "$.workflows.research.nodes.save.dependsOn.0"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "tradingagents_advisory_research": {
+    "contentHash": "d102a2a32c2870059e929c8367d1fd998c425568a7f8538e95b477b28927c09e",
+    "tools": [
+      "signaldeck/finance/market_data_quote_lookup",
+      "signaldeck/finance/reports_create"
+    ],
+    "resources": [
+      "finance-market-data"
+    ],
+    "plans": {
+      "research": {
+        "workflowKey": "research",
+        "nodeOrder": [
+          "collect",
+          "opportunity",
+          "risk",
+          "summary",
+          "save"
+        ],
+        "dependencies": {
+          "collect": [],
+          "opportunity": [
+            "collect"
+          ],
+          "risk": [
+            "collect"
+          ],
+          "save": [
+            "summary"
+          ],
+          "summary": [
+            "collect",
+            "opportunity",
+            "risk"
+          ]
+        },
+        "edges": [
+          {
+            "source": "collect",
+            "target": "opportunity",
+            "sources": [
+              "control",
+              "input"
+            ],
+            "paths": [
+              "$.workflows.research.nodes.opportunity.dependsOn.0",
+              "$.workflows.research.nodes.opportunity.inputMapping.object.market.ref"
+            ]
+          },
+          {
+            "source": "collect",
+            "target": "risk",
+            "sources": [
+              "condition",
+              "input"
+            ],
+            "paths": [
+              "$.workflows.research.nodes.risk.condition.args.0.args.0.ref",
+              "$.workflows.research.nodes.risk.inputMapping.object.market.ref"
+            ]
+          },
+          {
+            "source": "collect",
+            "target": "summary",
+            "sources": [
+              "input"
+            ],
+            "paths": [
+              "$.workflows.research.nodes.summary.inputMapping.object.market.ref"
+            ]
+          },
+          {
+            "source": "opportunity",
+            "target": "summary",
+            "sources": [
+              "input"
+            ],
+            "paths": [
+              "$.workflows.research.nodes.summary.inputMapping.object.opportunity.ref"
+            ]
+          },
+          {
+            "source": "risk",
+            "target": "summary",
+            "sources": [
+              "input"
+            ],
+            "paths": [
+              "$.workflows.research.nodes.summary.inputMapping.object.risk.ref"
+            ]
+          },
+          {
+            "source": "summary",
+            "target": "save",
+            "sources": [
+              "input"
+            ],
+            "paths": [
+              "$.workflows.research.nodes.save.inputMapping.ref"
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

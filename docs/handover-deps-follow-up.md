@@ -28,7 +28,7 @@ FastAPI 封顶仍在仓库中；当前锁文件尚未采用解除封顶要求的
 
 [`backend/app/main.py`](../backend/app/main.py) 在创建应用时调用 [`instrument_fastapi_app`](../backend/app/core/telemetry.py)，因此 405 路由行为属于应用运行时回归边界。
 
-[`backend/tests/test_api.py`](../backend/tests/test_api.py) 中两个路由挂载测试已经从公开的 `app.openapi()["paths"]` 读取路径集合，不依赖 `app.routes` 的平铺形态或私有 `_IncludedRouter`。
+当前 Core Workflow Package API 的行为由 [`test_platform_api.py`](../backend/tests/test_platform_api.py) 覆盖，Finance 自有 Templates/Reports HTTP 面由 [`test_independent_plugins.py`](../backend/tests/test_independent_plugins.py) 覆盖；Logfire 挂载检查位于 [`test_runtime_config_health.py`](../backend/tests/test_runtime_config_health.py)。[`test_core_api.py`](../backend/tests/test_core_api.py) 对实际已 instrumentation 的 `/api/runs` 检查公开 OpenAPI 的 GET-only 方法集合，并验证 POST 返回 405。
 
 ### 解锁条件与升级步骤
 
@@ -59,12 +59,13 @@ PY
 
 ```bash
 (cd backend && uv run pytest \
-  tests/test_api.py::test_agent_platform_routes_mount_package_first_api \
-  tests/test_api.py::test_finance_workspace_product_routes_remain_mounted_for_templates_and_reports \
-  tests/test_tool_catalog_api.py::test_tools_catalog_route_is_get_only)
+  tests/test_platform_api.py::test_definition_editor_uses_canonical_immutable_source \
+  tests/test_independent_plugins.py::test_finance_owned_crud_compile_upload_and_immutable_agent_reports \
+  tests/test_runtime_config_health.py::test_create_app_instruments_fastapi_with_logfire \
+  tests/test_core_api.py::test_run_catalog_is_get_only_with_logfire_instrumentation)
 ```
 
-前两个测试验证 Workflow Package API 与 Templates/Reports API 挂载；最后一个测试验证 `POST /api/tools` 返回 405，且 OpenAPI 中该路径只提供 GET。升级后应保留这些公开行为断言。
+这些检查分别验证 Core 包编辑、独立 Finance 业务 HTTP 闭环、Logfire instrumentation 注册，以及实际 GET-only 路由的 405/partial-route-match 行为。方法集合使用公开 `app.openapi()["paths"]`，不依赖 `app.routes` 的平铺形态或私有 `_IncludedRouter`。解除封顶前必须在待升级的完整依赖组合上重新运行这些检查。
 
 ## 已完成的镜像调整
 

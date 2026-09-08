@@ -6,11 +6,11 @@ SignalDeck 是一个面向 LLM agent 的自托管流水线运行器：用 YAML �
 
 当前开发档位为 **MVP**，围绕本地内网个人使用验证工作流的端到端闭环，并保持现有数据、密钥与运行快照约束。此处只是派生摘要，完整状态以 [`STATUS.md`](STATUS.md) 为准。
 
-后续迭代目标已形成 **SD-TARGET-001** 文档基线，见 [`迭代目标`](docs/迭代目标.md)；冻结提交的定位与引用方式见 [`STATUS.md`](STATUS.md#冻结迭代目标)。下列启动方式和能力描述仍对应当前实现。
+迭代围绕 **SD-TARGET-001** 冻结基线推进，见 [`迭代目标`](docs/迭代目标.md)；冻结提交、补充决定和验收状态见 [`STATUS.md`](STATUS.md#冻结迭代目标)。下列启动方式和能力描述对应当前实现，不代表全部目标验收已完成。
 
 ## 快速开始
 
-启动需要 Docker 和 Docker Compose v2；执行包含 agent 的工作流还需要可用的模型提供商配置。
+启动需要 Docker 和 Docker Compose v2；执行包含模型策略 Agent 的工作流还需要可用的模型资源配置。
 
 ```bash
 git clone https://github.com/coachpo/signaldeck.git
@@ -18,23 +18,37 @@ cd signaldeck
 ./start.sh
 ```
 
-启动脚本构建并运行本地/演示组合栈，默认在 `http://localhost:8080` 提供应用；可用 `APP_PORT` 覆盖端口。按 `Ctrl+C` 停止前台进程；需要停止并删除容器时运行：
+启动脚本构建并运行本地/演示栈，默认应用地址为 `http://localhost:8080`，可用 `APP_PORT` 覆盖端口。后台启动、查看状态和停止使用同一脚本，以保持 Compose 项目名、数据目录和插件配置一致：
 
 ```bash
-docker compose down
+./start.sh --detach
+./start.sh status
+./start.sh logs worker
+./start.sh stop
+./start.sh down
 ```
 
-首次打开应用后，在 **Model Connections** 中保存并测试模型提供商配置，再到 **Workflow Packages** 选择预置演示包、选择包内 workflow、填写输入并查看启动检查结果。满足所需模型和工具依赖后启动运行，在 **Runs** 查看证据和输出。两个预置包是只读的；需要修改时复制为自己的包，YAML 源文件位于 [`demo/`](demo/)。
+`stop` 停止服务；`down` 删除本栈容器与网络，两者均保留数据。前台启动后按 `Ctrl+C` 也会停止服务。默认 Compose 项目名为 `signaldeck-target-local`，数据库、Temporal 历史、产物和固定 Core 执行环境保存在仓库下 `.signaldeck-target/`；可用 `COMPOSE_PROJECT_NAME` 和 `SIGNALDECK_DATA_DIR` 指定另一套独立实例。此栈不复用旧版数据卷，不自动迁移、重置或删除旧实例数据。
 
-根目录的 `docker-compose.yml`、根 `Dockerfile` 和 `start.sh` 仅用于本地/演示组合栈；拆分部署使用 backend、frontend 两类镜像，scheduler 复用 backend 镜像。配置示例见 [`docker/compose.production.example.yml`](docker/compose.production.example.yml)。
+首次打开应用后，在 **Resources** 创建模型资源，资源 ID 与包内 `modelRef` 一致（预置示例使用 `research-model`），填入模型配置并单独写入凭据。在 **Plugins** 确认所需插件和工具可用，然后在 **Workflow Packages** 打开示例包，选择 workflow、填写输入并启动。**Runs** 展示运行图、调用证据、状态与产物。预置包首次启动时写入；可直接编辑，后续启动不会覆盖同名包。示例说明与 YAML 见 [`demo/`](demo/)。
+
+默认启用 Finance、Digital Oracle 和 Notes 三个独立插件进程；Finance 的模板/报告页面位于 `http://localhost:8091`，也可从 **Plugins** 的页面入口进入。可通过 `SIGNALDECK_PLUGINS` 指定逗号分隔的插件集合，例如：
+
+```bash
+SIGNALDECK_PLUGINS=notes ./start.sh --detach
+```
+
+空值只启动通用平台。启动时 bootstrap 注册缺失的本地插件描述与默认资源，保留已有配置；插件不可用时可在修复服务后运行 `./start.sh refresh-plugins` 刷新已选插件的 release。使用自定义环境变量时，后续状态、刷新和停止命令也应使用相同设置。插件使用说明见 [`plugins/README.md`](plugins/README.md)。
+
+栈中的 API、命令 dispatcher、固定制品 worker 和 Temporal 分别运行；浏览器关闭不停止后台执行。根 `Dockerfile` 仅将前端 Nginx 和 API 合并为本地/演示镜像，Temporal 使用持久 SQLite 的 `start-dev` 服务。拆分镜像配置示例见 [`docker/compose.production.example.yml`](docker/compose.production.example.yml)，需要另行提供 PostgreSQL 和 Temporal 服务；本地组合栈不代表生产部署验收。
 
 ## 主要能力
 
-- Workflow Package：在一个 YAML 包中声明输入、包内 agent、输出 schema、工具能力、私有 MCP、HTTP 操作和工作流图。
-- Scheduled Task：按 interval、daily、weekly 或 monthly 规则和 IANA 时区将到期任务物化为普通运行。
-- Run evidence：保留不可变包快照、输入、步骤、agent/HTTP 操作证据、队列进度、重试、失败信息和最终输出。
-- Model Connections：保存全局模型提供商绑定；API key 只写入、不在读取接口中返回。
-- Templates 与 Reports：创建和编辑模板，编译生成、编辑并下载 Markdown 报告快照。
+- Workflow Package：用同一份结构化定义或 YAML 编辑独立 Agent 和声明式 DAG，检查控制、输入映射和条件依赖。
+- Resources 与 Plugins：配置模型连接、限定工具资源和进程外插件；凭据只写入，读取不返回密钥值。
+- Runs：从不可变定义和资源绑定快照启动，查看节点状态、调用归属、依赖关系与内容寻址产物，支持取消和新 Run 重跑。
+- Scheduled Tasks：使用 cron、IANA 时区、重叠策略和错过窗口配置定时触发，并查看每次触发及其运行来源。
+- Finance：通过独立插件提供市场数据工具、Templates 与 Reports，核心平台通过工具契约和页面链接访问。
 
 ## 文档
 

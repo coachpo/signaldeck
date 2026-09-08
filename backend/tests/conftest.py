@@ -4,6 +4,7 @@ import os
 import subprocess
 import time
 from collections.abc import Iterator
+from pathlib import Path
 from uuid import uuid4
 
 import pytest
@@ -14,13 +15,20 @@ from sqlalchemy.engine import URL, make_url
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.config import reset_settings_cache
-from app.db.session import get_engine, get_session_factory, init_db, reset_db_caches
+from app.db.engine import get_engine, get_session_factory, reset_db_caches
+from app.infrastructure.platform_store import PlatformStore
+from app.infrastructure.schedule_store import ScheduleStore
 from app.main import create_app
 
-LOCAL_POSTGRES_CONTAINER = "signaldeck-local-postgres"
+LOCAL_POSTGRES_CONTAINER = "signaldeck-target-test-postgres"
 LOCAL_POSTGRES_IMAGE = "pgvector/pgvector:pg16"
 LOCAL_POSTGRES_PORT = os.environ.get("LOCAL_POSTGRES_PORT", "")
-LOCAL_POSTGRES_VOLUME = "signaldeck-postgres-data"
+LOCAL_POSTGRES_DATA = Path(
+    os.environ.get(
+        "SIGNALDECK_TEST_POSTGRES_DIR",
+        str(Path(__file__).resolve().parents[1] / ".data" / "test-postgres"),
+    )
+).resolve()
 POSTGRES_PASSWORD = os.environ.get("POSTGRES_PASSWORD", "signaldeck")
 
 
@@ -119,7 +127,7 @@ def _ensure_start_local_database() -> URL:
         postgres_publish_port = (
             f"127.0.0.1:{LOCAL_POSTGRES_PORT}:5432" if LOCAL_POSTGRES_PORT else "127.0.0.1::5432"
         )
-        _run_docker(["volume", "create", LOCAL_POSTGRES_VOLUME], check=True)
+        LOCAL_POSTGRES_DATA.mkdir(parents=True, exist_ok=True)
         _run_docker(
             [
                 "run",
@@ -130,6 +138,8 @@ def _ensure_start_local_database() -> URL:
                 "io.signaldeck.support=local-demo-only",
                 "--label",
                 "io.signaldeck.production-artifact=false",
+                "--label",
+                "io.signaldeck.test-resource=sd-target-001",
                 "-e",
                 "POSTGRES_DB=signaldeck",
                 "-e",
@@ -139,7 +149,7 @@ def _ensure_start_local_database() -> URL:
                 "-p",
                 postgres_publish_port,
                 "-v",
-                f"{LOCAL_POSTGRES_VOLUME}:/var/lib/postgresql/data",
+                f"{LOCAL_POSTGRES_DATA}:/var/lib/postgresql/data",
                 LOCAL_POSTGRES_IMAGE,
             ],
             check=True,
@@ -210,8 +220,6 @@ def session_factory(
     monkeypatch.setenv("DATABASE_URL", database_url)
     reset_settings_cache()
     reset_db_caches()
-    init_db(database_url)
-
     yield get_session_factory(database_url)
 
     get_engine(database_url).dispose()
@@ -221,6 +229,8 @@ def session_factory(
 
 @pytest.fixture()
 def app(session_factory: sessionmaker[Session]) -> FastAPI:
+    PlatformStore(session_factory).initialize()
+    ScheduleStore(session_factory).initialize()
     return create_app(init_database=False)
 
 

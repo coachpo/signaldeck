@@ -1,26 +1,49 @@
-# Production example: GHCR images, split topology.
-# Prereq: external PostgreSQL (managed or self-run); set env in .env file.
+# Split-image wiring. Supply existing PostgreSQL and Temporal infrastructure.
+# Temporal's start-dev SQLite mode is confined to the local/demo Compose file.
+x-core-environment: &core-environment
+  SIGNALDECK_RUNTIME_MODE: production
+  DATABASE_URL: ${DATABASE_URL:?Core PostgreSQL URL required}
+  TEMPORAL_ADDRESS: ${TEMPORAL_ADDRESS:?Temporal address required}
+  AGENT_PLATFORM_ENCRYPTION_KEY: ${AGENT_PLATFORM_ENCRYPTION_KEY:?Encryption key required}
+  SIGNALDECK_API_TOKEN: ${SIGNALDECK_API_TOKEN:?API token required}
+  SIGNALDECK_ARTIFACT_DIR: /data/artifacts
+  SIGNALDECK_CORE_ARTIFACT_DIR: /data/core
+  SIGNALDECK_CORE_ENV_DIR: /data/core-environments
+  SIGNALDECK_CORE_PYTHON_VERSION: "3.13.13"
+  UV_CACHE_DIR: /data/uv-cache
+
+x-core-volumes: &core-volumes
+  - target-artifacts:/data/artifacts
+  - target-core:/data/core
+  - target-core-environments:/data/core-environments
+  - target-uv-cache:/data/uv-cache
+
 services:
   backend:
     image: ghcr.io/OWNER/signaldeck-backend:${SIGNALDECK_IMAGE_TAG:?required}
     environment:
-      DATABASE_URL: ${DATABASE_URL:?required}
-      AGENT_PLATFORM_ENCRYPTION_KEY: ${AGENT_PLATFORM_ENCRYPTION_KEY:?required}
-      SIGNALDECK_API_TOKEN: ${SIGNALDECK_API_TOKEN:?required}
+      <<: *core-environment
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-}
-    ports:
-      - "127.0.0.1:8000:8000"
+    volumes: *core-volumes
     restart: unless-stopped
 
-  scheduler:
+  dispatcher:
     image: ghcr.io/OWNER/signaldeck-backend:${SIGNALDECK_IMAGE_TAG:?required}
-    command: ["python", "-m", "app.workers.run_scheduler"]
-    environment:
-      DATABASE_URL: ${DATABASE_URL:?required}
-      AGENT_PLATFORM_ENCRYPTION_KEY: ${AGENT_PLATFORM_ENCRYPTION_KEY:?required}
-    # No HTTP healthcheck: worker exposes none. pg advisory lock makes replicas safe.
+    command: ["python", "-m", "app.workers.command_dispatcher"]
+    environment: *core-environment
+    volumes: *core-volumes
     healthcheck:
       disable: true
+    restart: unless-stopped
+
+  worker:
+    image: ghcr.io/OWNER/signaldeck-backend:${SIGNALDECK_IMAGE_TAG:?required}
+    command: ["python", "-m", "app.workers.artifact_worker", "--serve"]
+    environment: *core-environment
+    volumes: *core-volumes
+    healthcheck:
+      disable: true
+    stop_grace_period: 30s
     restart: unless-stopped
 
   frontend:
@@ -29,7 +52,41 @@ services:
       PORT: 8080
       BACKEND_UPSTREAM: backend:8000
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     depends_on:
       - backend
     restart: unless-stopped
+
+  finance:
+    profiles: ["finance"]
+    image: ${SIGNALDECK_FINANCE_IMAGE:-signaldeck-finance:1.0.0}
+    environment:
+      PLUGIN_DATABASE_URL: ${FINANCE_DATABASE_URL:-}
+      PLUGIN_ENDPOINT: http://finance:8000/mcp/
+      PLUGIN_PAGE_URL: ${FINANCE_PAGE_URL:-http://localhost:8091/}
+    ports:
+      - "127.0.0.1:8091:8000"
+    restart: unless-stopped
+
+  digital-oracle:
+    profiles: ["digital-oracle"]
+    image: ${SIGNALDECK_ORACLE_IMAGE:-signaldeck-digital-oracle:1.0.0}
+    environment:
+      PLUGIN_ENDPOINT: http://digital-oracle:8000/mcp/
+      FRED_API_KEY: ${FRED_API_KEY:-}
+      EDGAR_CONTACT_EMAIL: ${EDGAR_CONTACT_EMAIL:-}
+    restart: unless-stopped
+
+  notes:
+    profiles: ["notes"]
+    image: ${SIGNALDECK_NOTES_IMAGE:-signaldeck-notes:1.0.0}
+    environment:
+      PLUGIN_DATABASE_URL: ${NOTES_DATABASE_URL:-}
+      PLUGIN_ENDPOINT: http://notes:8000/mcp/
+    restart: unless-stopped
+
+volumes:
+  target-artifacts:
+  target-core:
+  target-core-environments:
+  target-uv-cache:

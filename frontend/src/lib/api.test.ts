@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { TextTemplateRead, TextTemplateWriteInput } from "./types/text-template";
+
 
 const ORIGINAL_API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
 const ORIGINAL_DEV = import.meta.env.DEV;
@@ -40,20 +40,13 @@ async function loadApiModule({
   vi.resetModules();
   Reflect.set(import.meta.env, "VITE_API_BASE_URL", baseUrl);
   Reflect.set(import.meta.env, "DEV", dev);
-  const [
-    apiClient,
-    modelConnectionsApi,
-    templatesApi,
-  ] = await Promise.all([
-    import("./api-client"),
-    import("./api/model-connections"),
-    import("./api/templates"),
-  ]);
-
+  const apiClient = await import("./api-client");
   return {
     ...apiClient,
-    ...modelConnectionsApi,
-    ...templatesApi,
+    listTemplates: () => apiClient.request("/templates"),
+    createTemplate: (body: object) => apiClient.request("/templates", { method: "POST", body }),
+    getTemplate: (id: string) => apiClient.request(`/templates/${apiClient.toPathSegment(id)}`),
+    listModelConnections: () => apiClient.requestPlatform("/resources"),
   };
 }
 
@@ -71,7 +64,7 @@ function getLastFetchCall(fetchMock: ReturnType<typeof createFetchMock>): {
   return { init, url: String(input) };
 }
 
-const templateFixture: TextTemplateRead = {
+const templateFixture = {
   id: 1,
   name: "Daily summary",
   content: "Market summary",
@@ -79,7 +72,7 @@ const templateFixture: TextTemplateRead = {
   updatedAt: "2024-03-15T12:00:00Z",
 };
 
-const templateInput: TextTemplateWriteInput = {
+const templateInput = {
   name: "Daily summary",
   content: "Market summary",
 };
@@ -297,7 +290,7 @@ describe("api client", () => {
     await expect(listModelConnections()).resolves.toEqual({ items: [] });
 
     const { url } = getLastFetchCall(fetchMock);
-    expect(url).toBe("https://signaldeck.example.com/api/model-connections");
+    expect(url).toBe("https://signaldeck.example.com/api/resources");
   });
 
   it("encodes v1 path segments against the derived base URL", async () => {

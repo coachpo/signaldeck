@@ -20,6 +20,15 @@ logger = logging.getLogger(__name__)
 
 
 class Settings(BaseSettings):
+    temporal_address: str = Field(default="127.0.0.1:7233", alias="TEMPORAL_ADDRESS")
+    artifact_dir: str = Field(
+        default=str(Path(__file__).resolve().parents[2] / ".data" / "artifacts"),
+        alias="SIGNALDECK_ARTIFACT_DIR",
+    )
+    core_artifact_dir: str = Field(
+        default=str(Path(__file__).resolve().parents[2] / ".data" / "core"),
+        alias="SIGNALDECK_CORE_ARTIFACT_DIR",
+    )
     runtime_mode: Literal["local", "development", "test", "staging", "production", "prod"] = Field(
         default="local",
         alias="SIGNALDECK_RUNTIME_MODE",
@@ -32,80 +41,7 @@ class Settings(BaseSettings):
         default=DEFAULT_AGENT_PLATFORM_ENCRYPTION_KEY,
         alias="AGENT_PLATFORM_ENCRYPTION_KEY",
     )
-    market_data_cache_dir: str = Field(
-        default=str(Path(__file__).resolve().parents[2] / ".cache" / "market_data"),
-        alias="MARKET_DATA_CACHE_DIR",
-    )
-    public_base_url: str | None = Field(default=None, alias="PUBLIC_BASE_URL")
     api_token: str | None = Field(default=None, alias="SIGNALDECK_API_TOKEN")
-    mcp_runtime_enabled: bool = Field(default=False, alias="MCP_RUNTIME_ENABLED")
-    mcp_runtime_timeout_seconds: float = Field(default=5.0, alias="MCP_RUNTIME_TIMEOUT")
-    http_operation_allowed_methods: Annotated[list[str], NoDecode] = Field(
-        default=["GET", "POST"],
-        alias="HTTP_OPERATION_ALLOWED_METHODS",
-    )
-    http_operation_allow_insecure_http: bool = Field(
-        default=False,
-        alias="HTTP_OPERATION_ALLOW_INSECURE_HTTP",
-    )
-    http_operation_block_private_networks: bool = Field(
-        default=True,
-        alias="HTTP_OPERATION_BLOCK_PRIVATE_NETWORKS",
-    )
-    http_operation_timeout_max_seconds: int = Field(
-        default=30,
-        alias="HTTP_OPERATION_TIMEOUT_MAX_SECONDS",
-        gt=0,
-    )
-    http_operation_request_max_bytes: int = Field(
-        default=131072,
-        alias="HTTP_OPERATION_REQUEST_MAX_BYTES",
-        gt=0,
-    )
-    http_operation_response_max_bytes: int = Field(
-        default=262144,
-        alias="HTTP_OPERATION_RESPONSE_MAX_BYTES",
-        gt=0,
-    )
-    http_operation_max_redirects: int = Field(
-        default=0,
-        alias="HTTP_OPERATION_MAX_REDIRECTS",
-        ge=0,
-    )
-    run_scheduler_max_active_runs: int = Field(
-        default=4,
-        alias="RUN_SCHEDULER_MAX_ACTIVE_RUNS",
-        ge=1,
-    )
-    run_scheduler_max_active_per_package: int = Field(
-        default=1,
-        alias="RUN_SCHEDULER_MAX_ACTIVE_PER_PACKAGE",
-        ge=1,
-    )
-    run_scheduler_poll_interval_seconds: float = Field(
-        default=1.0,
-        alias="RUN_SCHEDULER_POLL_INTERVAL_SECONDS",
-        gt=0,
-    )
-    run_scheduler_heartbeat_seconds: float = Field(
-        default=10.0,
-        alias="RUN_SCHEDULER_HEARTBEAT_SECONDS",
-        gt=0,
-    )
-    run_scheduler_lease_ttl_seconds: float = Field(
-        default=60.0,
-        alias="RUN_SCHEDULER_LEASE_TTL_SECONDS",
-        gt=0,
-    )
-    run_retention_days: int | None = Field(
-        default=None,
-        alias="SIGNALDECK_RUN_RETENTION_DAYS",
-        ge=0,
-    )
-    mcp_stdio_allowed_commands: Annotated[list[str], NoDecode] = Field(
-        default=["node", "npx", "python", "python3"],
-        alias="MCP_STDIO_ALLOWED_COMMANDS",
-    )
     cors_allowed_origins: Annotated[list[str], NoDecode] = Field(
         default=[
             "http://127.0.0.1:4173",
@@ -123,8 +59,6 @@ class Settings(BaseSettings):
 
     @field_validator(
         "cors_allowed_origins",
-        "mcp_stdio_allowed_commands",
-        "http_operation_allowed_methods",
         mode="before",
     )
     @classmethod
@@ -132,26 +66,6 @@ class Settings(BaseSettings):
         if isinstance(value, str):
             return [item.strip() for item in value.split(",") if item.strip()]
         return value
-
-    @field_validator("http_operation_allowed_methods")
-    @classmethod
-    def normalize_http_operation_allowed_methods(cls, value: list[str]) -> list[str]:
-        normalized = [item.strip().upper() for item in value if item.strip()]
-        if not normalized:
-            raise ValueError("HTTP_OPERATION_ALLOWED_METHODS must include at least one method")
-        if len(set(normalized)) != len(normalized):
-            raise ValueError("HTTP_OPERATION_ALLOWED_METHODS must not contain duplicates")
-        return normalized
-
-    @field_validator("public_base_url", mode="before")
-    @classmethod
-    def normalize_public_base_url(cls, value: object) -> str | None:
-        if value is None:
-            return None
-        normalized = str(value).strip()
-        if not normalized:
-            return None
-        return normalized.rstrip("/")
 
     @field_validator("api_token", mode="before")
     @classmethod

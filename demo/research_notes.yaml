@@ -1,0 +1,296 @@
+apiVersion: signaldeck.workflowPackage/v2
+metadata:
+  key: research_notes
+  name: Research notes
+  description: Search the research collection, optionally edit a note with a model, and store
+    an immutable record. Save original text without a model using the capture workflow.
+agents:
+  find_notes:
+    name: Search research collection
+    inputSchema:
+      type: object
+      properties:
+        query:
+          type: string
+          maxLength: 200
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 50
+      required: []
+      unevaluatedProperties: false
+    outputSchema:
+      type: object
+      properties:
+        notes:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              collection:
+                type: string
+              title:
+                type: string
+              text:
+                type: string
+            required:
+            - id
+            - collection
+            - title
+            - text
+            unevaluatedProperties: false
+      required:
+      - notes
+      unevaluatedProperties: false
+    strategy:
+      kind: deterministic
+      toolId: example/notes/search
+      inputMapping:
+        ref: agent.input
+      outputMapping:
+        ref: tool.output
+    tools:
+    - example/notes/search
+    resources:
+    - notes-workspace
+    budget:
+      maxModelRequests: 6
+      maxToolCalls: 8
+      maxTokens: 18000
+      deadlineSeconds: 180
+      maxParallelTools: 3
+  summarize:
+    name: Research note editor
+    inputSchema:
+      type: object
+      properties:
+        text:
+          type: string
+          maxLength: 100000
+        priorNotes:
+          type: object
+          properties:
+            notes:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  collection:
+                    type: string
+                  title:
+                    type: string
+                  text:
+                    type: string
+                required:
+                - id
+                - collection
+                - title
+                - text
+                unevaluatedProperties: false
+          required:
+          - notes
+          unevaluatedProperties: false
+      required:
+      - text
+      - priorNotes
+    outputSchema:
+      type: object
+      properties:
+        text:
+          type: string
+          maxLength: 100000
+      required:
+      - text
+    strategy:
+      kind: model
+      modelRef: research-model
+      prompt: Edit the supplied research text into a clear note. Use prior notes only as
+        attributed context and retain uncertainty. Do not invent external facts or claim new
+        research. Keep the text under 100000 characters.
+    tools: []
+    resources: []
+    budget:
+      maxModelRequests: 6
+      maxToolCalls: 8
+      maxTokens: 18000
+      deadlineSeconds: 180
+      maxParallelTools: 3
+  write_note:
+    name: Save immutable research note
+    inputSchema:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        text:
+          type: string
+          maxLength: 100000
+      required:
+      - title
+      - text
+      unevaluatedProperties: false
+    outputSchema:
+      type: object
+      properties:
+        id:
+          type: string
+        collection:
+          type: string
+        title:
+          type: string
+        text:
+          type: string
+      required:
+      - id
+      - collection
+      - title
+      - text
+      unevaluatedProperties: false
+    strategy:
+      kind: deterministic
+      toolId: example/notes/create
+      inputMapping:
+        ref: agent.input
+      outputMapping:
+        ref: tool.output
+    tools:
+    - example/notes/create
+    resources:
+    - notes-workspace
+    budget:
+      maxModelRequests: 6
+      maxToolCalls: 8
+      maxTokens: 18000
+      deadlineSeconds: 180
+      maxParallelTools: 3
+workflows:
+  research:
+    name: Review and save a note
+    inputSchema:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        text:
+          type: string
+          maxLength: 100000
+        query:
+          type: string
+          maxLength: 200
+        summarize:
+          type: boolean
+      required:
+      - title
+      - text
+      - query
+      - summarize
+    outputSchema:
+      type: object
+      properties:
+        id:
+          type: string
+        collection:
+          type: string
+        title:
+          type: string
+        text:
+          type: string
+      required:
+      - id
+      - collection
+      - title
+      - text
+      unevaluatedProperties: false
+    nodes:
+      prior:
+        uses: find_notes
+        inputMapping:
+          object:
+            query:
+              ref: workflow.input.query
+            limit:
+              value: 20
+      edit:
+        uses: summarize
+        inputMapping:
+          object:
+            text:
+              ref: workflow.input.text
+            priorNotes:
+              ref: nodes.prior.output
+        condition:
+          op: eq
+          args:
+          - ref: workflow.input.summarize
+          - value: true
+      save:
+        uses: write_note
+        dependsOn:
+        - prior
+        acceptUpstreamStates:
+        - succeeded
+        - skipped
+        inputMapping:
+          object:
+            title:
+              ref: workflow.input.title
+            text:
+              ref: nodes.edit.output.text
+              onMissing:
+                ref: workflow.input.text
+    outputMapping:
+      ref: nodes.save.output
+    maxParallelNodes: 4
+    deadlineSeconds: 900
+    failurePolicy: continue_independent
+  capture:
+    name: Save original text
+    inputSchema:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        text:
+          type: string
+          maxLength: 100000
+      required:
+      - title
+      - text
+      unevaluatedProperties: false
+    outputSchema:
+      type: object
+      properties:
+        id:
+          type: string
+        collection:
+          type: string
+        title:
+          type: string
+        text:
+          type: string
+      required:
+      - id
+      - collection
+      - title
+      - text
+      unevaluatedProperties: false
+    nodes:
+      save:
+        uses: write_note
+        inputMapping:
+          ref: workflow.input
+    outputMapping:
+      ref: nodes.save.output
+    maxParallelNodes: 4
+    deadlineSeconds: 900
+    failurePolicy: continue_independent

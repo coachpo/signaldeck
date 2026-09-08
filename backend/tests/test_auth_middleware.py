@@ -10,6 +10,7 @@ from starlette.responses import Response
 
 from app.core.auth import BearerTokenMiddleware
 from app.core.config import reset_settings_cache
+from app.infrastructure.platform_store import PlatformStore
 from app.main import create_app
 
 ALLOWED_ORIGIN = "http://frontend.test"
@@ -23,6 +24,7 @@ def token_client(
     monkeypatch.setenv("SIGNALDECK_API_TOKEN", "test-token")
     monkeypatch.setenv("CORS_ALLOWED_ORIGINS", ALLOWED_ORIGIN)
     reset_settings_cache()
+    PlatformStore(session_factory).initialize()
     app = create_app(init_database=False)
 
     with TestClient(app) as client:

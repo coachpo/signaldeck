@@ -49,7 +49,6 @@ type RouteShellMode = "scroll" | "fullHeight";
 export type RouteWidthMode = "wide" | "full" | "compact" | "readable";
 export type RouteNavGroup =
   | "Agent Platform"
-  | "Finance Workspace"
   | "System";
 type RouteNavIconName =
   | "Briefcase"
@@ -97,8 +96,8 @@ export type RouteHandle = {
     | { kind: "platform" }
     | { kind: "system" }
     | {
-        extensionKey: "signaldeck.finance";
-        extensionLabel: "Finance Workspace";
+        extensionKey: string;
+        extensionLabel: string;
         kind: "extension";
       }
     | { kind: "unknown" };

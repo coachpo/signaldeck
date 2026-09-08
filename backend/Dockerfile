@@ -1,19 +1,20 @@
-FROM python:3.14-slim
+FROM python:3.13.13-slim@sha256:aa938a849bcb82dce8f49480f056ab82bf5c1c3ebc294f0430f37b6820e7f286
 
-COPY --from=ghcr.io/astral-sh/uv:0.9.8 /uv /uvx /bin/
+COPY --from=ghcr.io/astral-sh/uv:0.11.7@sha256:240fb85ab0f263ef12f492d8476aa3a2e4e1e333f7d67fbdd923d00a506a516a /uv /uvx /bin/
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy \
     PATH="/app/.venv/bin:$PATH" \
-    SIGNALDECK_RUNTIME_MODE=production
+    SIGNALDECK_RUNTIME_MODE=production \
+    SIGNALDECK_CORE_PYTHON_VERSION=3.13.13
 
 WORKDIR /app
 
-COPY pyproject.toml uv.lock README.md ./
+COPY pyproject.toml uv.lock README.md VERSION ./
 
-RUN uv sync --frozen --no-dev --no-install-project
+RUN UV_NO_CACHE=1 uv sync --frozen --no-dev --no-install-project
 
 COPY app ./app
 

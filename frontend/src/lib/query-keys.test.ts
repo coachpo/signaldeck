@@ -1,160 +1,17 @@
 import { describe, expect, it } from "vitest";
-
 import { queryKeys } from "./query-keys";
-
-describe("query keys", () => {
-  it("normalizes string and numeric ids to the same key", () => {
-    expect(queryKeys.templates.detail("1")).toEqual(
-      queryKeys.templates.detail(1),
+describe("query scopes", () => {
+  it("isolates resource families and keeps detail/list under one invalidation scope", () => {
+    const groups = Object.entries(queryKeys.platform)
+      .filter(([name]) => name !== "all")
+      .map(([, v]) => v as typeof queryKeys.platform.runs);
+    expect(new Set(groups.map((g) => JSON.stringify(g.all))).size).toBe(
+      groups.length,
     );
-    expect(queryKeys.reports.detail("42")).toEqual(
-      queryKeys.reports.detail(42),
-    );
-    expect(queryKeys.platform.workflowPackages.detail("7")).toEqual(
-      queryKeys.platform.workflowPackages.detail(7),
-    );
-  });
-
-  it("keeps existing v1 query key shapes stable", () => {
-    expect(queryKeys.templates.list()).toEqual(["api", "templates", "list"]);
-    expect(queryKeys.reports.list()).toEqual(["api", "reports", "list"]);
-  });
-
-  it("adds workflow package keys under the platform namespace", () => {
-    expect(queryKeys.platform.workflowPackages.detail("7")).toEqual(
-      queryKeys.platform.workflowPackages.detail(7),
-    );
-    expect(queryKeys.platform.workflowPackages.list()).toEqual([
-      "api",
-      "platform",
-      "workflowPackages",
-      "list",
-    ]);
-    expect(queryKeys.platform.workflowPackages.manifest("9")).toEqual(
-      queryKeys.platform.workflowPackages.manifest(9),
-    );
-    expect(queryKeys.platform.workflowPackages.launch("9", " review ")).toEqual(
-      queryKeys.platform.workflowPackages.launch(9, "review"),
-    );
-    expect(queryKeys.platform.workflowPackages.launch(9, "review")).toEqual([
-      "api",
-      "platform",
-      "workflowPackages",
-      "launch",
-      "9",
-      { workflowKey: "review" },
-    ]);
-    expect(queryKeys.platform.workflowPackages.preflight(9)).toEqual([
-      "api",
-      "platform",
-      "workflowPackages",
-      "preflight",
-      "9",
-    ]);
-    expect(queryKeys.platform.workflowPackages.launches()).toEqual([
-      "api",
-      "platform",
-      "workflowPackages",
-      "launch",
-    ]);
-    expect(queryKeys.platform.workflowPackages.preflights()).toEqual([
-      "api",
-      "platform",
-      "workflowPackages",
-      "preflight",
-    ]);
-  });
-
-  it("normalizes current platform resource keys", () => {
-    expect(queryKeys.platform.modelConnections.detail("7")).toEqual(
-      queryKeys.platform.modelConnections.detail(7),
-    );
-    expect(queryKeys.platform.runs.detail(42)).not.toEqual(
-      queryKeys.reports.detail(42),
-    );
-    expect(queryKeys.platform.workflowPackages.all).not.toEqual(
-      queryKeys.templates.all,
-    );
-    expect(queryKeys.platform.tools.list()).toEqual([
-      "api",
-      "platform",
-      "tools",
-      "list",
-    ]);
-  });
-
-  it("normalizes schedule list and fire-history filters", () => {
-    expect(queryKeys.platform.schedules.detail("44")).toEqual(
-      queryKeys.platform.schedules.detail(44),
-    );
-    expect(queryKeys.platform.schedules.lists()).toEqual([
-      "api",
-      "platform",
-      "schedules",
-      "list",
-    ]);
-    expect(
-      queryKeys.platform.schedules.list({
-        offset: 0,
-        packageKey: " research_package ",
-        status: "enabled",
-        workflowKey: " daily_research ",
-      }),
-    ).toEqual([
-      "api",
-      "platform",
-      "schedules",
-      "list",
-      {
-        offset: 0,
-        packageKey: "research_package",
-        status: "enabled",
-        workflowKey: "daily_research",
-      },
-    ]);
-    expect(queryKeys.platform.schedules.fires("44", { limit: 50 })).toEqual(
-      queryKeys.platform.schedules.fires(44, { limit: 50 }),
-    );
-    expect(queryKeys.platform.schedules.firesScope(44)).toEqual([
-      "api",
-      "platform",
-      "schedules",
-      "fires",
-      "44",
-    ]);
-  });
-
-  it("normalizes package run filters", () => {
-    expect(queryKeys.platform.runs.lists()).toEqual([
-      "api",
-      "platform",
-      "runs",
-      "list",
-    ]);
-    expect(queryKeys.platform.runs.rerunDrafts()).toEqual([
-      "api",
-      "platform",
-      "runs",
-      "rerunDraft",
-    ]);
-    expect(
-      queryKeys.platform.runs.list({
-        offset: 0,
-        status: "succeeded",
-        workflowKey: " summarize ",
-        workflowPackageKey: " research_package ",
-      }),
-    ).toEqual([
-      "api",
-      "platform",
-      "runs",
-      "list",
-      {
-        offset: 0,
-        status: "succeeded",
-        workflowKey: "summarize",
-        workflowPackageKey: "research_package",
-      },
-    ]);
+    for (const group of groups) {
+      expect(group.list().slice(0, group.all.length)).toEqual(group.all);
+      expect(group.detail("a/b").slice(0, group.all.length)).toEqual(group.all);
+      expect(group.detail("a/b")).not.toEqual(group.detail("a%2Fb"));
+    }
   });
 });

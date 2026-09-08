@@ -1,726 +1,209 @@
-apiVersion: signaldeck.workflowPackage/v1
-kind: WorkflowPackage
+apiVersion: signaldeck.workflowPackage/v2
 metadata:
   key: digital_oracle_researcher
-  name: Digital Oracle Researcher
-  description: Final proven demo package for research-only Digital Oracle finance
-    analysis.
-spec:
-  inputs:
-    type: object
-    title: Digital Oracle research inputs
-    description: Operator inputs for a research-only Digital Oracle finance run.
-    required:
-    - researchQuestion
-    - outputLanguage
-    properties:
-      researchQuestion:
-        type: string
-        title: Research question
-        description: Required finance research question to investigate with granted
-          tools.
-      outputLanguage:
-        type: string
-        title: Output language
-        default: English
-        description: Required language for the final structured report.
-      ticker:
-        type: string
-        title: Ticker
-        default: ""
-        description: Optional ticker to focus SEC filing context when relevant.
-      cik:
-        type: string
-        title: CIK
-        default: ""
-        description: Optional SEC Central Index Key for submissions metadata lookup.
-      secSubmissionsUrl:
-        type: string
-        title: SEC submissions URL
-        default: ""
-        description: Optional SEC JSON submissions endpoint for metadata-only evidence.
-      asOfDate:
-        type: string
-        title: As-of date
-        default: ""
-        description: Optional point-in-time date in YYYY-MM-DD format.
-      horizonDays:
-        type: integer
-        title: Horizon days
-        default: 30
-        description: Optional research horizon in calendar days.
-  capabilityProfiles:
-  - key: digital_oracle_phase1_tools
-    name: Digital Oracle Native Tools
-    description: Grants all shipped Digital Oracle native runtime lookups.
-    toolKeys:
-    - signaldeck.digital_oracle.prediction_markets.lookup
-    - signaldeck.digital_oracle.sec_filings.lookup
-    - signaldeck.digital_oracle.market_sentiment.lookup
-    - signaldeck.digital_oracle.macro_rates.lookup
-    - signaldeck.digital_oracle.crypto_derivatives.lookup
-    - signaldeck.digital_oracle.cftc_positioning.lookup
-    - signaldeck.digital_oracle.options.lookup
-  outputSchemas:
-  - key: digital_oracle_report
-    name: Digital Oracle Report
-    description: Structured research-only Digital Oracle report.
-    jsonSchema:
-      type: object
-      required:
-      - summary
-      - signals
-      - horizons
-      - contradictions
-      - limitations
-      - nextQuestions
-      properties:
-        summary:
-          type: string
-        signals:
-          type: array
-          items:
-            type: string
-        horizons:
-          type: array
-          items:
-            type: string
-        contradictions:
-          type: array
-          items:
-            type: string
-        limitations:
-          type: array
-          items:
-            type: string
-        nextQuestions:
-          type: array
-          items:
-            type: string
-  - key: macro_evidence_packet
-    name: Macro Evidence Packet
-    description: Bounded macro and rates evidence for synthesis.
-    jsonSchema:
-      type: object
-      required:
-      - summary
-      - findings
-      - limitations
-      - warnings
-      - sourceType
-      - sourceUrl
-      - fetchedAt
-      - query
-      - stableSourceId
-      properties:
-        summary:
-          type: string
-        findings:
-          type: array
-          items:
-            type: string
-        limitations:
-          type: array
-          items:
-            type: string
-        warnings:
-          type: array
-          items:
-            type: string
-        sourceType:
-          type: string
-        sourceUrl:
-          type: string
-        fetchedAt:
-          type: string
-        query:
-          type: string
-        stableSourceId:
-          type: string
-  - key: web_evidence_packet
-    name: Web Evidence Packet
-    description: Bounded supplementary web evidence for synthesis.
-    jsonSchema:
-      type: object
-      required:
-      - summary
-      - findings
-      - limitations
-      - warnings
-      - sourceType
-      - sourceUrl
-      - fetchedAt
-      - query
-      - stableSourceId
-      properties:
-        summary:
-          type: string
-        findings:
-          type: array
-          items:
-            type: string
-        limitations:
-          type: array
-          items:
-            type: string
-        warnings:
-          type: array
-          items:
-            type: string
-        sourceType:
-          type: string
-        sourceUrl:
-          type: string
-        fetchedAt:
-          type: string
-        query:
-          type: string
-        stableSourceId:
-          type: string
-  - key: sec_metadata_packet
-    name: SEC Metadata Packet
-    description: Bounded SEC submissions metadata evidence for synthesis.
-    jsonSchema:
-      type: object
-      required:
-      - summary
-      - findings
-      - limitations
-      - warnings
-      - sourceType
-      - sourceUrl
-      - fetchedAt
-      - query
-      - stableSourceId
-      properties:
-        summary:
-          type: string
-        findings:
-          type: array
-          items:
-            type: string
-        limitations:
-          type: array
-          items:
-            type: string
-        warnings:
-          type: array
-          items:
-            type: string
-        sourceType:
-          type: string
-        sourceUrl:
-          type: string
-        fetchedAt:
-          type: string
-        query:
-          type: string
-        stableSourceId:
-          type: string
-  mcpServers:
-  - key: web_research
-    name: Web Research
-    description: Package-private web evidence search for bounded advisory context.
-    transport: http-sse
-    url: https://mcp.exa.ai/mcp
-    headers:
-      Authorization: Bearer IMPLEMENTATION_TIME_VALUE
-    query:
-      api_key: IMPLEMENTATION_TIME_VALUE
-    toolKeys:
-    - web_search_exa
-  agents:
-  - key: digital_oracle_signal_researcher
-    name: Digital Oracle Signal Researcher
-    modelConnection: digital_oracle_primary_model
-    systemPrompt: |
-      Digital Oracle methodology is package-local for this agent.
-      Decompose each research question into the variable, labeled horizon, observable market, and granted evidence sources before using tools.
-      Use only the granted Digital Oracle prediction-market, SEC filing, market sentiment, macro/rates, crypto derivatives, CFTC positioning, and options tools for evidence.
-      Seek independent signal dimensions when available: prediction markets, SEC filings, broad market sentiment, macro/rates context, crypto derivatives, CFTC positioning, and options context.
-      Label every horizon, including as-of date and horizon days when supplied.
-      Compare contradictions across sources. Explain when markets, filings, sentiment, or macro/rates point in different directions.
-      Disclose warnings, sparse coverage, stale data, unresolved tickers, source gaps, and any missing signal dimension before drawing conclusions.
-      Never invent filing facts, event probabilities, sentiment readings, macro series, source URLs, or unavailable evidence.
+  name: Digital Oracle research
+  description: Run parallel specialist research with independently deployed Oracle tools and
+    retain the final report in Finance.
+agents:
+  researcher:
+    name: Digital Oracle specialist
     inputSchema:
       type: object
-      required:
-      - researchQuestion
-      - outputLanguage
-      - signalFocus
       properties:
-        researchQuestion:
+        question:
           type: string
-        outputLanguage:
+          minLength: 1
+        focus:
           type: string
-        signalFocus:
+      required:
+      - question
+      - focus
+    outputSchema:
+      type: object
+      properties:
+        text:
           type: string
-        ticker:
-          type: string
-        cik:
-          type: string
-        secSubmissionsUrl:
-          type: string
-        asOfDate:
-          type: string
-        horizonDays:
-          type: integer
-    outputSchema: digital_oracle_report
-    capabilityProfiles:
-    - digital_oracle_phase1_tools
-    mcpServers: []
-  - key: macro_evidence_collector
-    name: Macro Evidence Collector
-    modelConnection: digital_oracle_primary_model
-    systemPrompt: |
-      Use the granted native Digital Oracle macro/rates lookup tool to produce one bounded macro_evidence_packet.
-      Summarize relevant FRED, Treasury, BIS, World Bank, and FedWatch-style normalized series when returned by the native tool. Treat missing optional source coverage as a limitation, not a failure.
-      Do not expose raw provider payloads downstream. Return only structured content matching macro_evidence_packet.
+          minLength: 1
+      required:
+      - text
+    strategy:
+      kind: model
+      modelRef: research-model
+      prompt: Research the question using the granted Digital Oracle tools appropriate to the
+        focus. Read tool schemas before choosing arguments. Cite returned sources and
+        timestamps. State provider unavailability and distinguish facts from inference; never
+        invent data when a provider is unavailable. Produce a concise research note.
+    tools:
+    - signaldeck/digital-oracle/prediction_markets_lookup
+    - signaldeck/digital-oracle/sec_filings_lookup
+    - signaldeck/digital-oracle/market_sentiment_lookup
+    - signaldeck/digital-oracle/macro_rates_lookup
+    - signaldeck/digital-oracle/crypto_derivatives_lookup
+    - signaldeck/digital-oracle/cftc_positioning_lookup
+    - signaldeck/digital-oracle/options_lookup
+    resources: []
+    budget:
+      maxModelRequests: 6
+      maxToolCalls: 8
+      maxTokens: 18000
+      deadlineSeconds: 180
+      maxParallelTools: 3
+  editor:
+    name: Cross-source research editor
     inputSchema:
       type: object
-      required:
-      - researchQuestion
-      - outputLanguage
       properties:
-        researchQuestion:
+        question:
           type: string
-        outputLanguage:
+          minLength: 1
+        macro:
+          type: object
+          properties:
+            text:
+              type: string
+              minLength: 1
+          required:
+          - text
+        company:
+          type: object
+          properties:
+            text:
+              type: string
+              minLength: 1
+          required:
+          - text
+      required:
+      - question
+      - macro
+      - company
+    outputSchema:
+      type: object
+      properties:
+        name:
           type: string
-        ticker:
+          minLength: 1
+          maxLength: 160
+        content:
           type: string
-        asOfDate:
-          type: string
-        horizonDays:
-          type: integer
-    outputSchema: macro_evidence_packet
-    capabilityProfiles:
-    - digital_oracle_phase1_tools
-    mcpServers: []
-  - key: web_evidence_collector
-    name: Web Evidence Collector
-    modelConnection: digital_oracle_primary_model
-    systemPrompt: |-
-      Use the package-private web_research MCP server only for supplementary public web search.
-      Normalize any MCP search results into one bounded web_evidence_packet with provenance, findings, limitations, and warnings.
-      Keep web evidence supplementary to Digital Oracle canonical tools. Do not invent source URLs or unsupported facts.
-      Return only structured content matching web_evidence_packet.
+          minLength: 1
+      required:
+      - name
+      - content
+      unevaluatedProperties: false
+    strategy:
+      kind: model
+      modelRef: research-model
+      prompt: Synthesize the two research notes into one report with name and content. Preserve
+        source attribution, disagreements, provider limitations and dates. Include unanswered
+        questions. Keep the report name within 160 characters.
+    tools: []
+    resources: []
+    budget:
+      maxModelRequests: 6
+      maxToolCalls: 8
+      maxTokens: 18000
+      deadlineSeconds: 180
+      maxParallelTools: 3
+  save_report:
+    name: Save Finance report
     inputSchema:
       type: object
-      required:
-      - researchQuestion
-      - outputLanguage
       properties:
-        researchQuestion:
+        name:
           type: string
-        outputLanguage:
+          minLength: 1
+          maxLength: 160
+        content:
           type: string
-        ticker:
-          type: string
-        cik:
-          type: string
-        secSubmissionsUrl:
-          type: string
-        asOfDate:
-          type: string
-        horizonDays:
+          minLength: 1
+      required:
+      - name
+      - content
+      unevaluatedProperties: false
+    outputSchema:
+      type: object
+      properties:
+        reportId:
           type: integer
-    outputSchema: web_evidence_packet
-    capabilityProfiles: []
-    mcpServers:
-    - web_research
-  - key: sec_metadata_collector
-    name: SEC Filing Evidence Collector
-    modelConnection: digital_oracle_primary_model
-    systemPrompt: |
-      Use the granted native Digital Oracle SEC filings lookup tool and the existing SEC filing signal output to produce one bounded sec_metadata_packet.
-      Summarize issuer identity, ticker/CIK context, normalized search hits, recent filing form/date/accession metadata, Form 4 ownership summaries when available, and coverage limits only.
-      Do not expose raw SEC response dumps, configured contact emails, archive bodies, or request filing text. Return only structured content matching sec_metadata_packet.
+        name:
+          type: string
+      required:
+      - reportId
+      - name
+    strategy:
+      kind: deterministic
+      toolId: signaldeck/finance/reports_create
+      inputMapping:
+        ref: agent.input
+      outputMapping:
+        object:
+          reportId:
+            ref: tool.output.id
+          name:
+            ref: tool.output.name
+    tools:
+    - signaldeck/finance/reports_create
+    resources: []
+    budget:
+      maxModelRequests: 6
+      maxToolCalls: 8
+      maxTokens: 18000
+      deadlineSeconds: 180
+      maxParallelTools: 3
+workflows:
+  research:
+    name: Cross-source research
     inputSchema:
       type: object
-      required:
-      - researchQuestion
-      - outputLanguage
-      - filingSignals
       properties:
-        researchQuestion:
+        question:
           type: string
-        outputLanguage:
-          type: string
-        ticker:
-          type: string
-        cik:
-          type: string
-        secSubmissionsUrl:
-          type: string
-        asOfDate:
-          type: string
-        horizonDays:
-          type: integer
-        filingSignals:
-          type: object
-          required: []
-          properties:
-            summary:
-              type: string
-            signals:
-              type: array
-              items:
-                type: string
-            horizons:
-              type: array
-              items:
-                type: string
-            contradictions:
-              type: array
-              items:
-                type: string
-            limitations:
-              type: array
-              items:
-                type: string
-            nextQuestions:
-              type: array
-              items:
-                type: string
-    outputSchema: sec_metadata_packet
-    capabilityProfiles:
-    - digital_oracle_phase1_tools
-    mcpServers: []
-  - key: digital_oracle_synthesizer
-    name: Digital Oracle Synthesizer
-    modelConnection: digital_oracle_primary_model
-    systemPrompt: |
-      Digital Oracle synthesis is package-local for this agent.
-      Synthesize only from the supplied signal reports and bounded evidence packets.
-      Preserve labeled horizons, contradictions, limitations, warnings, source provenance, and gaps.
-      Treat macro, web, and SEC filing packets as supplementary bounded context from Digital Oracle native tools or package-private web search.
-      Require at least three independent signal dimensions when available. If fewer are available, say which dimensions are missing.
-      Do not invent missing market data, filings, event probabilities, URLs, macro values, or sentiment values.
-      Return the final structured report in the requested output language.
-    inputSchema:
+          minLength: 1
+      required:
+      - question
+    outputSchema:
       type: object
-      required:
-      - researchQuestion
-      - outputLanguage
-      - marketSignals
-      - filingSignals
-      - sentimentSearchSignals
-      - macroEvidence
-      - webEvidence
-      - secMetadataEvidence
       properties:
-        researchQuestion:
-          type: string
-        outputLanguage:
-          type: string
-        marketSignals:
-          type: object
-          required: []
-          properties:
-            summary:
-              type: string
-            signals:
-              type: array
-              items:
-                type: string
-            horizons:
-              type: array
-              items:
-                type: string
-            contradictions:
-              type: array
-              items:
-                type: string
-            limitations:
-              type: array
-              items:
-                type: string
-            nextQuestions:
-              type: array
-              items:
-                type: string
-        filingSignals:
-          type: object
-          required: []
-          properties:
-            summary:
-              type: string
-            signals:
-              type: array
-              items:
-                type: string
-            horizons:
-              type: array
-              items:
-                type: string
-            contradictions:
-              type: array
-              items:
-                type: string
-            limitations:
-              type: array
-              items:
-                type: string
-            nextQuestions:
-              type: array
-              items:
-                type: string
-        sentimentSearchSignals:
-          type: object
-          required: []
-          properties:
-            summary:
-              type: string
-            signals:
-              type: array
-              items:
-                type: string
-            horizons:
-              type: array
-              items:
-                type: string
-            contradictions:
-              type: array
-              items:
-                type: string
-            limitations:
-              type: array
-              items:
-                type: string
-            nextQuestions:
-              type: array
-              items:
-                type: string
-        macroEvidence:
-          type: object
-          required: []
-          properties:
-            summary:
-              type: string
-            findings:
-              type: array
-              items:
-                type: string
-            limitations:
-              type: array
-              items:
-                type: string
-            warnings:
-              type: array
-              items:
-                type: string
-            sourceType:
-              type: string
-            sourceUrl:
-              type: string
-            fetchedAt:
-              type: string
-            query:
-              type: string
-            stableSourceId:
-              type: string
-        webEvidence:
-          type: object
-          required: []
-          properties:
-            summary:
-              type: string
-            findings:
-              type: array
-              items:
-                type: string
-            limitations:
-              type: array
-              items:
-                type: string
-            warnings:
-              type: array
-              items:
-                type: string
-            sourceType:
-              type: string
-            sourceUrl:
-              type: string
-            fetchedAt:
-              type: string
-            query:
-              type: string
-            stableSourceId:
-              type: string
-        secMetadataEvidence:
-          type: object
-          required: []
-          properties:
-            summary:
-              type: string
-            findings:
-              type: array
-              items:
-                type: string
-            limitations:
-              type: array
-              items:
-                type: string
-            warnings:
-              type: array
-              items:
-                type: string
-            sourceType:
-              type: string
-            sourceUrl:
-              type: string
-            fetchedAt:
-              type: string
-            query:
-              type: string
-            stableSourceId:
-              type: string
-        ticker:
-          type: string
-        cik:
-          type: string
-        secSubmissionsUrl:
-          type: string
-        asOfDate:
-          type: string
-        horizonDays:
+        reportId:
           type: integer
-    outputSchema: digital_oracle_report
-    capabilityProfiles:
-    - digital_oracle_phase1_tools
-    mcpServers: []
-  workflows:
-  - key: research
-    name: Research
-    inputSchema:
-      type: object
+        name:
+          type: string
       required:
-      - researchQuestion
-      - outputLanguage
-      properties:
-        researchQuestion:
-          type: string
-        outputLanguage:
-          type: string
-        ticker:
-          type: string
-        cik:
-          type: string
-        secSubmissionsUrl:
-          type: string
-        asOfDate:
-          type: string
-        horizonDays:
-          type: integer
-    flow:
-      kind: sequence
-      id: research_sequence
-      nodes:
-      - kind: fanout
-        id: evidence_fanout
-        branches:
-        - id: market_signals
-          node:
-            kind: step
-            id: market_signals
-            slot: market_signals
-            uses: digital_oracle_signal_researcher
-            with:
-              researchQuestion: ${{ inputs.researchQuestion }}
-              outputLanguage: ${{ inputs.outputLanguage }}
-              signalFocus: ${{ inputs.researchQuestion }}
-              ticker: ${{ inputs.ticker }}
-              cik: ${{ inputs.cik }}
-              secSubmissionsUrl: ${{ inputs.secSubmissionsUrl }}
-              asOfDate: ${{ inputs.asOfDate }}
-              horizonDays: ${{ inputs.horizonDays }}
-        - id: filing_signals
-          node:
-            kind: step
-            id: filing_signals
-            slot: filing_signals
-            uses: digital_oracle_signal_researcher
-            with:
-              researchQuestion: ${{ inputs.researchQuestion }}
-              outputLanguage: ${{ inputs.outputLanguage }}
-              signalFocus: ${{ inputs.researchQuestion }}
-              ticker: ${{ inputs.ticker }}
-              cik: ${{ inputs.cik }}
-              secSubmissionsUrl: ${{ inputs.secSubmissionsUrl }}
-              asOfDate: ${{ inputs.asOfDate }}
-              horizonDays: ${{ inputs.horizonDays }}
-        - id: sentiment_search_signals
-          node:
-            kind: step
-            id: sentiment_search_signals
-            slot: sentiment_search_signals
-            uses: digital_oracle_signal_researcher
-            with:
-              researchQuestion: ${{ inputs.researchQuestion }}
-              outputLanguage: ${{ inputs.outputLanguage }}
-              signalFocus: ${{ inputs.researchQuestion }}
-              ticker: ${{ inputs.ticker }}
-              cik: ${{ inputs.cik }}
-              secSubmissionsUrl: ${{ inputs.secSubmissionsUrl }}
-              asOfDate: ${{ inputs.asOfDate }}
-              horizonDays: ${{ inputs.horizonDays }}
-        - id: macro_evidence
-          node:
-            kind: step
-            id: macro_evidence_collect
-            slot: macro_evidence
-            uses: macro_evidence_collector
-            with:
-              researchQuestion: ${{ inputs.researchQuestion }}
-              outputLanguage: ${{ inputs.outputLanguage }}
-              ticker: ${{ inputs.ticker }}
-              asOfDate: ${{ inputs.asOfDate }}
-              horizonDays: ${{ inputs.horizonDays }}
-        - id: web_evidence
-          node:
-            kind: step
-            id: web_evidence_collect
-            slot: web_evidence
-            uses: web_evidence_collector
-            with:
-              researchQuestion: ${{ inputs.researchQuestion }}
-              outputLanguage: ${{ inputs.outputLanguage }}
-              ticker: ${{ inputs.ticker }}
-              cik: ${{ inputs.cik }}
-              secSubmissionsUrl: ${{ inputs.secSubmissionsUrl }}
-              asOfDate: ${{ inputs.asOfDate }}
-              horizonDays: ${{ inputs.horizonDays }}
-      - kind: step
-        id: sec_metadata_collect
-        slot: sec_metadata
-        uses: sec_metadata_collector
-        with:
-          researchQuestion: ${{ inputs.researchQuestion }}
-          outputLanguage: ${{ inputs.outputLanguage }}
-          ticker: ${{ inputs.ticker }}
-          cik: ${{ inputs.cik }}
-          secSubmissionsUrl: ${{ inputs.secSubmissionsUrl }}
-          asOfDate: ${{ inputs.asOfDate }}
-          horizonDays: ${{ inputs.horizonDays }}
-          filingSignals: ${{ nodes.filing_signals.outputs.filing_signals }}
-      - kind: step
-        id: synthesis
-        slot: report
-        uses: digital_oracle_synthesizer
-        with:
-          researchQuestion: ${{ inputs.researchQuestion }}
-          outputLanguage: ${{ inputs.outputLanguage }}
-          marketSignals: ${{ nodes.market_signals.outputs.market_signals }}
-          filingSignals: ${{ nodes.filing_signals.outputs.filing_signals }}
-          sentimentSearchSignals: ${{
-            nodes.sentiment_search_signals.outputs.sentiment_search_signals }}
-          macroEvidence: ${{ nodes.macro_evidence_collect.outputs.macro_evidence }}
-          webEvidence: ${{ nodes.web_evidence_collect.outputs.web_evidence }}
-          secMetadataEvidence: ${{ nodes.sec_metadata_collect.outputs.sec_metadata }}
-          ticker: ${{ inputs.ticker }}
-          cik: ${{ inputs.cik }}
-          secSubmissionsUrl: ${{ inputs.secSubmissionsUrl }}
-          asOfDate: ${{ inputs.asOfDate }}
-          horizonDays: ${{ inputs.horizonDays }}
-    output:
-      from: ${{ nodes.synthesis.outputs.report }}
+      - reportId
+      - name
+    nodes:
+      macro:
+        uses: researcher
+        inputMapping:
+          object:
+            question:
+              ref: workflow.input.question
+            focus:
+              value: Macro rates, positioning, derivatives and prediction-market context
+      company:
+        uses: researcher
+        inputMapping:
+          object:
+            question:
+              ref: workflow.input.question
+            focus:
+              value: Company filings, market sentiment and options evidence
+      editor:
+        uses: editor
+        inputMapping:
+          object:
+            question:
+              ref: workflow.input.question
+            macro:
+              ref: nodes.macro.output
+            company:
+              ref: nodes.company.output
+      save:
+        uses: save_report
+        inputMapping:
+          ref: nodes.editor.output
+    outputMapping:
+      ref: nodes.save.output
+    maxParallelNodes: 4
+    deadlineSeconds: 900
+    failurePolicy: continue_independent
