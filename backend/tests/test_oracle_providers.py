@@ -443,7 +443,7 @@ oracle_fake__DIGITAL_ORACLE_FIXTURE_DIR = (
 
 
 def oracle_fake__normalize_digital_oracle_fixture_params(
-    params: Mapping[str, object] | None
+    params: Mapping[str, object] | None,
 ) -> dict[str, object]:
     if params is None:
         return {}

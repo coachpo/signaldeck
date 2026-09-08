@@ -919,7 +919,7 @@ def market_news_service_factory() -> Callable[[object], MarketDataService]:
 
 
 def test_news_adapter_rate_limit_degrades_with_structured_warning(
-    market_news_service_factory: Callable[[object], MarketDataService]
+    market_news_service_factory: Callable[[object], MarketDataService],
 ) -> None:
     provider = market__NewsProvider(
         failure=NewsProviderRateLimitError(
@@ -943,7 +943,7 @@ def test_news_adapter_rate_limit_degrades_with_structured_warning(
 
 
 def test_news_adapter_timeout_degrades_with_structured_warning(
-    market_news_service_factory: Callable[[object], MarketDataService]
+    market_news_service_factory: Callable[[object], MarketDataService],
 ) -> None:
     provider = market__NewsProvider(failure=NewsProviderTimeoutError("news provider timed out"))
     service = market_news_service_factory(provider)
@@ -959,7 +959,7 @@ def test_news_adapter_timeout_degrades_with_structured_warning(
 
 
 def test_news_adapter_unsupported_query_falls_back_with_structured_warning(
-    market_news_service_factory: Callable[[object], MarketDataService]
+    market_news_service_factory: Callable[[object], MarketDataService],
 ) -> None:
     primary_provider = market__NewsProvider(
         provider_name="alpha_vantage",
@@ -996,7 +996,7 @@ def test_news_adapter_unsupported_query_falls_back_with_structured_warning(
 
 
 def test_news_adapter_empty_result_returns_structured_warning(
-    market_news_service_factory: Callable[[object], MarketDataService]
+    market_news_service_factory: Callable[[object], MarketDataService],
 ) -> None:
     provider = market__NewsProvider()
     service = market_news_service_factory(provider)
@@ -1020,7 +1020,7 @@ def test_news_adapter_empty_result_returns_structured_warning(
 
 
 def test_news_adapter_empty_after_filter_preserves_empty_warning(
-    market_news_service_factory: Callable[[object], MarketDataService]
+    market_news_service_factory: Callable[[object], MarketDataService],
 ) -> None:
     provider = market__NewsProvider(
         items=[
@@ -1047,7 +1047,7 @@ def test_news_adapter_empty_after_filter_preserves_empty_warning(
 
 
 def test_news_adapter_global_warning_and_truncation_preserved(
-    market_news_service_factory: Callable[[object], MarketDataService]
+    market_news_service_factory: Callable[[object], MarketDataService],
 ) -> None:
     provider = market__NewsProvider(
         items=[
@@ -1078,7 +1078,7 @@ def test_news_adapter_global_warning_and_truncation_preserved(
 
 
 def test_news_adapter_partial_result_falls_back_after_provider_outage(
-    market_news_service_factory: Callable[[object], MarketDataService]
+    market_news_service_factory: Callable[[object], MarketDataService],
 ) -> None:
     first_provider = market__NewsProvider(
         provider_name="primary_news",
@@ -3094,7 +3094,7 @@ def test_market_data_runtime_tool_specs_preserve_business_selection_schemas(
     properties = cast(dict[str, object], schema["properties"])
     assert schema["required"] == required
     assert set(properties) == property_names
-    (path, expected_enum) = nested_check
+    path, expected_enum = nested_check
     property_schema = cast(dict[str, object], properties[path[0]])
     assert property_schema["type"] in ("array", ["array", "null"])
     item_schema = cast(dict[str, object], property_schema["items"])
