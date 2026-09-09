@@ -59,7 +59,7 @@ Market advisory `research`:
 }
 ```
 
-Setting `includeRisk` to `false` skips the risk branch. The summary explicitly records the missing review. Both branches reuse the same analyst definition with different perspective inputs; their dependencies belong to the workflow nodes.
+Setting `includeRisk` to `false` skips the risk branch. The workflow's summary prompt and missing-output fallback describe the omitted review; Core does not infer business incompleteness from this input. Both branches reuse the same analyst definition with different perspective inputs; their dependencies belong to the workflow nodes.
 
 Digital Oracle `research`:
 
@@ -107,14 +107,13 @@ The [cache policy contract](../backend/app/domain/tool_contracts.py) permits a T
 
 ## Maintaining the examples
 
-The YAML files are the source of the bundled startup packages. Startup inserts missing package keys and preserves operator edits under an existing key. The shipped source is embedded in the Core artifact so reading presets requires neither a filesystem checkout nor a running business plugin. Database revisions use the same canonical source representation as editor saves.
+The YAML files are optional workflow data distributed outside the Core executable artifact. The local Compose stack mounts them read-only; a direct API process imports them only when `SIGNALDECK_WORKFLOW_DATA_DIR` selects a directory. Startup and API `missing_only` imports atomically preserve existing package keys, while explicit `update` imports may advance the current revision. Imported records use the same parser, canonical source and immutable revision checks as editor saves. Reading saved definitions does not require the source directory or a running business plugin. Startup options are documented in the [project entry](../README.md#快速开始); the batch API is specified in the [independent import contract](../docs/工作流解耦方案.md#独立数据导入与分发).
 
-After editing a YAML example, regenerate the bundled sources and [machine contracts](contracts.json) from `backend/`:
+After editing a YAML example, regenerate only the [machine contracts](contracts.json) from `backend/`:
 
 ```sh
 uv run python ../demo/sync_seeds.py
-uv run black --config pyproject.toml app/infrastructure/package_seeds.py ../demo/sync_seeds.py
-uv run pytest tests/test_target_seeds.py tests/test_dag_compiler.py -q
+uv run pytest tests/test_target_seeds.py tests/test_dag_compiler.py tests/test_demo_presentation.py -q
 ```
 
-The contracts lock content hashes, tool and resource identities, node order, merged dependencies and edge origins. The tests also validate each deterministic Agent transformation against its independently published tool schema and verify atomic, non-overwriting seed installation in PostgreSQL.
+The contracts lock content hashes, tool and resource identities, node order, merged dependencies and edge origins. The tests also validate each deterministic Agent transformation and presentation binding against the independently published tool schema, and verify atomic, non-overwriting missing-only imports in PostgreSQL. The generator never embeds workflow sources into Core Python or app resources.

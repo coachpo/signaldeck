@@ -6,7 +6,7 @@ SignalDeck 的 FastAPI backend，提供 Workflow Package 定义、资源与插�
 
 ## 入口与运行前提
 
-- API 入口为 `app.main:app`；启动时初始化核心表、补充缺失示例包，并发布当前 Core 制品。
+- API 入口为 `app.main:app`；启动时初始化核心表并发布当前 Core 制品。仅设置 `SIGNALDECK_WORKFLOW_DATA_DIR` 时才从该外部目录导入缺失工作流；未设置、空目录或缺失目录都可正常启动，已有 key 不被覆盖。
 - `app.workers.command_dispatcher` 投递持久启动/取消命令、同步定时配置，并更新执行事实的读取投影。`app.workers.artifact_worker --serve` 为保留的 Core 制品启动固定依赖环境的 worker；Temporal 负责执行与定时调度。仅启动 API 不会执行已入队的 Run。
 - API、dispatcher 和 worker 共享 Core PostgreSQL、`AGENT_PLATFORM_ENCRYPTION_KEY`、产物目录和 Core 制品目录。dispatcher、worker，以及处理定时配置写入和时间预览的 API 使用同一 `TEMPORAL_ADDRESS`；运行与计划的普通历史读取不连接 Temporal。插件使用独立进程，Finance 和 Notes 数据保存在各自数据库，核心不挂载 Finance 业务路由。
 - `/health` 仅检查 API 进程存活；`/ready` 检查数据库连接，不验证 Temporal、worker、模型或插件。
@@ -16,7 +16,7 @@ SignalDeck 的 FastAPI backend，提供 Workflow Package 定义、资源与插�
 
 | 入口 | 实现责任 |
 | --- | --- |
-| `/api/workflow-packages` | 定义创建/修改、YAML 验证与编译；`/{packageKey}/prepare` 返回只读准备与绑定核对，`/{packageKey}/launches` 保存不可变快照和启动命令。 |
+| `/api/workflow-packages` | 定义创建/修改、YAML 验证与编译；`/import` 批量导入并逐项报告结果；`/{packageKey}/prepare` 返回只读准备与绑定核对，`/{packageKey}/launches` 保存不可变快照和启动命令。 |
 | `/api/resources` | 模型及工具资源配置、加密凭据写入和安全读取。 |
 | `/api/plugins` | 插件 release 契约注册、启停配置及描述读取。 |
 | `/api/runs` | 全历史查询/计数/分页、详情、cancel、rerun、调用证据和来源；`GET /{runId}/result` 返回业务结果投影；`GET /{runId}/reuse` 读取原修订输入，`POST` 同一路径创建修改输入后的新运行。 |
@@ -26,6 +26,8 @@ SignalDeck 的 FastAPI backend，提供 Workflow Package 定义、资源与插�
 | `/api/schedules` | cron/时区/重叠/错过策略配置、同步状态、`/preview` 和 `/{scheduleId}/preview` 的 Temporal 时间预览、`/{scheduleId}/trigger` 与 fire history。 |
 
 [`app/main.py`](app/main.py) 挂载 [`app/api/platform_router.py`](app/api/platform_router.py) 组合的 HTTP 路由，启动依赖由 [`app/api/platform_dependencies.py`](app/api/platform_dependencies.py) 注入；请求与响应使用 `app/schemas/`、领域层及相应路由文件的显式模型。定义和 DAG 契约位于 `app/domain/`；`app/application/` 拥有启动、准备、结果投影和 Tool Gateway；`app/infrastructure/` 实现存储、模型/MCP I/O 和 Temporal 适配。详见 [`架构说明`](../docs/架构说明.md)、[`数据模型`](../docs/data-model.md) 和 [`插件说明`](../plugins/README.md)。
+
+批量导入默认 `missing_only`，显式 `update` 才推进同名包指针；两种模式均保留不可变修订。客户端须检查每个 item 的状态，不能把 HTTP 200 视为所有来源均成功。请求与诊断格式见[独立数据导入](../docs/工作流解耦方案.md#独立数据导入与分发)。
 
 部署可通过 `SIGNALDECK_CONNECTION_PRESETS_FILE` 指定连接选择 JSON 文件；数据遵循 [`ConnectionPresetList`](app/schemas/connection_presets.py)，包含资源标识、非敏感配置和需要用户填写的凭据字段描述。文件中不提供凭据值；未提供选择时，普通页面不猜测 provider、模型或业务范围。实际服务部署仍是独立前提。
 

@@ -16,7 +16,7 @@ SignalDeck is a trusted single-user Agent workflow platform: YAML Workflow Packa
 | Worker recovery, launch delivery, and schedules | `backend/app/workers/artifact_worker.py`, `command_dispatcher.py` and `schedule_fire.py`; Temporal adapters live in `backend/app/infrastructure/`. |
 | Backend regression coverage | [backend/tests/AGENTS.md](backend/tests/AGENTS.md). |
 | Frontend tasks, results, settings, and expert authoring | [frontend/AGENTS.md](frontend/AGENTS.md); route ownership starts in `frontend/src/routes.ts`, with local guides under affected features and E2E. |
-| Workflow Package examples | [demo/AGENTS.md](demo/AGENTS.md); check corresponding bundled seeds and package contract tests. |
+| Workflow Package examples | [demo/AGENTS.md](demo/AGENTS.md); check external YAML imports and package contract tests. |
 | Documentation | [docs/AGENTS.md](docs/AGENTS.md) and the canonical navigation below. |
 | Product behavior and architecture | [Product specification](docs/产品说明.md), [architecture](docs/架构说明.md) and [development rules](docs/开发规范.md); completed iteration history is in [STATUS.md](STATUS.md#已完成迭代). |
 | Local launch and container images | `start.sh`, root Compose/Dockerfile for local/demo; `backend/Dockerfile`, `frontend/Dockerfile`, and `.github/workflows/docker-images.yml` for split images. |
@@ -30,9 +30,9 @@ SignalDeck is a trusted single-user Agent workflow platform: YAML Workflow Packa
 - Secret values must never appear in reads, exports, run details, logs, diagnostics, API error details, or metadata. Use existing encryption and safe projection boundaries; internal runtime payloads are not browser response models.
 - Keep YAML source safety and source locations in `domain/definition_parser.py`, graph semantics and deterministic hashes in `domain/compiler.py`, and launch resource/tool resolution in `application/launch.py` (paths relative to `backend/app/`). Package schemas stay closed; do not introduce `additionalProperties`, `allowAdditionalProperties`, or `patternProperties`, or silently discard unsupported constraints.
 - Execute and rerun from immutable package snapshots. Preserve queue, schedule, and run provenance when changing the corresponding flows.
-- PostgreSQL initialization uses `create_all`. Optional external YAML imports share ordinary normalization and atomically create missing package keys without overwriting operator revisions; workflow data stays outside the Core executable closure. Durable command delivery and Temporal own execution recovery; query projections must not schedule work. There is no migration framework; follow the [data and rebuild policy](STATUS.md) for schema changes.
+- PostgreSQL initialization uses `create_all`. Startup YAML imports and API `missing_only` imports share ordinary normalization and atomically create missing package keys without overwriting operator revisions; explicit updates may advance the current pointer while preserving immutable revisions. Workflow data stays outside the Core executable closure. Durable command delivery and Temporal own execution recovery; query projections must not schedule work. There is no migration framework; follow the [data and rebuild policy](STATUS.md) for schema changes.
 - Frontend data access uses feature hooks and `queryKeys`; shared components remain presentational. Follow [frontend/DESIGN.md](frontend/DESIGN.md) for visual changes.
-- Demo YAML is contract material. Review affected parser/compiler/launch tests, `demo/contracts.json`, and bundled seeds when changing it.
+- Demo YAML is contract material. Review affected parser/compiler/launch tests, `demo/contracts.json`, and external import coverage when changing it.
 
 ## Validation and Local Runtime
 

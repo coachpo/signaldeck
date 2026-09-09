@@ -47,9 +47,21 @@ schema/1 仍拒绝 default/examples。需要注解时，在对应 schema 节点�
 
 ### 声明结果页面链接
 
-工具可选声明 `resultLinks`，每项为闭合 `{version: "signaldeck.resultLink/1", key, label, path, query}`。`query` 把 URL 参数名绑定到该工具 output schema 中存在的 `tool.output.<字段>` 标量引用；`path` 只能是安全相对路径（允许空串），不能包含 authority、scheme、query、fragment 或路径穿越。发布的 pageUrl 提供页面基址，Core 只按确认工具输出绑定和编码，不理解报告或笔记参数。
+工具可选声明 `resultLinks`，每项为闭合 `{version: "signaldeck.resultLink/1", key, label, path, query}`，同一工具内 key 唯一。`query` 把非空 URL 参数名绑定到该工具 output schema 中存在的 `tool.output.<字段>` 标量引用；`path` 只能是安全相对路径（允许空串），不能包含 authority、scheme、query、fragment、反斜杠或路径穿越。发布的 pageUrl 提供页面基址，Core 只按确认工具输出绑定和编码，不理解报告或笔记参数。例如，工具 output schema 已声明 recordKey 时：
 
-Workflow 的 presentation/1 `link` 分节明确提供节点输出 ref、toolId 和 linkKey。编译校验授权，Launch 在实际发布中验证链接及 pageUrl；链接和确认操作保留 evidence/operation/plugin 身份。插件离线不妨碍确认输出与声明链接读取，但不能保证目标页面可访问。版本格式详见[解耦方案](工作流解耦方案.md#插件链接)。
+```json
+{
+  "resultLinks": [{
+    "version": "signaldeck.resultLink/1",
+    "key": "item",
+    "label": "打开记录",
+    "path": "",
+    "query": {"item": "tool.output.recordKey"}
+  }]
+}
+```
+
+Workflow 的 presentation/1 `link` 分节明确提供节点输出 ref、toolId 和 linkKey。编译校验授权，Launch 在实际发布中验证链接及 pageUrl；链接和确认操作保留 evidence/operation/plugin 身份。插件离线不妨碍确认输出与声明链接读取，但不能保证目标页面可访问。Workflow 的确认调用选择、绑定错误及历史读取语义见[解耦契约](工作流解耦方案.md#插件链接)；工具发布线格式以本节为准。
 
 resultLinks 参与工具 contract digest；旧工具缺省该字段时不自动序列化，原 digest 可验证。显式 null 拒绝。新增链接须发布新制品/描述，不修改已经冻结的发布。Finance 的报告路径及 query 参数由其自身发布提供，不能在 Core 添加业务路由推断。
 
