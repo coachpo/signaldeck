@@ -3,11 +3,8 @@ import { Link, useNavigate, useParams, useLocation } from "react-router";
 import { ApiRequestError } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { useDisplayMode } from "@/hooks/use-display-mode";
-import { TaskInputs } from "./task-inputs";
 import {
   availableTasks,
-  supportsTaskForm,
-  taskDescriptor,
   taskDefaults,
   taskConstraintErrors,
 } from "./task-catalog";
@@ -79,7 +76,6 @@ function ScheduleEditor({ schedule }: { schedule?: Schedule }) {
     },
   );
   const [creationUncertain, setCreationUncertain] = useState(false);
-  const [inputErrors, setInputErrors] = useState<Record<string, string>>({});
   const [parametersDirty, setParametersDirty] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const [acceptedTrigger, setAcceptedTrigger] = useState<string | null>(null);
@@ -87,9 +83,6 @@ function ScheduleEditor({ schedule }: { schedule?: Schedule }) {
   const [triggerId, setTriggerId] = useState(() => crypto.randomUUID());
   const pkg = packages.data?.items.find((p) => p.key === draft.packageKey);
   const workflow = pkg?.definition.workflows[draft.workflowKey];
-  const descriptor = taskDescriptor(draft.packageKey, draft.workflowKey);
-  const supported =
-    !!workflow && supportsTaskForm(descriptor, workflow.inputSchema);
   const set = <K extends keyof ScheduleConfig>(
     key: K,
     value: ScheduleConfig[K],
@@ -99,12 +92,11 @@ function ScheduleEditor({ schedule }: { schedule?: Schedule }) {
       if (parametersDirty) throw new Error("请先应用业务信息，再保存安排。");
       const value = draft.parameters;
       const businessErrors =
-        supported && workflow
+        workflow
           ? taskConstraintErrors(workflow.inputSchema, value)
           : {};
-      setInputErrors(businessErrors);
       if (Object.keys(businessErrors).length)
-        throw new Error("请检查业务信息中的提示。");
+        throw new Error(Object.entries(businessErrors).map(([path, message]) => `${path}: ${message}`).join("; "));
       const issues = workflow
         ? validateLaunchValueForSchema(workflow.inputSchema, value)
         : [];
@@ -151,7 +143,7 @@ function ScheduleEditor({ schedule }: { schedule?: Schedule }) {
           title={schedule?.name ?? "安排重复执行"}
           description={
             draft.packageKey
-              ? descriptor?.title || workflow?.name || draft.name
+              ? workflow?.name || draft.name
               : "选择任务，填写业务信息，再启用自动执行。"
           }
           actions={
@@ -368,28 +360,17 @@ function ScheduleEditor({ schedule }: { schedule?: Schedule }) {
             </p>
             {workflow && (
               <>
-                <div hidden={!expert && !parametersDirty}>
+                <div>
                   <LaunchInputs
+                    technical={expert}
                     key={`${draft.packageKey}/${draft.workflowKey}`}
                     schema={workflow.inputSchema}
+                    inputHints={workflow.presentation?.inputHints}
                     value={draft.parameters}
                     onChange={(value) => set("parameters", value)}
                     onDirtyChange={setParametersDirty}
                   />
                 </div>
-                <div hidden={!supported || expert || parametersDirty}>
-                  <TaskInputs
-                    errors={inputErrors}
-                    schema={workflow.inputSchema}
-                    value={draft.parameters}
-                    onChange={(value) => set("parameters", value)}
-                  />
-                </div>
-                {!supported && !expert && !parametersDirty && (
-                  <p className="text-sm">
-                    沿用已保存的业务信息。如需修改此自定义任务的输入，请开启专家模式。
-                  </p>
-                )}
                 {parametersDirty && !expert && (
                   <p role="alert">
                     专家输入尚未应用，请先应用或放弃修改，避免覆盖草稿。

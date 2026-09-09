@@ -1,0 +1,101 @@
+apiVersion: signaldeck.workflowPackage/v2
+metadata:
+  key: dispatch_brief
+  name: Dispatch briefing
+agents:
+  prepare:
+    name: Prepare dispatch briefing
+    inputSchema:
+      type: object
+      properties:
+        headline:
+          type: string
+        includeRisk:
+          type: boolean
+        reportId:
+          type: string
+        collection:
+          type: string
+      required: [headline, includeRisk, reportId, collection]
+      unevaluatedProperties: false
+    outputSchema:
+      type: object
+      properties:
+        bulletin:
+          type: string
+        reportId:
+          type: string
+        collection:
+          type: string
+      required: [bulletin, reportId, collection]
+      unevaluatedProperties: false
+    strategy:
+      kind: deterministic
+      toolId: example/dispatch/prepare
+      inputMapping:
+        ref: agent.input
+      outputMapping:
+        ref: tool.output
+    tools: [example/dispatch/prepare]
+workflows:
+  briefing:
+    name: Dispatch briefing
+    description: Prepare a dispatch bulletin using ordinary operator data.
+    inputSchema:
+      type: object
+      properties:
+        headline:
+          type: string
+          title: Dispatch headline
+          minLength: 1
+        includeRisk:
+          type: boolean
+          title: Include appendix
+          x-signaldeck-schema: signaldeck.schema/2
+          default: false
+        reportId:
+          type: string
+          title: External reference
+        collection:
+          type: string
+          title: Delivery group
+      required: [headline, includeRisk, reportId, collection]
+      unevaluatedProperties: false
+    outputSchema:
+      type: object
+      properties:
+        bulletin:
+          type: string
+        reportId:
+          type: string
+        collection:
+          type: string
+      required: [bulletin, reportId, collection]
+      unevaluatedProperties: false
+    nodes:
+      compose:
+        uses: prepare
+        inputMapping:
+          ref: workflow.input
+    outputMapping:
+      ref: nodes.compose.output
+    presentation:
+      version: signaldeck.presentation/1
+      inputHints:
+      - ref: workflow.input.headline
+        control: textarea
+        placeholder: Describe the dispatch update.
+      title:
+        kind: input
+        ref: workflow.input.headline
+      sections:
+      - kind: markdown
+        ref: nodes.compose.output.bulletin
+        label: Dispatch bulletin
+        required: true
+      - kind: value
+        ref: workflow.output.reportId
+        label: External reference
+      - kind: value
+        ref: workflow.output.collection
+        label: Delivery group

@@ -32,6 +32,8 @@ export SIGNALDECK_CORE_PYTHON_VERSION=3.13.13
 mkdir -p "$PWD/.signaldeck-dev/temporal"
 ```
 
+直接运行 API 默认不安装示例。需要本地示例时，另设 `SIGNALDECK_WORKFLOW_DATA_DIR="$PWD/demo"`；留空或选择空目录仍可正常运行。导入只创建缺失 key，已有工作流通过普通编辑或显式 update 导入更新。
+
 在仓库根目录分别打开终端执行（Temporal 已在运行时复用其地址）：
 
 ```bash

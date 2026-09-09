@@ -11,3 +11,5 @@
 - Serialize public API models with `model_dump(mode="json", by_alias=True)`. Test route presence through `app.openapi()["paths"]`, and observable response behavior through `TestClient`.
 - Test secret absence at read/export/error boundaries. Encryption tests may inspect controlled test payloads and ciphertext envelopes to prove encryption and wrong-key failure; do not turn a no-leak assertion into a blanket ban on testing the storage contract.
 - Run the narrow relevant tests and the applicable backend gates from [CONTRIBUTING](../../CONTRIBUTING.md).
+
+- Decoupling coverage includes `test_presentation_contract.py`, `test_presentation_binding.py`, `test_result_declarations.py`, `test_run_title_declarations.py` and `test_demo_presentation.py`. Preserve old hash/digest omission, arbitrary/renamed fields, optional skip versus declared missing, confirmed artifact ownership, concurrent missing-only imports and offline history. A known demo field name is ordinary data unless selected by a frozen public declaration.

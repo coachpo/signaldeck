@@ -15,17 +15,14 @@ import { WorkspacePageShell } from "@/components/shared/workspace-page-shell";
 import { PageContextBar } from "@/components/shared/page-context-bar";
 import { InventoryStatePanel } from "@/components/shared/inventory-state-panel";
 import { RequestError } from "./feedback";
-import { TaskInputs } from "./task-inputs";
 import { TaskConnections } from "./task-connections";
 import { TaskPreparation } from "./task-preparation";
 import { LaunchInputs } from "./launch-inputs";
 import {
-  supportsTaskForm,
   taskDefaults,
-  taskDescriptor,
   taskConstraintErrors,
 } from "./task-catalog";
-import type { Json, JsonObject } from "@/lib/types/workflow-platform";
+import type { Json, JsonObject, WorkflowDefinition } from "@/lib/types/workflow-platform";
 import type {
   Preparation,
   ReuseInput,
@@ -79,6 +76,7 @@ export function TaskPage() {
       workflowKey={workflowKey}
       packageHash={historical?.packageHash ?? pkg!.packageHash}
       schema={schema}
+      workflow={historical?.workflow ?? workflow}
       initial={
         historical ? historical.parameters : preset?.hasParameters ? preset.parameters : taskDefaults(schema)
       }
@@ -101,6 +99,7 @@ function TaskForm({
   workflowKey,
   packageHash,
   schema,
+  workflow,
   initial,
   historical,
   preset,
@@ -109,12 +108,12 @@ function TaskForm({
   workflowKey: string;
   packageHash: string;
   schema: JsonObject;
+  workflow?: WorkflowDefinition;
   initial: Json;
   historical?: ReuseInput;
   preset?: TaskPreset;
 }) {
-  const descriptor = taskDescriptor(packageKey, workflowKey);
-  const supported = supportsTaskForm(descriptor, schema);
+  const descriptor = { title: workflow?.name || workflowKey, description: workflow?.description };
   const { expert } = useDisplayMode();
   const navigate = useNavigate();
   const mutations = useTaskMutations();
@@ -155,7 +154,7 @@ function TaskForm({
       ...taskConstraintErrors(schema, parameters),
     };
   }
-  const preparation = useTaskPreparation(body, !dirty && !uncertain && (supported || expert) && Object.keys(validationErrors()).length === 0);
+  const preparation = useTaskPreparation(body, !dirty && !uncertain && Object.keys(validationErrors()).length === 0);
   const prepared = uncertain ? draft.prepared : preparation.data;
   function validate() {
     const allErrors = validationErrors();
@@ -262,26 +261,17 @@ function TaskForm({
           </p>
         )}
         <fieldset disabled={uncertain} className="min-w-0">
-          <div hidden={supported && !expert && !dirty}>
+          <div>
             <LaunchInputs
+              technical={expert}
               schema={schema}
+              inputHints={workflow?.presentation?.inputHints}
               value={parameters}
               onChange={change}
               onDirtyChange={setDirty}
             />
           </div>
-          <div hidden={!supported || expert || dirty}>
-            <TaskInputs
-              schema={schema}
-              value={parameters}
-              onChange={change}
-              errors={errors}
-            />
-          </div>
-        </fieldset>{" "}
-        {!supported && !expert && (
-          <p role="alert">此定义包含自定义输入，请开启专家模式处理后再执行。</p>
-        )}
+        </fieldset>
         {preparation.isFetching && !uncertain && <p role="status">正在自动核对连接与本次设置…</p>}
         {prepared && (
           <>
@@ -299,8 +289,7 @@ function TaskForm({
               disabled={
                 dirty ||
                 preparation.isFetching ||
-                uncertain ||
-                (!supported && !expert)
+                uncertain
               }
               onClick={() => void prepare()}
             >
@@ -309,7 +298,7 @@ function TaskForm({
           )}
           {(!prepared || prepared.ready) && (
             <Button
-              disabled={dirty || mutations.launch.isPending || (!supported && !expert) || (!uncertain && (preparation.isFetching || !!prepared && prepared.packageHash !== packageHash))}
+              disabled={dirty || mutations.launch.isPending || (!uncertain && (preparation.isFetching || !!prepared && prepared.packageHash !== packageHash))}
               onClick={() => void launch()}
             >
               {mutations.launch.isPending
@@ -323,7 +312,7 @@ function TaskForm({
           )}
           <Button
             variant="outline"
-            disabled={uncertain}
+            disabled={uncertain || dirty}
             onClick={() =>
               navigate("/scheduled-tasks/new", {
                 state: {
@@ -354,7 +343,7 @@ function TaskForm({
             <div className="flex flex-wrap gap-2">
               <Button
                 variant="outline"
-                disabled={mutations.savePreset.isPending}
+                disabled={mutations.savePreset.isPending || dirty || uncertain}
                 onClick={() => void save(false)}
               >
                 保存为新配置
@@ -362,13 +351,13 @@ function TaskForm({
               {preset && (
                 <Button
                   variant="outline"
-                  disabled={mutations.savePreset.isPending}
+                  disabled={mutations.savePreset.isPending || dirty || uncertain}
                   onClick={() => void save(true)}
                 >
                   更新此配置
                 </Button>
               )}
-              <Button variant="ghost" onClick={() => void save(false, true)}>
+              <Button variant="ghost" disabled={uncertain} onClick={() => void save(false, true)}>
                 仅收藏任务，不保存输入
               </Button>
             </div>

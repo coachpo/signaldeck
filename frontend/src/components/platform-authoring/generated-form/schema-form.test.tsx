@@ -188,14 +188,14 @@ describe("SchemaForm", () => {
           expect.objectContaining({
             key: "limit",
             pathTokens: ["limit"],
-            value: expect.objectContaining({ kind: "number", pathTokens: ["limit"], value: 0 }),
+            value: expect.objectContaining({ kind: "integer", pathTokens: ["limit"], value: 0 }),
           }),
         ],
       }),
     );
   });
 
-  it("materializes optional absent fields from schema defaultValue entries", () => {
+  it("keeps absent optional defaults omitted until explicitly added", () => {
     const schema = schemaWithDefaults({
       fields: [
         {
@@ -209,8 +209,9 @@ describe("SchemaForm", () => {
 
     render(<StatefulSchemaForm schema={schema} value={encodeValueEntry({})} />);
 
+    expect(screen.queryByRole("textbox", { name: "Ticker" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /add field/i }));
     expect(screen.getByRole("textbox", { name: "Ticker" })).toHaveValue("AAPL");
-    expect(screen.queryByRole("button", { name: /add field/i })).not.toBeInTheDocument();
   });
 
   it("starts optional no-default fields as addable generated fields", () => {
@@ -409,6 +410,6 @@ describe("SchemaForm", () => {
 
     expect(screen.getByLabelText("Order Input variant")).toHaveTextContent("Cash Order");
     expect(screen.getAllByText("Cash Order").length).toBeGreaterThanOrEqual(2);
-    expect(screen.getByText("Capture object fields without dropping the shared value-entry structure.")).toBeVisible();
+    expect(screen.getByText("Enter the fields below.")).toBeVisible();
   });
 });

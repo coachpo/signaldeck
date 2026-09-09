@@ -5,6 +5,7 @@ from typing import Any, Literal
 
 from pydantic import Field, JsonValue
 
+from app.domain.definitions import WorkflowDefinition
 from app.domain.execution import LaunchOrigin, RunStatus
 from app.schemas.common import CamelModel
 
@@ -49,6 +50,7 @@ class ReuseRead(CamelModel):
     package_hash: str
     parameters: JsonValue
     input_schema: dict[str, Any]
+    workflow: WorkflowDefinition
 
 
 class ReuseRequest(CamelModel):
@@ -58,11 +60,27 @@ class ReuseRequest(CamelModel):
 
 
 class ResultAttachment(CamelModel):
-    kind: Literal["artifact", "report", "note"]
+    kind: Literal["artifact"]
     label: str
     reference: JsonValue
+    node_id: str | None = None
+    operation_id: str | None = None
+    tool_evidence_id: str | None = None
     evidence_id: str | None = None
     plugin_id: str | None = None
+
+
+class ResultSection(CamelModel):
+    kind: Literal["markdown", "value", "receipt", "sources", "dataTime", "notice", "link"]
+    label: str
+    value: JsonValue = None
+    evidence_id: str | None = None
+    node_id: str | None = None
+    operation_id: str | None = None
+    tool_evidence_id: str | None = None
+    plugin_id: str | None = None
+    href: str | None = None
+    severity: Literal["info", "warning", "missing"] | None = None
 
 
 class ResultRead(CamelModel):
@@ -70,6 +88,10 @@ class ResultRead(CamelModel):
     title: str
     status: RunStatus
     content_status: Literal["not_available", "available", "partial", "unknown"]
+    sections: list[ResultSection] = Field(default_factory=list)
+    deferred_sections: list[str] = Field(default_factory=list)
+    skipped: list[str] = Field(default_factory=list)
+    execution_issues: list[str] = Field(default_factory=list)
     body: str | None = None
     receipt: JsonValue = None
     data_time: str | None = None

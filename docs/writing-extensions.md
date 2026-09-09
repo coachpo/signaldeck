@@ -29,6 +29,8 @@ Finance、Digital Oracle 和非金融 Notes 的构建、配置及本地运行入
 
 所有 object 隐式闭合，发送给外部校验器时显式补全 `unevaluatedProperties: false`。不支持的关键字直接拒绝，不丢弃；`additionalProperties`、`allowAdditionalProperties`、`patternProperties`、组合/引用及多类型 schema 不在合同内。`$artifact` 保留给平台内部产物引用，不能作为业务 schema 字段。可选字段使用省略而不是擅自增加 nullable 联合类型；日期由业务 adapter 校验后输出 ISO 字符串，金额、数量和市场价值输出十进制字符串。
 
+schema/1 仍拒绝 default/examples。需要注解时，在对应 schema 节点显式声明 `x-signaldeck-schema: signaldeck.schema/2`，再提供 `default` 或 `examples`；子节点不继承该标记。注解值须通过完整闭合 schema 校验，服务端不会据此改写工具参数或 Workflow 输入。省略标记的旧 schema 保持原序列化与摘要。表单只在新草稿中显式物化默认值。
+
 ## 发布描述
 
 发布描述 `PluginRelease` 包含：
@@ -42,6 +44,14 @@ Finance、Digital Oracle 和非金融 Notes 的构建、配置及本地运行入
 当前示例服务的 `GET /release` 提供描述，`GET /health` 提供运行发布身份。通过 Core `POST /api/plugins` 安装描述，`PATCH /api/plugins/{publisher}/{plugin}` 修改 enabled。同 plugin/artifact 身份不能登记不同描述。目录读取仅返回保存的描述和已有 operation health observation，不连接插件；禁用的无关插件不参与 launch 解析。
 
 每次调用 `_meta["signaldeck/release"]` 携带四字段精确身份：pluginId、releaseId、artifactDigest、contractDigest。MCP adapter 验证协议、工具集合与发布绑定，插件也拒绝身份不符的业务调用。当前插件的制品摘要覆盖插件目录及共享 runtime 下的全部分发文件，包括 VERSION、发布代码、web assets、Dockerfile、锁文件及随包文档（排除 `__pycache__`、`.venv` 和 `.git`）；Finance 和 Oracle 还绑定已解析的非敏感 provider 设置。修改随包文档同样会改变新进程启动时计算的制品身份。
+
+### 声明结果页面链接
+
+工具可选声明 `resultLinks`，每项为闭合 `{version: "signaldeck.resultLink/1", key, label, path, query}`。`query` 把 URL 参数名绑定到该工具 output schema 中存在的 `tool.output.<字段>` 标量引用；`path` 只能是安全相对路径（允许空串），不能包含 authority、scheme、query、fragment 或路径穿越。发布的 pageUrl 提供页面基址，Core 只按确认工具输出绑定和编码，不理解报告或笔记参数。
+
+Workflow 的 presentation/1 `link` 分节明确提供节点输出 ref、toolId 和 linkKey。编译校验授权，Launch 在实际发布中验证链接及 pageUrl；链接和确认操作保留 evidence/operation/plugin 身份。插件离线不妨碍确认输出与声明链接读取，但不能保证目标页面可访问。版本格式详见[解耦方案](工作流解耦方案.md#插件链接)。
+
+resultLinks 参与工具 contract digest；旧工具缺省该字段时不自动序列化，原 digest 可验证。显式 null 拒绝。新增链接须发布新制品/描述，不修改已经冻结的发布。Finance 的报告路径及 query 参数由其自身发布提供，不能在 Core 添加业务路由推断。
 
 ## 资源、凭据与业务数据
 

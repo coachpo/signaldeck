@@ -147,13 +147,15 @@ export function SchemaNodeCard({
       return;
     }
 
-    onChange({ ...node, defaultValue: result.defaultValue });
+    onChange({ ...node, annotationVersion: "signaldeck.schema/2", defaultValue: result.defaultValue });
   };
 
   const handleKindChange = (nextKind: SchemaIRNode["kind"]) => {
     const nextNode = preserveDefaultValueIfValid(
       {
         ...createDefaultSchemaNode(nextKind),
+        ...(node.annotationVersion ? { annotationVersion: node.annotationVersion } : {}),
+        ...(node.examples ? { examples: node.examples } : {}),
         description: node.description ?? null,
         title: node.title ?? null,
       },
@@ -222,7 +224,7 @@ export function SchemaNodeCard({
             onChange={(event) => handleDefaultTextChange(event.target.value)}
           />
           <p className="text-sm text-muted-foreground">
-            Defaults apply only when optional fields are absent. Enter JSON text; strings must include quotes, and blank means no default.
+            Defaults initialize new input drafts only; explicit inputs are preserved. Enter JSON text; blank removes the annotation. Setting a default opts this node into signaldeck.schema/2.
           </p>
           {defaultIssue ? (
             <p className="text-sm text-destructive">{formatDefaultIssueText(defaultIssue)}</p>

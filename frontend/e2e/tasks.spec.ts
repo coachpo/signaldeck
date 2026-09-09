@@ -61,8 +61,8 @@ test("UX01/03/06: four ordinary tasks execute with real plugins and retain reusa
         .getByLabel("想了解什么", { exact: true })
         .fill("Which changes and missing evidence should be considered?");
       if (scenario.key === "tradingagents_advisory_research") {
-        await page.getByRole("button", { name: "添加研究对象" }).click();
-        await page.getByLabel("研究对象 1", { exact: true }).fill("MSFT");
+        await page.getByRole("button", { name: "添加项目", exact: true }).click();
+        await page.getByLabel("研究对象", { exact: true }).fill("MSFT");
         await expect(
           page.getByLabel("包含风险分析", { exact: true }),
         ).toBeChecked();
@@ -109,7 +109,7 @@ test("UX01/03/06: four ordinary tasks execute with real plugins and retain reusa
       const connection = page
         .locator("details")
         .filter({
-          has: page.locator("summary", { hasText: "研究服务 · 补齐连接" }),
+          has: page.locator("summary", { hasText: "research-model · 补齐连接" }),
         })
         .last();
       await connection.locator("summary").click();
@@ -184,7 +184,10 @@ test("UX01/03/06: four ordinary tasks execute with real plugins and retain reusa
       await request.get(`${apiBase}/runs/${runId}/result`)
     ).json();
     const run = await (await request.get(`${apiBase}/runs/${runId}`)).json();
-    expect(result.body || result.receipt).toBeTruthy();
+    expect(result.sections).toEqual(expect.arrayContaining([
+      expect.objectContaining({ kind: "markdown", label: scenario.key === "research_notes" ? "笔记正文" : "研究报告", value: expect.any(String) }),
+      expect.objectContaining({ kind: "receipt", value: expect.any(Object), operationId: expect.any(String) }),
+    ]));
     if (scenario.key === "digital_oracle_researcher") {
       expect(
         run.evidence.some(
@@ -227,7 +230,7 @@ test("UX01/03/06: four ordinary tasks execute with real plugins and retain reusa
         page,
         evidenceDirectory,
         `${scenario.workflow}-${scenario.key}-result`,
-        page.getByLabel("结果正文"),
+        page.getByRole("region", { name: scenario.key === "research_notes" ? "笔记正文" : "研究报告", exact: true }),
         [
           {
             name: "再运行一次",
@@ -267,7 +270,7 @@ test("UX01/03/06: four ordinary tasks execute with real plugins and retain reusa
     if (scenario.key !== "research_notes") {
       const popupPromise = page.waitForEvent("popup");
       await page
-        .getByRole("link", { name: "打开报告", exact: true })
+        .getByRole("link", { name: "在 Finance 中查看报告", exact: true })
         .first()
         .click();
       const reportPage = await popupPromise;
@@ -284,7 +287,7 @@ test("UX01/03/06: four ordinary tasks execute with real plugins and retain reusa
       await reportPage.close();
     }
     if (scenario.workflow === "capture") {
-      expect(result.body || JSON.stringify(result.receipt)).toContain(
+      expect(result.sections.find((section: { kind: string }) => section.kind === "markdown").value).toContain(
         "Original business evidence retained unchanged.",
       );
       const before = JSON.stringify(run.spec);

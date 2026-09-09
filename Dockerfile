@@ -25,6 +25,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PATH="/app/.venv/bin:$PATH" \
     SIGNALDECK_RUNTIME_MODE=local \
     SIGNALDECK_ROOT_IMAGE_SCOPE=local-demo-only \
+    SIGNALDECK_WORKFLOW_DATA_DIR=/opt/signaldeck/workflows \
     PORT=8080 \
     BACKEND_PORT=8000 \
     SIGNALDECK_CORE_PYTHON_VERSION=3.13.13 \
@@ -40,6 +41,7 @@ COPY --from=ghcr.io/astral-sh/uv:0.11.7@sha256:240fb85ab0f263ef12f492d8476aa3a2e
 COPY backend/pyproject.toml backend/uv.lock backend/README.md backend/VERSION ./
 RUN UV_NO_CACHE=1 uv sync --frozen --no-dev --no-install-project
 COPY backend/app ./app
+COPY demo/*.yaml /opt/signaldeck/workflows/
 COPY --from=frontend-builder /app/dist /usr/share/nginx/html
 COPY docker/nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY docker/entrypoint.sh /entrypoint.sh

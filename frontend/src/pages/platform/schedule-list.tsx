@@ -17,7 +17,6 @@ import {
   usePackages,
 } from "@/hooks/use-workflow-platform";
 import { scheduleFireLabel } from "@/lib/schedule-frequency";
-import { taskDescriptor } from "./task-catalog";
 import { scheduleSummary } from "@/lib/schedule-frequency";
 import type { Schedule } from "@/lib/types/workflow-platform";
 import { AppliedSchedulePreview } from "./schedule-timing";
@@ -169,7 +168,6 @@ export function SchedulesPage() {
             key={s.id}
             schedule={s}
             taskName={
-              taskDescriptor(s.packageKey, s.workflowKey)?.title ||
               packages.data?.items.find((p) => p.key === s.packageKey)
                 ?.definition.workflows[s.workflowKey]?.name ||
               s.name

@@ -124,6 +124,7 @@ def reuse_input(run_id: str, store: Store) -> ReuseRead:
         package_hash=original.package_hash,
         parameters=original.spec.parameters,
         input_schema=workflow.input_schema,
+        workflow=workflow,
     )
 
 

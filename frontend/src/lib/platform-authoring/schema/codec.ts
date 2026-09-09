@@ -1,3 +1,4 @@
+import { CONSTRAINT_KEYS, TYPED_CONSTRAINTS, validateConstraintValue, validateSchemaConstraints } from "./constraints";
 import type { UnknownRecord } from "@/lib/types/common";
 import type { JsonPrimitive, JsonValue, SchemaIRNode, SchemaIRRef } from "./types";
 import { createDefaultSchemaNode } from "./factories";
@@ -29,6 +30,7 @@ type PrimitiveKind = "boolean" | "integer" | "number" | "string";
 type SchemaNodeContext = {
   issues: SchemaCodecIssue[];
   path: string;
+  schema?: Record<string, unknown>;
 };
 
 const PRIMITIVE_TYPES = new Set(["string", "integer", "number", "boolean"]);
@@ -151,8 +153,14 @@ function withMetadata<T extends SchemaIRNode>(
   const titleText = toOptionalText(title);
   const descriptionText = toOptionalText(description);
   const keepEmptyMetadata = shouldPreserveEmptyMetadata(node, context);
+  const annotationVersion = context?.schema?.["x-signaldeck-schema"] as SchemaIRNode["annotationVersion"];
+  const examples = context?.schema?.examples;
+  const constraints = Object.fromEntries(Object.entries(context?.schema ?? {}).filter(([key]) => CONSTRAINT_KEYS.has(key)));
   const nextNode = {
     ...node,
+    ...(annotationVersion ? { annotationVersion } : {}),
+    ...(Array.isArray(examples) ? { examples } : {}),
+    ...(Object.keys(constraints).length ? { constraints } : {}),
     ...(parsedDefault.hasDefault ? { defaultValue: parsedDefault.defaultValue } : {}),
     ...(descriptionText ? { description: descriptionText } : keepEmptyMetadata ? { description: null } : {}),
     ...(titleText ? { title: titleText } : keepEmptyMetadata ? { title: null } : {}),
@@ -162,11 +170,16 @@ function withMetadata<T extends SchemaIRNode>(
     validateDefaultValue(nextNode, parsedDefault.defaultValue, joinSchemaPath(context.path as never, "default"), context.issues);
   }
 
+  if (Array.isArray(examples) && context) {
+    examples.forEach((value, index) => validateDefaultValue(nextNode, value as JsonValue, joinSchemaPath(context.path as never, `examples[${index}]`), context.issues));
+  }
   return nextNode;
 }
 
-function withJsonMetadata(payload: UnknownRecord, node: { defaultValue?: JsonValue; description?: string | null; title?: string | null }) {
-  const nextPayload = { ...payload };
+function withJsonMetadata(payload: UnknownRecord, node: SchemaIRNode) {
+  const nextPayload = { ...payload, ...node.constraints };
+  if (node.annotationVersion) nextPayload["x-signaldeck-schema"] = node.annotationVersion;
+  if (hasOwnKey(node, "examples")) nextPayload.examples = node.examples;
 
   if (toOptionalText(node.title ?? undefined)) {
     nextPayload.title = node.title;
@@ -242,6 +255,7 @@ function readDefaultValue(schema: Record<string, unknown>, context: SchemaNodeCo
 }
 
 function validateDefaultValue(node: SchemaIRNode, value: JsonValue, path: string, issues: SchemaCodecIssue[]) {
+  validateConstraintValue(node, value, path, issues);
   if (value === null) {
     addIssue(issues, path, "Default values cannot be null");
     return;
@@ -415,6 +429,13 @@ function jsonSchemaToSchemaBuilder(schema: unknown, context: SchemaNodeContext):
     return createDefaultSchemaNode("string");
   }
 
+  context = { ...context, schema };
+  const version = schema["x-signaldeck-schema"];
+  if (version !== undefined && version !== "signaldeck.schema/1" && version !== "signaldeck.schema/2") addIssue(context.issues, `${context.path}.x-signaldeck-schema`, "Unsupported schema version");
+  for (const key of ["default", "examples"]) {
+    if (hasOwnKey(schema, key) && version !== "signaldeck.schema/2") addIssue(context.issues, `${context.path}.${key}`, "Annotations require x-signaldeck-schema: signaldeck.schema/2 on this node");
+  }
+  if (hasOwnKey(schema, "examples") && (!Array.isArray(schema.examples) || !isJsonValue(schema.examples))) addIssue(context.issues, `${context.path}.examples`, "Examples must be an array of JSON values");
   const title = readOptionalString(schema.title, joinSchemaPath(context.path as never, "title"), context.issues);
   const description = readOptionalString(
     schema.description,
@@ -604,6 +625,8 @@ function jsonSchemaToSchemaBuilder(schema: unknown, context: SchemaNodeContext):
 }
 
 function validateAllowedKeys(schema: Record<string, unknown>, allowedKeys: Set<string>, context: SchemaNodeContext) {
+  for (const key of ["x-signaldeck-schema", "examples", "$schema", ...(TYPED_CONSTRAINTS[String(schema.type)] ?? [])]) allowedKeys.add(key);
+  validateSchemaConstraints(schema, context.path, context.issues);
   for (const key of Object.keys(schema).sort()) {
     if (allowedKeys.has(key)) {
       continue;

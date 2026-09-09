@@ -11,10 +11,10 @@ describe("launch schema templates", () => {
     properties: {
       optionalNote: { title: "Optional Note", type: "string" },
       ticker: { title: "Ticker", type: "string" },
-      limit: { default: 10, title: "Limit", type: "integer" },
+      limit: { "x-signaldeck-schema": "signaldeck.schema/2", default: 10, title: "Limit", type: "integer" },
       filters: {
         properties: {
-          includeNews: { default: true, type: "boolean" },
+          includeNews: { "x-signaldeck-schema": "signaldeck.schema/2", default: true, type: "boolean" },
           ignoredOptional: { type: "string" },
           sector: { type: "string" },
         },

@@ -21,10 +21,10 @@ describe("launch input state", () => {
   const schema = {
     properties: {
       comment: { title: "Comment", type: "string" },
-      defaultLimit: { default: 10, title: "Default Limit", type: "integer" },
+      defaultLimit: { "x-signaldeck-schema": "signaldeck.schema/2", default: 10, title: "Default Limit", type: "integer" },
       filters: {
         properties: {
-          includeNews: { default: true, type: "boolean" },
+          includeNews: { "x-signaldeck-schema": "signaldeck.schema/2", default: true, type: "boolean" },
           ignoredOptional: { type: "string" },
           sector: { type: "string" },
         },
@@ -88,7 +88,7 @@ describe("launch input state", () => {
     ]);
   });
 
-  it("keeps optional fields absent and materializes defaults after validation", () => {
+  it("keeps optional fields and defaults absent in explicitly supplied payloads", () => {
     const state = createLaunchInputState(schema);
 
     const accepted = createLaunchDraftFromValidatedPayload(state, {
@@ -98,8 +98,7 @@ describe("launch input state", () => {
 
     expect(accepted.issues).toEqual([]);
     expect(createLaunchPayloadFromDraft(accepted.draft!)).toEqual({
-      defaultLimit: 10,
-      filters: { includeNews: true, sector: "technology" },
+      filters: { sector: "technology" },
       ticker: "AAPL",
     });
   });
@@ -126,8 +125,7 @@ describe("launch input state", () => {
     const state = createLaunchInputState(schema);
     const previous = createLaunchDraftFromPayload(state, {
       comment: "Operator memo",
-      defaultLimit: 10,
-      filters: { includeNews: true, sector: "technology" },
+      filters: { sector: "technology" },
       ticker: "AAPL",
     });
     const next = createObjectValueEntry([

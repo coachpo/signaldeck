@@ -35,7 +35,7 @@ def store(database_url: str):
 
 def test_bundled_sources_hashes_and_plans_match_importable_examples() -> None:
     contracts = json.loads((DEMO / "contracts.json").read_text())
-    seeds = load_seed_packages()
+    seeds = load_seed_packages(DEMO)
     assert len(seeds) == 3
     assert set(contracts) == {seed.compiled.package.metadata.key for seed in seeds}
     for seed in seeds:
@@ -69,7 +69,7 @@ def test_seed_loading_has_no_plugin_or_network_dependency(monkeypatch) -> None:
 
     monkeypatch.setattr(socket, "create_connection", forbidden)
     before = set(sys.modules)
-    load_seed_packages()
+    load_seed_packages(DEMO)
     assert not any(
         name.startswith(("finance_plugin", "oracle_plugin", "notes_plugin"))
         for name in set(sys.modules) - before
@@ -78,10 +78,10 @@ def test_seed_loading_has_no_plugin_or_network_dependency(monkeypatch) -> None:
 
 def test_seed_install_is_atomic_and_preserves_operator_revisions(store: PlatformStore) -> None:
     with ThreadPoolExecutor(max_workers=2) as pool:
-        results = list(pool.map(lambda _: seed_packages(store), range(2)))
-    assert sum(len(keys) for keys in results) == 3
+        results = list(pool.map(lambda _: seed_packages(store, DEMO), range(2)))
+    assert sum(item["status"] == "created" for items in results for item in items) == 3
     assert len(store.list_packages()) == 3
-    seed = load_seed_packages()[0]
+    seed = load_seed_packages(DEMO)[0]
     key = seed.compiled.package.metadata.key
     initial = store.get_package(key)
     assert initial is not None
@@ -92,7 +92,7 @@ def test_seed_install_is_atomic_and_preserves_operator_revisions(store: Platform
     definition["metadata"]["description"] = "Operator-owned custom research workflow"
     updated = save_definition(store, canonical_source(definition), expected_key=key)
     assert updated["packageHash"] != initial["packageHash"]
-    assert seed_packages(store) == []
+    assert all(item["status"] == "preserved" for item in seed_packages(store, DEMO))
     assert store.get_package(key) == updated
     assert store.get_package(key, initial["packageHash"]) == initial
 
@@ -124,7 +124,7 @@ print(json.dumps(tools))
         [sys.executable, "-c", script], env=environment, check=True, text=True, capture_output=True
     )
     contracts = json.loads(result.stdout)
-    for seed in load_seed_packages():
+    for seed in load_seed_packages(DEMO):
         for agent in seed.compiled.package.agents.values():
             for tool_id in agent.tools:
                 assert tool_id in contracts
@@ -135,7 +135,9 @@ print(json.dumps(tools))
 
 
 def test_examples_preserve_parallelism_reuse_and_explicit_missing_semantics() -> None:
-    packages = {seed.compiled.package.metadata.key: seed.compiled for seed in load_seed_packages()}
+    packages = {
+        seed.compiled.package.metadata.key: seed.compiled for seed in load_seed_packages(DEMO)
+    }
     finance = packages["tradingagents_advisory_research"]
     workflow = finance.package.workflows["research"]
     plan = finance.plans["research"]
@@ -170,3 +172,106 @@ def test_examples_preserve_parallelism_reuse_and_explicit_missing_semantics() ->
     assert all(
         notes.agents[node.uses].strategy.kind == "deterministic" for node in capture.nodes.values()
     )
+
+
+def test_optional_data_and_item_failures_do_not_prevent_import(store, tmp_path) -> None:
+    assert load_seed_packages() == ()
+    assert seed_packages(store) == []
+    assert seed_packages(store, tmp_path / "absent") == []
+    (tmp_path / "broken.yaml").write_text("not: [valid")
+    (tmp_path / "valid.yml").write_text(load_seed_packages(DEMO)[0].source)
+    results = seed_packages(store, tmp_path)
+    assert [item["status"] for item in results] == ["error", "created"]
+    assert len(store.list_packages()) == 1
+
+
+def test_import_api_is_generic_and_uses_the_ordinary_revision_path(store) -> None:
+    from fastapi.testclient import TestClient
+
+    from app.api.platform_dependencies import get_platform_store
+    from app.main import create_app
+
+    app = create_app(init_database=False)
+    app.dependency_overrides[get_platform_store] = lambda: store
+    source = load_seed_packages(DEMO)[0].source
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/workflow-packages/import",
+            json={
+                "sources": [
+                    {"name": "invalid", "manifestSource": "no: ["},
+                    {"name": "valid", "manifestSource": source},
+                ]
+            },
+        )
+        assert response.status_code == 200
+        items = response.json()["items"]
+        assert [item["status"] for item in items] == ["error", "created"]
+        key = items[1]["packageKey"]
+        initial = store.get_package(key)
+        assert initial is not None
+        ordinary = save_definition(store, source)
+        assert ordinary == initial
+        changed = json.loads(json.dumps(initial["definition"]))
+        changed["metadata"]["description"] = "An independently distributed definition"
+        source = canonical_source(changed)
+        payload = {"sources": [{"manifestSource": source}]}
+        assert (
+            client.post("/api/workflow-packages/import", json=payload).json()["items"][0]["status"]
+            == "preserved"
+        )
+        assert store.get_package(key) == initial
+        payload["mode"] = "update"
+        assert (
+            client.post("/api/workflow-packages/import", json=payload).json()["items"][0]["status"]
+            == "updated"
+        )
+        assert store.get_package(key)["packageHash"] != initial["packageHash"]
+        assert store.get_package(key, initial["packageHash"]) == initial
+
+
+def test_missing_import_and_operator_save_share_atomic_identity_lock(store) -> None:
+    from app.application.package_import import import_source
+
+    source = load_seed_packages(DEMO)[0].source
+    definition = load_seed_packages(DEMO)[0].compiled.package.model_dump(mode="json", by_alias=True)
+    definition["metadata"]["description"] = "Concurrent operator revision"
+    operator_source = canonical_source(definition)
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        imported = pool.submit(import_source, store, source, missing_only=True)
+        saved = pool.submit(save_definition, store, operator_source)
+        assert imported.result()["status"] in {"created", "preserved"}
+        operator = saved.result()
+    assert store.get_package(operator["packageKey"]) == operator
+
+
+@pytest.mark.parametrize("invalid_data", [False, True])
+def test_api_starts_with_empty_or_invalid_optional_distribution(
+    store, tmp_path, monkeypatch, invalid_data
+) -> None:
+    from types import SimpleNamespace
+
+    from fastapi.testclient import TestClient
+
+    from app import main
+    from app.api.platform_dependencies import get_platform_store
+
+    if invalid_data:
+        (tmp_path / "invalid.yaml").write_text("invalid: [")
+    settings = main.get_settings().model_copy(update={"workflow_data_dir": str(tmp_path)})
+    monkeypatch.setattr(main, "get_settings", lambda: settings)
+    monkeypatch.setattr(main, "get_platform_store", lambda: store)
+    monkeypatch.setattr(main, "get_schedule_store", lambda: store)
+    monkeypatch.setattr(
+        main, "get_core_artifacts", lambda: SimpleNamespace(current_digest=lambda: "fixed-core")
+    )
+    app = main.create_app()
+    app.dependency_overrides[get_platform_store] = lambda: store
+    with TestClient(app) as client:
+        assert client.get("/api/workflow-packages").json() == {"items": []}
+        source = load_seed_packages(DEMO)[0].source
+        assert (
+            client.post("/api/workflow-packages", json={"manifestSource": source}).status_code
+            == 201
+        )
+    assert len(app.state.workflow_imports) == int(invalid_data)

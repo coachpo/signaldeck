@@ -20,6 +20,7 @@ from app.domain.definitions import (
 )
 from app.domain.mapping_types import check_mapping, check_mapping_availability, reference_schema
 from app.domain.mappings import condition_references, mapping_references
+from app.domain.presentation import validate_presentation
 from app.domain.schema_contract import Diagnostic, DomainValidationError, reject
 
 
@@ -30,7 +31,7 @@ def compile_package(package: PackageDefinition | dict[str, Any]) -> CompiledPack
         except ValidationError as error:
             diagnostics: list[Diagnostic] = []
             for item in error.errors(include_input=False):
-                prefix = "$" + "".join(f".{part}" for part in item["loc"])
+                prefix = _definition_error_path(package, item["loc"])
                 cause = item.get("ctx", {}).get("error")
                 if isinstance(cause, DomainValidationError):
                     diagnostics.extend(
@@ -68,6 +69,23 @@ def compile_package(package: PackageDefinition | dict[str, Any]) -> CompiledPack
     return CompiledPackage(
         package=PackageDefinition.model_validate(canonical), plans=plans, content_hash=content_hash
     )
+
+
+def _definition_error_path(value: Any, location: tuple[str | int, ...]) -> str:
+    """Discriminated union tags are model metadata, not YAML path components."""
+    path = "$"
+    for index, part in enumerate(location):
+        if isinstance(value, dict):
+            repeated_tag = index + 1 < len(location) and location[index + 1] == part
+            if value.get("kind") == part and (part not in value or repeated_tag):
+                continue
+            value = value.get(part)
+        elif isinstance(value, list) and isinstance(part, int) and part < len(value):
+            value = value[part]
+        else:
+            value = None
+        path += f".{part}"
+    return path
 
 
 def _check_agent_references(agent: AgentDefinition, path: str) -> None:
@@ -122,6 +140,7 @@ def _compile_workflow(
                 "unknown_agent", f"{root}.nodes.{node_key}.uses", "Referenced Agent is not defined"
             )
         namespace[f"nodes.{node_key}.output"] = package.agents[node.uses].output_schema
+    validate_presentation(workflow, package, root + ".presentation")
     edge_sources: dict[tuple[str, str], set[str]] = {}
     edge_paths: dict[tuple[str, str], set[str]] = {}
     dependencies: dict[str, set[str]] = {node_key: set() for node_key in workflow.nodes}

@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 class Settings(BaseSettings):
+    workflow_data_dir: str | None = Field(default=None, alias="SIGNALDECK_WORKFLOW_DATA_DIR")
     temporal_address: str = Field(default="127.0.0.1:7233", alias="TEMPORAL_ADDRESS")
     artifact_dir: str = Field(
         default=str(Path(__file__).resolve().parents[2] / ".data" / "artifacts"),

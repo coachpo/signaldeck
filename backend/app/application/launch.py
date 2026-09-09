@@ -18,6 +18,7 @@ from app.domain.execution import (
     RunSummary,
 )
 from app.domain.launch_bindings import binding_value
+from app.domain.presentation import LinkSection
 from app.domain.resources import ResolvedModelConfiguration, ResolvedToolResourceConfiguration
 from app.domain.schema_contract import validate_value
 from app.domain.tool_contracts import PluginRelease, ToolCatalog, canonical_digest
@@ -213,4 +214,21 @@ class LaunchService:
                     and agent.strategy.tool_id == tool_id
                 ):
                     validate_agent_tool_contract(agent, tool.input_schema, tool.output_schema)
+        # A selector's key is resolved against the same captured release as execution.
+        # Optional sections may lack a result, but their declared contract must exist.
+        if workflow.presentation:
+            for section in workflow.presentation.sections:
+                if not isinstance(section, LinkSection):
+                    continue
+                release, tool = catalog.binding(section.tool_id)
+                if not any(link.key == section.link_key for link in (tool.result_links or ())):
+                    raise ApplicationError(
+                        "presentation_link_unavailable",
+                        "A declared result link is unavailable in the selected tool release",
+                    )
+                if release.page_url is None:
+                    raise ApplicationError(
+                        "presentation_page_unavailable",
+                        "A declared result link requires the selected plugin's page URL",
+                    )
         return models, resources, releases

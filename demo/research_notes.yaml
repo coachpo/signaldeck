@@ -108,9 +108,9 @@ agents:
     strategy:
       kind: model
       modelRef: research-model
-      prompt: Edit the supplied research text into a clear note. Use prior notes only as
-        attributed context and retain uncertainty. Do not invent external facts or claim new
-        research. Keep the text under 100000 characters.
+      prompt: Edit the supplied research text into a clear note. Use prior notes only as attributed
+        context and retain uncertainty. Do not invent external facts or claim new research.
+        Keep the text under 100000 characters.
     tools: []
     resources: []
     budget:
@@ -171,7 +171,7 @@ agents:
       maxParallelTools: 3
 workflows:
   research:
-    name: Review and save a note
+    name: 整理笔记
     inputSchema:
       type: object
       properties:
@@ -179,14 +179,18 @@ workflows:
           type: string
           minLength: 1
           maxLength: 200
+          title: 标题
         text:
           type: string
           maxLength: 100000
+          title: 原文
         query:
           type: string
           maxLength: 200
+          title: 查找已有笔记
         summarize:
           type: boolean
+          title: 整理并总结原文
       required:
       - title
       - text
@@ -251,8 +255,33 @@ workflows:
     maxParallelNodes: 4
     deadlineSeconds: 900
     failurePolicy: continue_independent
+    presentation:
+      version: signaldeck.presentation/1
+      inputHints:
+      - ref: workflow.input.title
+        control: text
+        placeholder: 例如：本周产品访谈
+      - ref: workflow.input.text
+        control: textarea
+        placeholder: 粘贴需要保存或整理的内容
+      - ref: workflow.input.query
+        control: text
+        placeholder: 用于查找相关笔记的关键词，可留空
+      title:
+        kind: input
+        ref: workflow.input.title
+      sections:
+      - kind: markdown
+        ref: nodes.save.output.text
+        label: 笔记正文
+        required: true
+      - kind: receipt
+        ref: nodes.save.output
+        label: 笔记保存凭据
+        required: true
+    description: 结合已有笔记整理资料，并保存新的笔记。
   capture:
-    name: Save original text
+    name: 保存原文
     inputSchema:
       type: object
       properties:
@@ -260,9 +289,11 @@ workflows:
           type: string
           minLength: 1
           maxLength: 200
+          title: 标题
         text:
           type: string
           maxLength: 100000
+          title: 原文
       required:
       - title
       - text
@@ -294,3 +325,25 @@ workflows:
     maxParallelNodes: 4
     deadlineSeconds: 900
     failurePolicy: continue_independent
+    presentation:
+      version: signaldeck.presentation/1
+      inputHints:
+      - ref: workflow.input.title
+        control: text
+        placeholder: 例如：本周产品访谈
+      - ref: workflow.input.text
+        control: textarea
+        placeholder: 粘贴需要保存或整理的内容
+      title:
+        kind: input
+        ref: workflow.input.title
+      sections:
+      - kind: markdown
+        ref: nodes.save.output.text
+        label: 笔记正文
+        required: true
+      - kind: receipt
+        ref: nodes.save.output
+        label: 笔记保存凭据
+        required: true
+    description: 直接保存标题与原文，不需要模型服务。

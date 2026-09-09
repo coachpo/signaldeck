@@ -30,6 +30,26 @@ const definition = () =>
   parseDefinition(screen.getByLabelText("source").textContent!);
 
 describe("expert properties and shared source", () => {
+  it("edits presentation explicitly while preserving omission and schema annotations", () => {
+    render(<Editor />);
+    fireEvent.click(screen.getByRole("button", { name: "Workflow · main" }));
+    expect(definition().workflows.main).not.toHaveProperty("presentation");
+    const presentation = { version: "signaldeck.presentation/1", title: { kind: "static", text: "A title" }, sections: [] };
+    fireEvent.change(screen.getByLabelText("presentation"), { target: { value: JSON.stringify(presentation) } });
+    expect(definition().workflows.main).not.toHaveProperty("presentation");
+    expect(screen.getByLabelText("pending")).toHaveTextContent("true");
+    fireEvent.click(screen.getByRole("button", { name: "Apply presentation" }));
+    expect(definition().workflows.main.presentation).toEqual(presentation);
+    const schema = { type: "null", "x-signaldeck-schema": "signaldeck.schema/2", default: null, examples: [null] };
+    fireEvent.change(screen.getByLabelText("inputSchema"), { target: { value: JSON.stringify(schema) } });
+    fireEvent.click(screen.getByRole("button", { name: "Apply inputSchema" }));
+    fireEvent.change(screen.getByLabelText("Workflow name"), { target: { value: "Renamed" } });
+    expect(definition().workflows.main.inputSchema).toEqual(schema);
+    expect(definition().workflows.main.presentation).toEqual(presentation);
+    fireEvent.click(screen.getByRole("button", { name: "移除 presentation" }));
+    expect(definition().workflows.main).not.toHaveProperty("presentation");
+    expect(definition().workflows.main.inputSchema).toEqual(schema);
+  });
   it("edits prompt, grants and budget without replacing workflow mappings or comments", () => {
     render(<Editor />);
     fireEvent.click(screen.getByRole("button", { name: "Agent · assistant" }));

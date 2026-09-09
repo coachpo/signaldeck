@@ -246,12 +246,10 @@ function createValueEntryFromDefaultValue(schema: SchemaIRNode, value: JsonValue
   if (schema.kind === "object" && isRecord(value)) {
     const fields = schema.fields ?? [];
     const defaultedFields = fields
-      .filter((field) => Object.prototype.hasOwnProperty.call(value, field.name) || field.required !== false || hasSchemaDefault(field.schema))
+      .filter((field) => Object.prototype.hasOwnProperty.call(value, field.name))
       .map((field) => {
         const fieldPath = extendPath(pathTokens, field.name);
-        const fieldValue = Object.prototype.hasOwnProperty.call(value, field.name)
-          ? createValueEntryFromDefaultValue(field.schema, value[field.name], fieldPath)
-          : createValueEntryForSchema(field.schema, fieldPath);
+        const fieldValue = createValueEntryFromDefaultValue(field.schema, value[field.name], fieldPath);
         return createValueEntryObjectField(field.name, fieldValue, fieldPath);
       });
     return createObjectValueEntry(defaultedFields, pathTokens);

@@ -102,6 +102,8 @@ def create_app(database_url=None, quote_provider=None, *, settings: FinanceSetti
             report_schema,
             "Persist a Finance report with immutable Agent invocation provenance.",
             write=True,
+            result_links=[{"version": "signaldeck.resultLink/1", "key": "report", "label": "打开报告", "path": "",
+                           "query": {"reportId": "tool.output.id"}}],
         )
     )
     context = RuntimeToolContext(

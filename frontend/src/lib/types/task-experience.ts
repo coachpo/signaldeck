@@ -1,4 +1,4 @@
-import type { Json, JsonObject } from "./workflow-platform";
+import type { Json, JsonObject, WorkflowDefinition } from "./workflow-platform";
 export interface Preparation {
   packageKey: string;
   workflowKey: string;
@@ -24,6 +24,7 @@ export interface Requirement {
   issue?: string | null;
 }
 export interface ReuseInput {
+  workflow: WorkflowDefinition;
   sourceRunId: string;
   packageKey: string;
   workflowKey: string;

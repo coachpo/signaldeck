@@ -14,6 +14,12 @@ x-core-environment: &core-environment
 
 x-core-volumes: &core-volumes
   - type: bind
+    source: ${SIGNALDECK_WORKFLOW_DATA_SOURCE:-./demo}
+    target: /opt/signaldeck/workflows
+    read_only: true
+    bind:
+      create_host_path: false
+  - type: bind
     source: ${SIGNALDECK_CONNECTION_PRESETS_FILE:-./docker/connection-presets.local.json}
     target: /etc/signaldeck/connection-presets.json
     read_only: true
@@ -78,6 +84,7 @@ services:
     environment:
       <<: *core-environment
       SIGNALDECK_ROOT_IMAGE_SCOPE: local-demo-only
+      SIGNALDECK_WORKFLOW_DATA_DIR: ${SIGNALDECK_WORKFLOW_DATA_DIR-/opt/signaldeck/workflows}
       PUBLIC_BASE_URL: http://localhost:${APP_PORT:-8080}
       CORS_ALLOWED_ORIGINS: http://localhost:${APP_PORT:-8080},http://127.0.0.1:${APP_PORT:-8080}
       BACKEND_PORT: "8000"

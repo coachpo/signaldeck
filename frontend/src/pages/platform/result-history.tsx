@@ -18,13 +18,16 @@ import {
   useResultHistory,
   useInvalidateResultHistory,
 } from "@/hooks/use-results";
-import { taskDescriptors, taskDescriptor } from "./task-catalog";
+import { availableTasks } from "./task-catalog";
+import { usePackages } from "@/hooks/use-workflow-platform";
 import { localDateBoundary, localDateValue } from "./result-history-query";
 import { RequestError } from "./feedback";
 import { originLabels, resultStatusLabels } from "./result-labels";
 const selectClass =
   "h-8 min-w-0 rounded border border-input bg-background px-2 text-sm";
 export function ResultHistoryPage() {
+  const packages = usePackages();
+  const tasks = availableTasks(Array.isArray(packages.data) ? packages.data : []);
   const [search, setSearch] = useSearchParams();
   const invalidateHistory = useInvalidateResultHistory();
   const query = new URLSearchParams(search);
@@ -124,7 +127,7 @@ export function ResultHistoryPage() {
               }}
             >
               <option value="/">所有任务</option>
-              {taskDescriptors.map((t) => (
+              {tasks.map((t) => (
                 <option
                   key={`${t.packageKey}/${t.workflowKey}`}
                   value={`${t.packageKey}/${t.workflowKey}`}
@@ -230,7 +233,7 @@ export function ResultHistoryPage() {
                       )}
                   </TableCell>
                   <TableCell>
-                    {taskDescriptor(run.packageKey, run.workflowKey)?.title ??
+                    {tasks.find((t) => t.packageKey === run.packageKey && t.workflowKey === run.workflowKey)?.title ??
                       run.workflowKey}
                   </TableCell>
                   <TableCell>{originLabels[run.origin.kind]}</TableCell>

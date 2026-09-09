@@ -9,40 +9,8 @@ import type { ResultAttachment } from "@/lib/types/result";
 import { RequestError } from "./feedback";
 import { safePluginPageUrl } from "./plugin-links";
 import { findArtifacts } from "./artifact-references";
-const valueLabels: Record<string, string> = {
-  title: "标题",
-  text: "原文",
-  question: "研究问题",
-  symbols: "关注对象",
-  includeRisk: "风险分析",
-  summarize: "整理摘要",
-  query: "查找范围",
-  id: "记录编号",
-  collection: "保存位置",
-  createdAt: "创建时间",
-  updatedAt: "更新时间",
-  name: "名称",
-  slug: "报告标识",
-  reportId: "报告编号",
-  sourceRunId: "来源运行",
-  operationId: "操作编号",
-  fetchedAt: "获取时间",
-  observedAt: "资料时间",
-  expiresAt: "有效至",
-  url: "来源链接",
-  content: "正文",
-  location: "保存位置",
-  asOf: "数据日期",
-  price: "价格",
-  symbol: "研究对象",
-  isStale: "资料新鲜度",
-  currency: "币种",
-  provider: "数据提供方",
-  previousClose: "前次收盘价",
-  publishedAt: "发布时间",
-};
 export function ResultValue({ value }: { value: Json }) {
-  if (value === null) return <span>未提供</span>;
+  if (value === null) return <span>null</span>;
   if (Array.isArray(value))
     return (
       <ul className="flex flex-col gap-2">
@@ -67,7 +35,7 @@ export function ResultValue({ value }: { value: Json }) {
   if (typeof value !== "object")
     return (
       <span className="whitespace-pre-wrap break-words">
-        {typeof value === "boolean" ? (value ? "开启" : "关闭") : String(value)}
+        {String(value)}
       </span>
     );
   return (
@@ -75,18 +43,10 @@ export function ResultValue({ value }: { value: Json }) {
       {Object.entries(value).map(([key, child]) => (
         <div key={key} className="min-w-0">
           <dt className="text-xs text-muted-foreground">
-            {valueLabels[key] ?? key}
+            {key}
           </dt>
           <dd className="pl-2">
-            {key === "isStale" && typeof child === "boolean" ? (
-              child ? (
-                "已过期"
-              ) : (
-                "当前资料"
-              )
-            ) : (
-              <ResultValue value={child} />
-            )}
+            <ResultValue value={child} />
           </dd>
         </div>
       ))}
@@ -95,59 +55,15 @@ export function ResultValue({ value }: { value: Json }) {
 }
 export function ResultAttachmentView({
   attachment,
-  pageUrl,
 }: {
   attachment: ResultAttachment;
-  pageUrl?: string | null;
 }) {
   const [error, setError] = useState<unknown>(null);
   const refs = findArtifacts(attachment.reference);
   const reference = attachment.reference;
-  let link =
-    reference && typeof reference === "object" && !Array.isArray(reference)
-      ? safePluginPageUrl(
-          typeof reference.url === "string"
-            ? reference.url
-            : typeof reference.reportUrl === "string"
-              ? reference.reportUrl
-              : null,
-        )
-      : null;
-  if (
-    !link &&
-    pageUrl &&
-    reference &&
-    typeof reference === "object" &&
-    !Array.isArray(reference)
-  ) {
-    const base = safePluginPageUrl(pageUrl);
-    if (base) {
-      const url = new URL(base);
-      if (typeof reference.slug === "string") {
-        url.searchParams.set("report", reference.slug);
-        link = url.href;
-      } else if (
-        typeof reference.reportId === "number" ||
-        typeof reference.reportId === "string"
-      ) {
-        url.searchParams.set("reportId", String(reference.reportId));
-        link = url.href;
-      }
-    }
-  }
   return (
     <li className="flex flex-col gap-2 border-b border-border py-2">
       <span className="font-medium">{attachment.label}</span>
-      {link && (
-        <a
-          className="text-sm underline"
-          href={link}
-          target="_blank"
-          rel="noreferrer"
-        >
-          打开{attachment.kind === "report" ? "报告" : "保存记录"}
-        </a>
-      )}
       {refs.map(({ ref }) => (
         <div key={ref.digest} className="flex flex-col gap-2">
           <ArtifactReading digest={ref.digest} mediaType={ref.mediaType} />
@@ -164,7 +80,7 @@ export function ResultAttachmentView({
           </Button>
         </div>
       ))}
-      {!link && !refs.length && <ResultValue value={reference} />}
+      {!refs.length && <ResultValue value={reference} />}
       <RequestError error={error} />
     </li>
   );
@@ -191,14 +107,7 @@ export function ArtifactReading({
       /* The stored bytes remain available for direct reading. */
     }
   }
-  const body =
-    value && typeof value === "object" && !Array.isArray(value)
-      ? [value.content, value.text, value.markdown].find(
-          (v): v is string => typeof v === "string",
-        )
-      : typeof value === "string"
-        ? value
-        : undefined;
+  const body = typeof value === "string" ? value : undefined;
   return (
     <div className="flex flex-col gap-2">
       <Button variant="outline" onClick={() => setOpen((v) => !v)}>

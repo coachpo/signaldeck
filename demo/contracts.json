@@ -1,6 +1,6 @@
 {
   "digital_oracle_researcher": {
-    "contentHash": "aaa5cb87db7e68dbeab6184beef094d64490f10411fd9c59d9f65318512d506e",
+    "contentHash": "d75b50154393d7541c37bb98d4ac18504ff3ff9ce9b23d719c03f16c65d792de",
     "tools": [
       "signaldeck/digital-oracle/cftc_positioning_lookup",
       "signaldeck/digital-oracle/crypto_derivatives_lookup",
@@ -68,7 +68,7 @@
     }
   },
   "research_notes": {
-    "contentHash": "436934e8731ed15b83e679e2878bfe6747ec4102b038565a17778a60a3cd38a2",
+    "contentHash": "a16495173897e347377cc1356ac5988e1da83e3ac1fac73e4ac7d22cfda3bb5e",
     "tools": [
       "example/notes/create",
       "example/notes/search"
@@ -140,7 +140,7 @@
     }
   },
   "tradingagents_advisory_research": {
-    "contentHash": "d102a2a32c2870059e929c8367d1fd998c425568a7f8538e95b477b28927c09e",
+    "contentHash": "01675d6da511805090e0e1b7159439093d5626a26f33ee2b987c0a83f380abfd",
     "tools": [
       "signaldeck/finance/market_data_quote_lookup",
       "signaldeck/finance/reports_create"

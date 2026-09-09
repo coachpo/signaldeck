@@ -12,6 +12,8 @@ from jsonschema.exceptions import SchemaError
 
 DIALECT = "https://json-schema.org/draft/2020-12/schema"
 SCHEMA_SUBSET_VERSION = "signaldeck.schema/1"
+ANNOTATED_SCHEMA_VERSION = "signaldeck.schema/2"
+SCHEMA_VERSION_KEY = "x-signaldeck-schema"
 _COMMON = {"$schema", "type", "title", "description", "enum", "const"}
 _TYPED = {
     "object": {"properties", "required", "unevaluatedProperties", "minProperties", "maxProperties"},
@@ -52,7 +54,14 @@ def validate_schema(schema: dict[str, Any], path: str = "$") -> None:
     kind = schema.get("type")
     if not isinstance(kind, str) or kind not in _TYPED:
         reject("invalid_schema", path + ".type", "A single supported type is required")
-    unknown = set(schema) - _COMMON - _TYPED[kind]
+    version = schema.get(SCHEMA_VERSION_KEY, SCHEMA_SUBSET_VERSION)
+    if not isinstance(version, str) or version not in {
+        SCHEMA_SUBSET_VERSION,
+        ANNOTATED_SCHEMA_VERSION,
+    }:
+        reject("unsupported_schema", path + "." + SCHEMA_VERSION_KEY, "Unsupported schema version")
+    annotations = {"default", "examples"} if version == ANNOTATED_SCHEMA_VERSION else set()
+    unknown = set(schema) - _COMMON - _TYPED[kind] - {SCHEMA_VERSION_KEY} - annotations
     if unknown:
         reject("unsupported_schema", path + "." + sorted(unknown)[0], "Unsupported schema keyword")
     if "$schema" in schema and schema["$schema"] != DIALECT:
@@ -80,24 +89,38 @@ def validate_schema(schema: dict[str, Any], path: str = "$") -> None:
         if "items" not in schema:
             reject("invalid_schema", path + ".items", "Array item schema is required")
         validate_schema(schema["items"], path + ".items")
+    if "default" in schema:
+        _validate_prepared_value(_close_schema(schema), schema["default"], path + ".default")
+    if "examples" in schema:
+        if not isinstance(schema["examples"], list):
+            reject("invalid_schema", path + ".examples", "Examples must be an array")
+        for index, example in enumerate(schema["examples"]):
+            _validate_prepared_value(_close_schema(schema), example, f"{path}.examples.{index}")
 
 
 def materialize_schema(schema: dict[str, Any]) -> dict[str, Any]:
     """Make the dialect's implicit object closure explicit for external validators."""
     validate_schema(schema)
+    return _close_schema(schema)
+
+
+def _close_schema(schema: dict[str, Any]) -> dict[str, Any]:
     result = copy.deepcopy(schema)
     if result["type"] == "object":
         result["unevaluatedProperties"] = False
         result["properties"] = {
-            key: materialize_schema(value) for key, value in result.get("properties", {}).items()
+            key: _close_schema(value) for key, value in result.get("properties", {}).items()
         }
     elif result["type"] == "array":
-        result["items"] = materialize_schema(result["items"])
+        result["items"] = _close_schema(result["items"])
     return result
 
 
 def validate_value(schema: dict[str, Any], value: Any, path: str = "$") -> None:
-    prepared = materialize_schema(schema)
+    _validate_prepared_value(materialize_schema(schema), value, path)
+
+
+def _validate_prepared_value(prepared: dict[str, Any], value: Any, path: str) -> None:
     try:
         json.dumps(value, allow_nan=False)
     except (TypeError, ValueError):

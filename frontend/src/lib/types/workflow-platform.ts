@@ -35,7 +35,19 @@ export interface NodeDefinition {
   acceptUpstreamStates?: string[];
   maxAttempts?: number;
 }
+export type PresentationSection =
+  | { kind: "markdown" | "value" | "receipt" | "sources" | "dataTime"; ref: string; label: string; required?: boolean }
+  | { kind: "notice"; ref: string; label: string; required?: boolean; severity: "info" | "warning" | "missing" }
+  | { kind: "link"; ref: string; label: string; required?: boolean; toolId: string; linkKey: string };
+export interface WorkflowPresentation {
+  version: "signaldeck.presentation/1";
+  inputHints?: { ref: string; control: "text" | "textarea"; placeholder?: string }[];
+  title?: { kind: "input"; ref: string } | { kind: "static"; text: string };
+  sections?: PresentationSection[];
+}
 export interface WorkflowDefinition {
+  description?: string;
+  presentation?: WorkflowPresentation;
   name?: string;
   inputSchema: JsonObject;
   outputSchema: JsonObject;
@@ -91,7 +103,7 @@ export interface WorkflowPackage {
 export type RunStatus =
   "queued" | "running" | "succeeded" | "failed" | "cancelled";
 export interface LaunchOrigin {
-  kind: "manual" | "rerun" | "schedule";
+  kind: "manual" | "rerun" | "reuse" | "schedule";
   sourceRunId?: string | null;
   scheduleId?: string | null;
   triggerId?: string | null;

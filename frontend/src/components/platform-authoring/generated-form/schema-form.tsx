@@ -1,11 +1,10 @@
-import { type ComponentProps, useMemo } from "react";
+import { type ComponentProps, createContext, useContext, useMemo } from "react";
 import { AlertCircle, Plus, Trash2 } from "lucide-react";
 
 import type {
   JsonPrimitive,
   SchemaIRDiscriminatedUnion,
   SchemaIRNode,
-  SchemaIRObject,
 } from "@/lib/platform-authoring/schema/types";
 import { valueEntryPathToString } from "@/lib/platform-authoring/values/codec";
 import {
@@ -58,9 +57,14 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/components/ui/utils";
 
+export type InputHint = { ref: string; control: "text" | "textarea"; placeholder?: string };
+const TechnicalFormContext = createContext(true);
+const InputHintsContext = createContext<readonly InputHint[]>([]);
 const NONE_OPTION = "__none__";
 
 export type SchemaValueEntryFormProps = {
+  inputHints?: readonly InputHint[];
+  technical?: boolean;
   disabled?: boolean;
   label?: string;
   onChange: (nextValue: ValueEntry) => void;
@@ -177,7 +181,6 @@ function parsePrimitiveOptionValue(value: string): JsonPrimitive {
 }
 
 function updateArrayItems(
-  schema: SchemaIRNode,
   value: ValueEntryArray,
   items: ValueEntry[],
 ): ValueEntryArray {
@@ -186,7 +189,7 @@ function updateArrayItems(
       const itemPath = extendPath(value.pathTokens, String(index));
       return createValueEntryArrayItem(
         index,
-        coerceValueEntryForSchema(schema, item, itemPath),
+        rebaseValueEntryPaths(item, itemPath),
         itemPath,
       );
     }),
@@ -195,30 +198,20 @@ function updateArrayItems(
 }
 
 function updateObjectFields(
-  schema: SchemaIRObject,
   value: ValueEntryObject,
   fields: ValueEntryObject["fields"],
 ): ValueEntryObject {
-  const knownFieldNames = new Set(
-    (schema.fields ?? []).map((field) => field.name),
-  );
   const nextFields = fields.map((field) => {
     const fieldPath = extendPath(value.pathTokens, field.key);
-    const schemaField = (schema.fields ?? []).find(
-      (item) => item.name === field.key,
-    );
-
     return createValueEntryObjectField(
       field.key,
-      schemaField
-        ? coerceValueEntryForSchema(schemaField.schema, field.value, fieldPath)
-        : rebaseValueEntryPaths(field.value, fieldPath),
+      rebaseValueEntryPaths(field.value, fieldPath),
       fieldPath,
     );
   });
 
   return createObjectValueEntry(
-    nextFields.filter((field) => knownFieldNames.has(field.key)),
+    nextFields,
     value.pathTokens,
   );
 }
@@ -234,17 +227,18 @@ function SchemaEditorHeader({
   required?: boolean;
   schema: SchemaIRNode;
 }) {
+  const technical = useContext(TechnicalFormContext);
   return (
     <div className="flex flex-wrap items-center gap-2">
       <span className="text-sm font-medium text-foreground">{label}</span>
 
-      <Badge variant="outline" className="capitalize">
+      {technical && <Badge variant="outline" className="capitalize">
         {schema.kind.replaceAll("_", " ")}
-      </Badge>
+      </Badge>}
       <Badge variant="secondary">
-        {required === false ? "optional" : "required"}
+        {technical ? (required === false ? "optional" : "required") : (required === false ? "可选" : "必填")}
       </Badge>
-      <Badge variant="outline">{getFieldPathLabel(pathTokens)}</Badge>
+      {technical && <Badge variant="outline">{getFieldPathLabel(pathTokens)}</Badge>}
     </div>
   );
 }
@@ -285,6 +279,9 @@ function SchemaNodeEditor({
   value,
 }: SchemaNodeEditorProps) {
   const displayLabel = getSchemaDisplayLabel(schema, label);
+  const technical = useContext(TechnicalFormContext);
+  const hints = useContext(InputHintsContext);
+  const hint = hints.find((item) => item.ref === ["workflow", "input", ...value.pathTokens].join("."));
 
   if (schema.kind === "object") {
     const objectValue =
@@ -305,15 +302,14 @@ function SchemaNodeEditor({
             required={required}
             schema={schema}
           />
-          <CardDescription>
-            {schema.description ??
-              "Capture object fields without dropping the shared value-entry structure."}
-          </CardDescription>
+          {(schema.description || technical) && <CardDescription>
+            {schema.description ?? "Enter the fields below."}
+          </CardDescription>}
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           {definedFields.length === 0 ? (
             <div className="rounded-lg border border-border/70 bg-card/70 px-3 py-2 text-sm text-muted-foreground shadow-ui-xs">
-              This object schema does not define any editable fields yet.
+              {technical ? "This object schema does not define any editable fields yet." : "此任务无需填写输入字段。"}
             </div>
           ) : null}
           {definedFields.map((field) => {
@@ -338,8 +334,7 @@ function SchemaNodeEditor({
                       schema={field.schema}
                     />
                     <p className="text-sm text-muted-foreground">
-                      {field.schema.description ??
-                        "Optional field. Add it when you need to capture this value."}
+                      {field.schema.description ?? (technical ? "Optional field. Add it when you need to capture this value." : "按需添加此字段。")}
                     </p>
                   </div>
                   <Button
@@ -353,7 +348,7 @@ function SchemaNodeEditor({
                         field.name,
                       );
                       onChange(
-                        updateObjectFields(schema, objectValue, [
+                        updateObjectFields(objectValue, [
                           ...objectValue.fields,
                           createValueEntryObjectField(
                             field.name,
@@ -365,7 +360,7 @@ function SchemaNodeEditor({
                     }}
                   >
                     <Plus data-icon="inline-start" />
-                    Add Field
+                    {technical ? "Add Field" : "添加字段"}
                   </Button>
                 </div>
               );
@@ -394,7 +389,6 @@ function SchemaNodeEditor({
                       onClick={() =>
                         onChange(
                           updateObjectFields(
-                            schema,
                             objectValue,
                             objectValue.fields.filter(
                               (item) => item.key !== field.name,
@@ -404,7 +398,7 @@ function SchemaNodeEditor({
                       }
                     >
                       <Trash2 data-icon="inline-start" />
-                      Remove Optional Field
+                      {technical ? "Remove Optional Field" : "移除可选字段"}
                     </Button>
                   ) : null}
                 </div>
@@ -415,9 +409,8 @@ function SchemaNodeEditor({
                   onChange={(nextValue) =>
                     onChange(
                       updateObjectFields(
-                        schema,
                         objectValue,
-                        objectValue.fields.map((item) =>
+                        (existingField ? objectValue.fields : [...objectValue.fields, nextField]).map((item) =>
                           item.key === field.name
                             ? createValueEntryObjectField(
                                 item.key,
@@ -456,9 +449,9 @@ function SchemaNodeEditor({
             required={required}
             schema={schema}
           />
-          <CardDescription>
+          {(schema.description || technical) && <CardDescription>
             {schema.description ?? "Repeated values."}
-          </CardDescription>
+          </CardDescription>}
           <CardAction>
             <Button
               disabled={disabled}
@@ -467,7 +460,7 @@ function SchemaNodeEditor({
               variant="outline"
               onClick={() =>
                 onChange(
-                  updateArrayItems(schema.items, arrayValue, [
+                  updateArrayItems(arrayValue, [
                     ...arrayValue.items.map((item) => item.value),
                     createValueEntryForSchema(
                       schema.items,
@@ -481,14 +474,14 @@ function SchemaNodeEditor({
               }
             >
               <Plus data-icon="inline-start" />
-              Add Item
+              {technical ? "Add Item" : "添加项目"}
             </Button>
           </CardAction>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           {arrayValue.items.length === 0 ? (
             <div className="rounded-lg border border-border/70 bg-card/70 px-3 py-2 text-sm text-muted-foreground shadow-ui-xs">
-              No items yet. Add one to start capturing repeated values.
+              {technical ? "No items yet. Add one to start capturing repeated values." : "暂无项目。可以添加。"}
             </div>
           ) : null}
           {arrayValue.items.map((item, index) => (
@@ -505,7 +498,6 @@ function SchemaNodeEditor({
                   onClick={() =>
                     onChange(
                       updateArrayItems(
-                        schema.items,
                         arrayValue,
                         arrayValue.items
                           .filter((_, itemIndex) => itemIndex !== index)
@@ -515,17 +507,16 @@ function SchemaNodeEditor({
                   }
                 >
                   <Trash2 data-icon="inline-start" />
-                  Remove Item
+                  {technical ? "Remove Item" : "删除项目"}
                 </Button>
               </div>
               <SchemaNodeEditor
                 depth={depth + 1}
                 disabled={disabled}
-                label={`Item ${index + 1}`}
+                label={technical ? `Item ${index + 1}` : `第 ${index + 1} 项`}
                 onChange={(nextValue) =>
                   onChange(
                     updateArrayItems(
-                      schema.items,
                       arrayValue,
                       arrayValue.items.map((entry, itemIndex) =>
                         itemIndex === index ? nextValue : entry.value,
@@ -557,14 +548,13 @@ function SchemaNodeEditor({
             required={required}
             schema={schema}
           />
-          <CardDescription>
-            {schema.description ??
-              `Pick a ${schema.discriminator} variant before filling the matching object shape.`}
-          </CardDescription>
+          {(schema.description || technical) && <CardDescription>
+            {schema.description ?? `Pick a ${schema.discriminator} variant before filling the matching object shape.`}
+          </CardDescription>}
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
-            <Label>Variant</Label>
+            <Label>{technical ? "Variant" : "输入类型"}</Label>
             <Select
               disabled={disabled}
               value={
@@ -608,11 +598,7 @@ function SchemaNodeEditor({
               label={selectedOption.label}
               onChange={onChange}
               schema={selectedOption.schema}
-              value={coerceValueEntryForSchema(
-                selectedOption.schema,
-                value,
-                value.pathTokens,
-              )}
+              value={value}
             />
           ) : null}
         </CardContent>
@@ -638,7 +624,7 @@ function SchemaNodeEditor({
           </div>
           <p className="text-sm text-muted-foreground">
             {schema.description ??
-              "Referenced schemas are preserved in the shared value model, but this first generated-form surface cannot expand registry refs yet."}
+              "Use the JSON editor to enter a value for this referenced schema."}
           </p>
         </AlertDescription>
       </Alert>
@@ -653,21 +639,27 @@ function SchemaNodeEditor({
         required={required}
         schema={schema}
       />
-      <p className="text-sm text-muted-foreground">
-        {schema.description ??
-          "Provide a value that matches the selected schema branch."}
-      </p>
+      {(schema.description || technical) && <p className="text-sm text-muted-foreground">
+        {schema.description ?? "Enter a value."}
+      </p>}
       {schema.kind === "string" ? (
-        <Textarea
+        hint?.control === "textarea" ? <Textarea
           aria-label={displayLabel}
           disabled={disabled}
           rows={3}
+          placeholder={hint?.placeholder}
           value={value.kind === "string" ? value.value : ""}
           onChange={(event) =>
             onChange(
               createStringValueEntry(event.target.value, value.pathTokens),
             )
           }
+        /> : <Input
+          aria-label={displayLabel}
+          disabled={disabled}
+          placeholder={hint?.placeholder}
+          value={value.kind === "string" ? value.value : ""}
+          onChange={(event) => onChange(createStringValueEntry(event.target.value, value.pathTokens))}
         />
       ) : null}
       {schema.kind === "integer" ? (
@@ -707,7 +699,7 @@ function SchemaNodeEditor({
       {schema.kind === "boolean" ? (
         <div className="flex items-center justify-between rounded-md border bg-background px-3 py-2">
           <span className="text-sm text-foreground">
-            Toggle the boolean value.
+            {technical ? "Toggle the boolean value." : displayLabel}
           </span>
           <Switch
             aria-label={displayLabel}
@@ -767,6 +759,8 @@ function SchemaNodeEditor({
 
 export function SchemaValueEntryForm({
   className,
+  inputHints = [],
+  technical = true,
   disabled = false,
   label = "Schema form",
   onChange,
@@ -775,7 +769,7 @@ export function SchemaValueEntryForm({
   ...props
 }: SchemaValueEntryFormProps) {
   const resolvedValue = useMemo(
-    () => coerceValueEntryForSchema(schema, value),
+    () => value ?? coerceValueEntryForSchema(schema, value),
     [schema, value],
   );
   const validationIssues = useMemo(
@@ -784,6 +778,8 @@ export function SchemaValueEntryForm({
   );
 
   return (
+    <TechnicalFormContext.Provider value={technical}>
+    <InputHintsContext.Provider value={inputHints}>
     <div className={cn("flex flex-col gap-4", className)} {...props}>
       <ValidationIssuesAlert issues={validationIssues} />
       <SchemaNodeEditor
@@ -795,11 +791,15 @@ export function SchemaValueEntryForm({
         value={resolvedValue}
       />
     </div>
+    </InputHintsContext.Provider>
+    </TechnicalFormContext.Provider>
   );
 }
 
 export function SchemaForm({
   className,
+  inputHints,
+  technical = true,
   description,
   disabled = false,
   label = "Schema form",
@@ -816,11 +816,13 @@ export function SchemaForm({
           <CardDescription>
             {description ??
               schema.description ??
-              "Enter structured values directly from the shared schema and value-entry foundations."}
+              "Enter values for this input."}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <SchemaValueEntryForm
+            technical={technical}
+            inputHints={inputHints}
             disabled={disabled}
             label={label}
             onChange={onChange}

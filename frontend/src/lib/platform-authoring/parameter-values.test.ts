@@ -19,8 +19,11 @@ describe("workflow parameter values", () => {
     expect(initialParameters({ type: "integer" })).toBe(0);
     expect(initialParameters({ type: "boolean" })).toBe(false);
     expect(
-      initialParameters({ type: ["string", "null"], default: null }),
+      initialParameters({ type: ["string", "null"], "x-signaldeck-schema": "signaldeck.schema/2", default: null }),
     ).toBeNull();
+  });
+  it("uses object defaults exactly without adding nested optional defaults", () => {
+    expect(initialParameters({type:"object",properties:{nested:{type:"object","x-signaldeck-schema":"signaldeck.schema/2",default:{},properties:{optional:{type:"string","x-signaldeck-schema":"signaldeck.schema/2",default:"do not add"}}}},required:["nested"]})).toEqual({nested:{}});
   });
   it("checks root scalar and array item types through the existing schema codec", () => {
     expect(validateLaunchValueForSchema({ type: "integer" }, 7)).toEqual([]);

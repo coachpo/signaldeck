@@ -32,7 +32,7 @@ READINESS_UNAVAILABLE_STATUS = status.HTTP_503_SERVICE_UNAVAILABLE
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     store = get_platform_store()
     store.initialize()
-    seed_packages(store)
+    app.state.workflow_imports = seed_packages(store, get_settings().workflow_data_dir)
     get_schedule_store().initialize()
     # Publish the process's executable closure once. A later source edit must not
     # be combined with already-imported API code in a different launch snapshot.

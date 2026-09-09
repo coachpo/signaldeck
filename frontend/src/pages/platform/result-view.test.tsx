@@ -273,18 +273,19 @@ describe("ordinary results", () => {
     );
     expect(start).toBeEnabled();
   });
-  it("opens the report identified by its public slug at its frozen plugin page", async () => {
+  it("opens only the explicitly projected frozen plugin link", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (url: string) =>
         url.endsWith("/result")
           ? response({
               ...result,
-              attachments: [
+              sections: [
                 {
-                  kind: "report",
-                  label: "研究报告",
-                  reference: { reportId: 7, slug: "report-seven" },
+                  kind: "link",
+                  label: "打开报告",
+                  value: { reportId: 7, slug: "report-seven" },
+                  href: "https://finance.example/reports?report=report-seven",
                   pluginId: "finance",
                 },
               ],
@@ -363,7 +364,7 @@ describe("ordinary results", () => {
       screen.queryByText("尚无可阅读的正文或保存回执"),
     ).not.toBeInTheDocument();
     expect(
-      await screen.findByRole("heading", { name: "完整正文" }),
+      await screen.findByText("# 完整正文 附件中的原文"),
     ).toBeVisible();
   });
   it("refreshes from the first page with a new snapshot while retaining filters", async () => {
@@ -371,6 +372,7 @@ describe("ordinary results", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (url: string) => {
+        if (url.endsWith("/workflow-packages")) return response([]);
         urls.push(url);
         return response({
           items: [{ ...runFixture, title: "旧结果", hasUnknownEffects: true }],
@@ -401,6 +403,7 @@ describe("ordinary results", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (url: string) => {
+        if (url.endsWith("/workflow-packages")) return response([]);
         urls.push(url);
         return response({
           items: [{ ...runFixture, title: "旧结果" }],

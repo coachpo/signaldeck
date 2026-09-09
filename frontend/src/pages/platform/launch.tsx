@@ -92,6 +92,7 @@ function LaunchForm({ pkg }: { pkg: WorkflowPackage }) {
             <LaunchInputs
               key={workflowKey}
               schema={workflow.inputSchema}
+              inputHints={workflow.presentation?.inputHints}
               value={parameters}
               onChange={setParameters}
               onDirtyChange={setDirty}

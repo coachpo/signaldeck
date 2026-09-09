@@ -2,6 +2,7 @@
 
 These modules transform schema, values and package drafts without React, DOM, network, toast or query-cache dependencies.
 
+- Schema `default`/`examples` annotations require the per-node `x-signaldeck-schema: signaldeck.schema/2` opt-in. Preserve explicit marker and annotation presence through codecs; never add annotations to existing definitions. `schema/constraints.ts` preserves and checks supported bounds; server validation remains authoritative. Schemas outside the form subset retain complete JSON/YAML editing, including null roots.
 - `schema/codec.ts` maps the supported JSON Schema subset to schema IR; `values/` encodes/decodes value-entry IR. Preserve optional-field omission, nullable values, discriminated unions and array path rebasing through round trips.
 - `parameter-values.ts` preserves scalar, array, object and null parameter roots without wrappers. `schema/launch-input-state.ts` builds object-form drafts and supplies reusable browser shape checks; the backend validates the complete schema for all roots. `schema/schema-template.ts` provides template values. Preserve the difference between omitted, null, empty and defaulted values.
 - `common/field-path.ts` owns diagnostic path tokens; reuse them across generated forms and codecs. Schema title/description are display metadata and must not become runtime fields.

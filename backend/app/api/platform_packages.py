@@ -8,12 +8,14 @@ from fastapi import APIRouter, Depends
 from app.api.platform_dependencies import get_launch_service, get_platform_store
 from app.application.definitions import save_definition
 from app.application.launch import LaunchService
+from app.application.package_import import import_source
 from app.application.task_preparation import prepare_task
 from app.domain.definition_parser import parse_package_source
 from app.domain.execution import ApplicationError, RunSummary
 from app.domain.schema_contract import DomainValidationError
 from app.infrastructure.platform_store import PlatformStore
 from app.infrastructure.plugin_health import PluginHealthReader
+from app.schemas.package_import import ImportItemRead, PackageImportRead, PackageImportRequest
 from app.schemas.platform import (
     DiagnosticRead,
     LaunchRequest,
@@ -48,6 +50,21 @@ def package_read(record: dict[str, Any]) -> PackageRead:
 @router.get("", response_model=PackageList)
 def list_packages(store: Store) -> PackageList:
     return PackageList(items=[package_read(item) for item in store.list_packages()])
+
+
+@router.post("/import", response_model=PackageImportRead)
+def import_packages(payload: PackageImportRequest, store: Store) -> PackageImportRead:
+    return PackageImportRead(
+        items=[
+            ImportItemRead(
+                name=source.name,
+                **import_source(
+                    store, source.manifest_source, missing_only=payload.mode == "missing_only"
+                ),
+            )
+            for source in payload.sources
+        ]
+    )
 
 
 @router.post("/validate-manifest", response_model=ValidationRead)

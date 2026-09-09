@@ -24,32 +24,27 @@ def query_history(
     limit: int = 50,
     offset: int = 0,
 ) -> tuple[list[RunRow], int, set[str]]:
+    workflow = RunRow.spec["definition"]["workflows"].op("->")(RunRow.spec["workflowKey"].astext)
+    declaration = workflow["presentation"]["title"]
+    selected_path = func.string_to_array(
+        func.substr(declaration["ref"].astext, len("workflow.input.") + 1), "."
+    )
+    selected = RunRow.spec["parameters"].op("#>")(selected_path)
+    selected_text = RunRow.spec["parameters"].op("#>>")(selected_path)
+    declared_title = case(
+        (
+            (declaration["kind"].astext == "input") & (func.jsonb_typeof(selected) == "string"),
+            selected_text,
+        ),
+        (declaration["kind"].astext == "static", declaration["text"].astext),
+        else_=None,
+    )
     title = func.coalesce(
-        *[
-            case(
-                (
-                    func.jsonb_typeof(RunRow.spec["parameters"][key]) == "string",
-                    func.nullif(
-                        func.substr(
-                            func.regexp_replace(
-                                RunRow.spec["parameters"][key].astext, r"^\s+|\s+$", "", "g"
-                            ),
-                            1,
-                            300,
-                        ),
-                        "",
-                    ),
-                ),
-                else_=None,
-            )
-            for key in ("title", "question")
-        ],
         func.nullif(
-            RunRow.spec["definition"]["workflows"]
-            .op("->")(RunRow.spec["workflowKey"].astext)
-            .op("->>")("name"),
+            func.substr(func.regexp_replace(declared_title, r"^\s+|\s+$", "", "g"), 1, 300),
             "",
         ),
+        func.nullif(workflow["name"].astext, ""),
         RunRow.spec["definition"]["metadata"]["name"].astext,
         RunRow.spec["workflowKey"].astext,
     )

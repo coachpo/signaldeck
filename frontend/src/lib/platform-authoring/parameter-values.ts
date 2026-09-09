@@ -21,7 +21,7 @@ export function parseParameters(text: string): Json {
   return value;
 }
 export function initialParameters(schema: JsonObject): Json {
-  if (Object.prototype.hasOwnProperty.call(schema, "default"))
+  if (schema["x-signaldeck-schema"] === "signaldeck.schema/2" && Object.prototype.hasOwnProperty.call(schema, "default"))
     return structuredClone(schema.default);
   const object = createLaunchInputState(schema);
   if (object.schemaSupported) return object.payload as Json;

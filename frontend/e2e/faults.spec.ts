@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { stringify } from "yaml";
+import { parse, stringify } from "yaml";
 import { apiBase } from "./platform-fixtures";
 import { startHeldPlugin } from "./held-plugin-fixture";
 
@@ -49,6 +49,21 @@ test("actual independent write remains unknown after cancellation and history su
     const effect = JSON.parse(readFileSync(join(plugin.directory,"effect.json"),"utf8"));
     expect(effect.operationId).toBe(unknown.operationId);
     expect(effect.output.value).toBe(2);
+    const confirmedKey = `${key}-confirmed`;
+    const confirmedSource = stringify({ ...parse(source), metadata: { key: confirmedKey, name: "Confirmed offline record" } }, { aliasDuplicateObjects: false });
+    const savedConfirmed = await request.post(`${apiBase}/workflow-packages`, { data: { manifestSource: confirmedSource } });
+    expect(savedConfirmed.ok(), await savedConfirmed.text()).toBe(true);
+    const confirmedLaunch = await request.post(`${apiBase}/workflow-packages/${confirmedKey}/launches`, { data: { workflowKey: "main", parameters: { value: 10, delay: 0, tag: "Confirmed offline output" }, launchId: crypto.randomUUID() } });
+    expect(confirmedLaunch.ok(), await confirmedLaunch.text()).toBe(true);
+    const confirmedId = (await confirmedLaunch.json()).id;
+    await expect.poll(async () => (await (await request.get(`${apiBase}/runs/${confirmedId}`)).json()).status, { timeout: 60000 }).toBe("succeeded");
+    const confirmedRun = await (await request.get(`${apiBase}/runs/${confirmedId}`)).json();
+    const confirmedResult = await (await request.get(`${apiBase}/runs/${confirmedId}/result`)).json();
+    expect(confirmedRun.output).toEqual({ value: 12, delay: 0, tag: "Confirmed offline output" });
+    expect(confirmedResult.sections).toEqual(expect.arrayContaining([
+      expect.objectContaining({ kind: "value", label: "工作流输出", value: confirmedRun.output }),
+      expect.objectContaining({ kind: "value", nodeId: "after", pluginId: plugin.binding.pluginId, operationId: expect.any(String), value: confirmedRun.output }),
+    ]));
     await plugin.stop();
     expect(await request.get(`${plugin.baseUrl}/health`,{timeout:500}).catch(() => null)).toBeNull();
     await page.reload();
@@ -57,9 +72,15 @@ test("actual independent write remains unknown after cancellation and history su
     await page.getByRole("link",{name:"核实未确认的操作",exact:true}).click();
     await expect(page.getByLabel("Call ownership tree")).toBeVisible();
     await page.screenshot({path:join(directory,"plugin-offline-call-evidence.png"),fullPage:true});
+    await page.goto(`/runs/${confirmedId}`);
+    await expect(page.getByRole("region", { name: "工作流输出", exact: true })).toContainText("Confirmed offline output");
+    expect(await (await request.get(`${apiBase}/runs/${confirmedId}`)).json()).toEqual(confirmedRun);
+    expect(await (await request.get(`${apiBase}/runs/${confirmedId}/result`)).json()).toEqual(confirmedResult);
     const requests = readFileSync(join(plugin.directory,"requests.jsonl"),"utf8").trim().split("\n").map(line => JSON.parse(line));
     const writes = requests.filter(item => item.method === "tools/call" && item.params.name === tool.toolId);
-    expect(writes).toHaveLength(1);
+    expect(writes).toHaveLength(3);
+    expect(writes.filter(item => item.params.arguments.tag === "Controlled external effect")).toHaveLength(1);
+    expect(writes.filter(item => item.params.arguments.tag === "Confirmed offline output")).toHaveLength(2);
     const history = await (await request.get(`${apiBase}/runs`,{params:{packageKey:key}})).json();
     expect(history.total).toBe(1);
     let engineStopped = false;
@@ -78,8 +99,12 @@ test("actual independent write remains unknown after cancellation and history su
       await page.getByRole("link",{name:"核实未确认的操作",exact:true}).click();
       await expect(page.getByLabel("Call ownership tree")).toBeVisible();
       await page.screenshot({path:join(directory,"engine-and-plugin-offline-history.png"),fullPage:true});
+      await page.goto(`/runs/${confirmedId}`);
+      await expect(page.getByRole("region", { name: "工作流输出", exact: true })).toContainText("Confirmed offline output");
+      expect(await (await request.get(`${apiBase}/runs/${confirmedId}`)).json()).toEqual(confirmedRun);
+      expect(await (await request.get(`${apiBase}/runs/${confirmedId}/result`)).json()).toEqual(confirmedResult);
     }
-    const observation = {engineStopped,run:before,effectAfterCancellation:effect,pluginStopped:true,writeRequests:writes,methods:requests.map(item => item.method)};
+    const observation = {engineStopped,run:before,effectAfterCancellation:effect,confirmedRun,confirmedResult,pluginStopped:true,writeRequests:writes,methods:requests.map(item => item.method)};
     writeFileSync(join(directory,"unknown-plugin-offline-evidence.json"),JSON.stringify(observation,null,2));
     await testInfo.attach("unknown-plugin-offline-evidence.json",{body:JSON.stringify(observation,null,2),contentType:"application/json"});
   } finally { await plugin.dispose(); }

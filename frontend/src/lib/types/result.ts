@@ -1,12 +1,31 @@
 import type { Json, RunSummary, LaunchOrigin } from "./workflow-platform";
 export interface ResultAttachment {
-  kind: "artifact" | "report" | "note";
+  kind: "artifact";
   label: string;
   reference: Json;
+  nodeId?: string | null;
+  operationId?: string | null;
+  toolEvidenceId?: string | null;
   evidenceId?: string | null;
   pluginId?: string | null;
 }
+export interface ResultSection {
+  kind: "markdown" | "value" | "receipt" | "sources" | "dataTime" | "notice" | "link";
+  label: string;
+  value: Json;
+  evidenceId?: string | null;
+  nodeId?: string | null;
+  operationId?: string | null;
+  toolEvidenceId?: string | null;
+  pluginId?: string | null;
+  href?: string | null;
+  severity?: "info" | "warning" | "missing" | null;
+}
 export interface RunResult {
+  sections?: ResultSection[];
+  skipped?: string[];
+  deferredSections?: string[];
+  executionIssues?: string[];
   runId: string;
   title: string;
   status: RunSummary["status"];

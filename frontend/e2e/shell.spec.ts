@@ -1,6 +1,19 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
+import { apiBase } from "./platform-fixtures";
 import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
+async function openSavedTaskCatalog(page: Page) {
+  const loading = page.waitForResponse((response) => response.url() === `${apiBase}/workflow-packages` && response.request().method() === "GET");
+  await page.goto("/");
+  const response = await loading;
+  expect(response.ok(), await response.text()).toBe(true);
+  const packages = await response.json();
+  const hrefs: string[] = packages.items.flatMap((pkg: { key: string; definition: { workflows: Record<string, unknown> } }) =>
+    Object.keys(pkg.definition.workflows).map((workflowKey) => `/tasks/new?packageKey=${encodeURIComponent(pkg.key)}&workflowKey=${encodeURIComponent(workflowKey)}`));
+  await expect(page.getByRole("link", { name: "选择任务", exact: true })).toHaveCount(hrefs.length);
+  for (const href of hrefs) await expect(page.locator(`a[href="${href}"]`)).toBeVisible();
+  return hrefs;
+}
 const routes = [
   { path: "/", label: "任务", nav: "tasks" },
   {
@@ -16,14 +29,14 @@ const routes = [
 test("generic navigation owns one route shell without embedded finance pages", async ({
   page,
 }) => {
-  await page.goto("/");
+  const taskHrefs = await openSavedTaskCatalog(page);
   await expect(page.getByTestId("nav-workflow-packages")).toHaveCount(0);
   const expertEntry = page.getByRole("link", {
     name: "全部任务定义与专家制作",
     exact: true,
   });
   await expect(expertEntry).toHaveCount(0);
-  await expect(page.getByRole("link", { name: "选择任务", exact: true })).toHaveCount(4);
+  for (const href of taskHrefs) await expect(page.locator(`a[href="${href}"]`)).toBeVisible();
   await page.getByRole("switch", { name: "专家模式", exact: true }).check();
   await expect(expertEntry).toBeVisible();
   await expertEntry.click();
@@ -31,7 +44,7 @@ test("generic navigation owns one route shell without embedded finance pages", a
   await page.getByTestId("nav-tasks").click();
   await page.getByRole("switch", { name: "专家模式", exact: true }).uncheck();
   await expect(expertEntry).toHaveCount(0);
-  await expect(page.getByRole("link", { name: "选择任务", exact: true })).toHaveCount(4);
+  for (const href of taskHrefs) await expect(page.locator(`a[href="${href}"]`)).toBeVisible();
   await page.getByRole("switch", { name: "专家模式", exact: true }).check();
   for (const route of routes) {
     await page.getByTestId(`nav-${route.nav}`).click();
@@ -64,13 +77,9 @@ for (const width of [375, 768, 1024, 1440])
       "/plugins",
       "/runs",
     ]) {
-      await page.goto(path);
+      if (path === "/") await openSavedTaskCatalog(page);
+      else await page.goto(path);
       await expect(page.getByRole("main")).toBeVisible();
-      if (path === "/") {
-        await expect(
-          page.getByRole("link", { name: "选择任务", exact: true }),
-        ).toHaveCount(4);
-      }
       if (path === "/workflow-packages/new") {
         await expect(page.getByLabel("Workflow Package YAML")).toBeVisible();
       }

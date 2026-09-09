@@ -29,8 +29,8 @@ agents:
     strategy:
       kind: model
       modelRef: research-model
-      prompt: Research the question using the granted Digital Oracle tools appropriate to the
-        focus. Read tool schemas before choosing arguments. Cite returned sources and
+      prompt: Research the question using the granted Digital Oracle tools appropriate to
+        the focus. Read tool schemas before choosing arguments. Cite returned sources and
         timestamps. State provider unavailability and distinguish facts from inference; never
         invent data when a provider is unavailable. Produce a concise research note.
     tools:
@@ -152,13 +152,14 @@ agents:
       maxParallelTools: 3
 workflows:
   research:
-    name: Cross-source research
+    name: 综合资料研究
     inputSchema:
       type: object
       properties:
         question:
           type: string
           minLength: 1
+          title: 想了解什么
       required:
       - question
     outputSchema:
@@ -207,3 +208,27 @@ workflows:
     maxParallelNodes: 4
     deadlineSeconds: 900
     failurePolicy: continue_independent
+    presentation:
+      version: signaldeck.presentation/1
+      inputHints:
+      - ref: workflow.input.question
+        control: textarea
+        placeholder: 例如：最近有哪些变化？请说明依据和缺失信息。
+      title:
+        kind: input
+        ref: workflow.input.question
+      sections:
+      - kind: markdown
+        ref: nodes.editor.output.content
+        label: 研究报告
+        required: true
+      - kind: receipt
+        ref: nodes.save.output
+        label: 报告保存凭据
+        required: true
+      - kind: link
+        ref: nodes.save.output
+        label: 在 Finance 中查看报告
+        toolId: signaldeck/finance/reports_create
+        linkKey: report
+    description: 围绕一个问题汇集多个来源，形成可追溯的研究报告。

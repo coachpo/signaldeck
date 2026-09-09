@@ -14,8 +14,7 @@ After a YAML change, run from `backend/`:
 
 ```sh
 uv run python ../demo/sync_seeds.py
-uv run black --config pyproject.toml app/infrastructure/package_seeds.py ../demo/sync_seeds.py
-uv run pytest tests/test_target_seeds.py tests/test_dag_compiler.py -q
+uv run pytest tests/test_target_seeds.py tests/test_dag_compiler.py tests/test_demo_presentation.py -q
 ```
 
-`sync_seeds.py` updates the embedded source in `backend/app/infrastructure/package_seeds.py` and `demo/contracts.json`. The startup seed path inserts only missing keys; existing operator revisions must never be overwritten. Add or select runtime and API tests for behavioral changes beyond compilation and seeding. Use the real PostgreSQL fixtures described in `CONTRIBUTING.md`.
+`sync_seeds.py` updates only `demo/contracts.json`; it must not generate business YAML into Core Python or app resources. Data is imported through the ordinary parser/canonical revision path. The optional startup directory and `missing_only` API mode atomically preserve existing keys; explicit ordinary updates are required to advance operator revisions. New fields use the closed schema/2 and presentation/1 declarations from [the decoupling contract](../docs/工作流解耦方案.md); defaults are draft annotations, not runtime parameter mutation. Keep task copy and result selectors in these data files, plugin route contracts in independent releases. Add or select runtime and API tests for behavioral changes beyond compilation/import; use real PostgreSQL fixtures from CONTRIBUTING.

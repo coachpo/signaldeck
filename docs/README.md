@@ -23,7 +23,7 @@
 - [`planning/sprint-backlog.md`](planning/sprint-backlog.md)：已完成简化操作 S1–S6 的任务分解及 P/UX 追溯，保留当时自动化验收方式调整。
 - [`planning/sprint-delivery.md`](planning/sprint-delivery.md)：原实现阶段的 23 项交付映射和历史验证记录；不替代最终独立验收或当前规范。
 - [`planning/sprint-verification.md`](planning/sprint-verification.md)：简化操作的独立验收范围、修复、最终结果和复现入口；版本及后续状态以 `STATUS.md` 为准。
-- [`工作流解耦方案.md`](工作流解耦方案.md)：工作流耦合问题的研究、候选比较、协议与分发改造建议及验证路径；尚未实施的方案，原则和当前偏差分别以产品说明、架构说明为准。
+- [`工作流解耦方案.md`](工作流解耦方案.md)：已实施的输入/展示/插件链接契约、独立数据分发、历史呈现影响和 D01–D06 证据；原则与模块边界分别以产品说明、架构说明为准。
 - [`data-model.md`](data-model.md)：Core/插件数据归属、PostgreSQL 表、不可变运行快照、凭据版本和内容寻址存储。
 - [`writing-extensions.md`](writing-extensions.md)：独立进程插件的发布、MCP/工具/schema、资源/效果合同与升级方式；保留原文件路径。
 - [`执行引擎比较.md`](执行引擎比较.md)：Temporal、Prefect、Hatchet 的同场景比较、实际证据范围及选型结论；不替代平台整体验收。

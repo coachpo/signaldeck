@@ -7,10 +7,18 @@ import hashlib
 import json
 from datetime import datetime
 from typing import Any, Literal, Self
-from urllib.parse import urlsplit
+from urllib.parse import unquote, urlsplit
 
-from pydantic import ConfigDict, Field, field_validator, model_validator
+from pydantic import (
+    ConfigDict,
+    Field,
+    SerializerFunctionWrapHandler,
+    field_validator,
+    model_serializer,
+    model_validator,
+)
 
+from app.domain.mapping_types import reference_schema
 from app.domain.resources import (
     ResolvedToolResourceConfiguration,
     ToolResourceConfiguration,
@@ -34,6 +42,32 @@ class ToolContractModel(CamelModel):
     model_config = ConfigDict(frozen=True, validate_default=True)
 
 
+class ResultLink(ToolContractModel):
+    version: Literal["signaldeck.resultLink/1"]
+    key: str = Field(min_length=1)
+    label: str = Field(min_length=1)
+    path: str
+    query: dict[str, str]
+
+    @field_validator("path")
+    @classmethod
+    def relative_path(cls, value: str) -> str:
+        decoded = unquote(value)
+        parts = urlsplit(decoded)
+        if (
+            any(ord(char) < 32 or ord(char) == 127 for char in decoded)
+            or parts.scheme
+            or parts.netloc
+            or parts.query
+            or parts.fragment
+            or decoded.startswith("/")
+            or "\\" in decoded
+            or any(part in {".", ".."} for part in decoded.split("/"))
+        ):
+            raise ValueError("Result link path must be a safe relative page path")
+        return value
+
+
 class ToolDefinition(ToolContractModel):
     tool_id: str = Field(pattern=QUALIFIED_ID)
     owner_plugin_id: str = Field(pattern=PLUGIN_ID)
@@ -44,6 +78,24 @@ class ToolDefinition(ToolContractModel):
     resource_requirements: tuple[str, ...] = ()
     timeout_seconds: float = Field(default=30.0, gt=0, le=3600)
     max_attempts: int = Field(default=1, ge=1, le=10)
+    result_links: tuple[ResultLink, ...] | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def reject_null_links(cls, value: Any) -> Any:
+        if isinstance(value, dict) and any(
+            key in value and value[key] is None for key in ("resultLinks", "result_links")
+        ):
+            raise ValueError("resultLinks must be omitted or a list, not null")
+        return value
+
+    @model_serializer(mode="wrap")
+    def omit_absent_links(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:
+        value: dict[str, Any] = handler(self)
+        if self.result_links is None:
+            value.pop("resultLinks", None)
+            value.pop("result_links", None)
+        return value
 
     @field_validator("input_schema", "output_schema")
     @classmethod
@@ -59,6 +111,18 @@ class ToolDefinition(ToolContractModel):
             raise ValueError("Tool input must be an object for the pinned MCP protocol")
         if self.output_schema["type"] != "object":
             raise ValueError("Tool output must be an object for MCP structuredContent")
+        if self.result_links is not None:
+            if len({link.key for link in self.result_links}) != len(self.result_links):
+                raise ValueError("Duplicate result link key")
+            for link in self.result_links:
+                for parameter, ref in link.query.items():
+                    if not parameter or not ref.startswith("tool.output."):
+                        raise ValueError("Result link query must reference tool.output fields")
+                    schema, _ = reference_schema(
+                        ref, {"tool.output": self.output_schema}, "$.resultLinks.query"
+                    )
+                    if schema.get("type") not in {"string", "number", "integer", "boolean", "null"}:
+                        raise ValueError("Result link query must reference a scalar output")
         return self
 
 

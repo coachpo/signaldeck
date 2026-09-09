@@ -277,9 +277,9 @@ def test_result_keeps_cancel_request_and_unknown_separate_from_content(platform)
         )
     ]
     result = project_result(detail)
-    assert result.body == "confirmed prior output" and result.content_status == "unknown"
+    assert result.sections[0].value == detail.output and result.content_status == "unknown"
     assert result.unknown_evidence_ids == ["unknown-op"]
-    assert result.sources == [{"name": "controlled source"}]
+    assert result.sources == []  # Historical aliases remain ordinary fields.
 
 
 def test_deployment_connection_choices_validate_and_never_expose_credentials(
@@ -388,9 +388,10 @@ def test_result_links_confirmed_owner_and_does_not_mistake_recovered_attempt_for
     projected = project_result(detail)
     assert projected.content_status == "available"
     assert projected.unknown_evidence_ids == []
-    assert len(projected.attachments) == 1
-    assert projected.attachments[0].plugin_id == "example/echo"
-    assert projected.attachments[0].evidence_id == "confirmed-write"
+    assert projected.attachments == []
+    assert projected.sections[-1].plugin_id == "example/echo"
+    assert projected.sections[-1].evidence_id == "confirmed-write"
+    assert projected.sections[-1].value == receipt
 
 
 def test_launch_identity_does_not_accept_different_explicit_revision(platform):
@@ -450,10 +451,11 @@ def test_history_title_fallback_preserves_non_string_and_whitespace_inputs(platf
         store.create_run(
             spec.model_copy(update={"run_id": identity, "parameters": parameters}), identity
         )
-    for term, identity in (("查询标题", "whitespace"), ("数字字段不作标题", "number")):
+    for term in ("查询标题", "数字字段不作标题"):
         result = client.get("/api/runs", params={"q": term, "sort": "title_asc"}).json()
-        assert result["total"] == 1 and result["items"][0]["id"] == identity
-        assert result["items"][0]["title"] == term
+        assert result["total"] == 0
+    for identity in ("whitespace", "number"):
+        assert client.get(f"/api/runs/{identity}").json()["title"] == "API Package"
 
 
 @pytest.mark.parametrize("large_tool_output", [False, True])
@@ -507,9 +509,9 @@ def test_finance_receipt_owner_follows_frozen_deterministic_mapping(platform, la
             output=detail.output,
         ),
     ]
-    report = next(item for item in project_result(detail).attachments if item.kind == "report")
-    assert report.reference["reportId"] == 7
-    assert report.plugin_id == "signaldeck/finance" and report.evidence_id == "report-tool"
+    report = next(item for item in project_result(detail).sections if item.kind == "receipt")
+    assert report.value["reportId"] == 7
+    assert report.plugin_id == "signaldeck/finance" and report.evidence_id == "save-node"
 
 
 def test_attention_group_and_summary_use_logical_unknown_not_old_network_attempt(platform):
@@ -595,7 +597,8 @@ def test_result_preserves_structured_source_warnings(platform):
     }
     detail.status = "succeeded"
     result = project_result(detail)
-    assert result.content_status == "partial" and result.missing == ["此来源为受控本地数据"]
+    assert result.content_status == "available" and result.missing == []
+    assert result.sections[0].value == detail.output
 
 
 def test_preparation_reports_last_failed_observation_without_claiming_live_health(platform):

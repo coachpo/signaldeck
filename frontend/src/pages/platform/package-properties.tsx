@@ -213,6 +213,12 @@ export function WorkflowProperties({
         value={workflow.deadlineSeconds}
         edit={edit}
       />
+      <ObjectProperty key={workflow.presentation === undefined ? "absent-presentation" : "present-presentation"} name="presentation" value={workflow.presentation} edit={edit} draft={draft} />
+      {workflow.presentation !== undefined && (
+        <Button variant="outline" onClick={() => { edit(["presentation"], undefined); draft("presentation", false); }}>
+          移除 presentation
+        </Button>
+      )}
       {(["inputSchema", "outputSchema", "outputMapping"] as const).map(
         (name) => (
           <ObjectProperty

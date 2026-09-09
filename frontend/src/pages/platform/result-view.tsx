@@ -9,7 +9,6 @@ import { ResourceStatusBadge } from "@/components/shared/resource-status-strip";
 import { useRunResult } from "@/hooks/use-results";
 import {
   usePlatformMutations,
-  usePlatformRun,
 } from "@/hooks/use-workflow-platform";
 import { useTaskReuse } from "@/hooks/use-task-experience";
 import type { RunResult } from "@/lib/types/result";
@@ -17,6 +16,7 @@ import { RequestError } from "./feedback";
 import { resultStatusLabels, originLabels } from "./result-labels";
 import { findArtifacts } from "./artifact-references";
 import { runSearch } from "./result-navigation";
+import { DeclaredResultSections } from "./result-sections";
 import { ResultRepeat } from "./result-repeat";
 import {
   ResultValue as Value,
@@ -35,7 +35,6 @@ export function ResultPage() {
 }
 function ResultContent({ result }: { result: RunResult }) {
   const [search] = useSearchParams();
-  const technical = usePlatformRun(result.runId);
   const primaryArtifact = result.attachments
     .filter((a) => a.kind === "artifact" && !a.evidenceId)
     .flatMap((a) => findArtifacts(a.reference))
@@ -122,16 +121,28 @@ function ResultContent({ result }: { result: RunResult }) {
           <ul className="list-disc pl-5">
             {result.missing.map((item) => (
               <li key={item}>
-                {item.replace(
-                  /: (failed|blocked|skipped|timed_out|cancelled)$/,
-                  (_, status: string) => `：${resultStatusLabels[status]}`,
-                )}
+                {item}
               </li>
             ))}
           </ul>
         </InlineStatePanel>
       )}
-      {result.body ? (
+      {result.deferredSections?.length ? (
+        <InlineStatePanel title="内容保存在执行产物">
+          {result.deferredSections.join("、")}：请阅读或下载下方附件。
+        </InlineStatePanel>
+      ) : null}
+      {result.executionIssues?.length ? (
+        <InlineStatePanel tone="danger" title="执行未完成">
+          {result.executionIssues.map((issue) => <p key={issue}>{issue}</p>)}
+        </InlineStatePanel>
+      ) : null}
+      {result.skipped?.length ? (
+        <InlineStatePanel title="已跳过的分支">{result.skipped.join("、")}</InlineStatePanel>
+      ) : null}
+      {result.sections?.length ? (
+        <DeclaredResultSections sections={result.sections} search={search} />
+      ) : result.body ? (
         <article
           aria-label="结果正文"
           className="min-w-0 overflow-x-auto rounded border border-border bg-card p-4 text-sm [&_h1]:mb-3 [&_h1]:text-xl [&_h2]:my-3 [&_h2]:text-lg [&_p]:my-2 [&_ul]:list-disc [&_ul]:pl-5"
@@ -219,11 +230,7 @@ function ResultContent({ result }: { result: RunResult }) {
               <Attachment
                 key={i}
                 attachment={attachment}
-                pageUrl={
-                  technical.data?.spec.pluginReleases.find(
-                    (p) => p.pluginId === attachment.pluginId,
-                  )?.pageUrl as string | undefined
-                }
+
               />
             ))}
           </ul>

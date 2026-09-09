@@ -43,18 +43,18 @@ test("array input uses the same definition for manual and scheduled launches wit
     data: { manifestSource: source },
   });
   expect(saved.ok(), await saved.text()).toBeTruthy();
-  await page.goto(`/workflow-packages/${key}/run`);
-  await page.getByRole("combobox", { name: "Workflow", exact: true }).click();
-  await page
-    .getByRole("option", { name: "Array workflow", exact: true })
-    .click();
+  await page.goto("/tasks");
+  const card = page.locator("section").filter({
+    has: page.getByRole("heading", { name: "Array workflow", exact: true }),
+  }).last();
+  await card.getByRole("link", { name: "选择任务", exact: true }).click();
   await expect(
-    page.getByRole("tab", { name: "Input form", exact: true }),
+    page.getByRole("tab", { name: "填写输入", exact: true }),
   ).toBeDisabled();
-  await expect(page.getByLabel("Parameters JSON")).toHaveValue("[]");
-  await page.getByLabel("Parameters JSON").fill('["alpha","beta"]');
-  await page.getByRole("button", { name: "Apply parameters JSON" }).click();
-  await page.getByRole("button", { name: "Start run", exact: true }).click();
+  await expect(page.getByLabel("任务输入 JSON")).toHaveValue("[]");
+  await page.getByLabel("任务输入 JSON").fill('["alpha","beta"]');
+  await page.getByRole("button", { name: "应用 JSON 输入" }).click();
+  await page.getByRole("button", { name: "开始任务", exact: true }).click();
   await expect(page).toHaveURL(/\/runs\/[^/]+$/);
   const manualId = page.url().split("/").at(-1)!;
   await expect
@@ -77,17 +77,14 @@ test("array input uses the same definition for manual and scheduled launches wit
     ).parameters,
   ).toEqual(["alpha", "beta"]);
   await page.goto("/scheduled-tasks/new");
-  await page.getByRole("switch", { name: "专家模式" }).check();
   await page.getByLabel("安排名称").fill(`Array schedule ${key}`);
-  await page.getByRole("combobox", { name: "任务包", exact: true }).click();
-  await page.getByRole("option", { name: `Array ${key}`, exact: true }).click();
-  await page.getByRole("combobox", { name: "任务", exact: true }).click();
+  await page.getByRole("combobox", { name: "选择任务", exact: true }).click();
   await page
     .getByRole("option", { name: "Array workflow", exact: true })
     .click();
-  await page.getByLabel("Parameters JSON", { exact: true }).fill("[]");
+  await page.getByLabel("任务输入 JSON", { exact: true }).fill("[]");
   await page
-    .getByRole("button", { name: "Apply parameters JSON", exact: true })
+    .getByRole("button", { name: "应用 JSON 输入", exact: true })
     .click();
   await page
     .getByRole("combobox", { name: "自动执行状态", exact: true })

@@ -371,7 +371,7 @@ agents:
       maxParallelTools: 3
 workflows:
   research:
-    name: Market advisory report
+    name: 市场研究
     inputSchema:
       type: object
       properties:
@@ -379,13 +379,22 @@ workflows:
           type: array
           items:
             type: string
+            title: 研究对象
+            x-signaldeck-schema: signaldeck.schema/2
+            examples:
+            - AAPL
           minItems: 1
           maxItems: 10
+          title: 研究对象
         question:
           type: string
           minLength: 1
+          title: 想了解什么
         includeRisk:
           type: boolean
+          title: 包含风险分析
+          x-signaldeck-schema: signaldeck.schema/2
+          default: true
       required:
       - symbols
       - question
@@ -472,3 +481,33 @@ workflows:
     maxParallelNodes: 4
     deadlineSeconds: 900
     failurePolicy: continue_independent
+    presentation:
+      version: signaldeck.presentation/1
+      inputHints:
+      - ref: workflow.input.question
+        control: textarea
+        placeholder: 例如：最近有哪些变化？请说明依据和缺失信息。
+      title:
+        kind: input
+        ref: workflow.input.question
+      sections:
+      - kind: markdown
+        ref: nodes.summary.output.content
+        label: 研究报告
+        required: true
+      - kind: markdown
+        ref: nodes.risk.output.text
+        label: 风险分析
+      - kind: value
+        ref: nodes.collect.output.quotes
+        label: 行情证据
+      - kind: receipt
+        ref: nodes.save.output
+        label: 报告保存凭据
+        required: true
+      - kind: link
+        ref: nodes.save.output
+        label: 在 Finance 中查看报告
+        toolId: signaldeck/finance/reports_create
+        linkKey: report
+    description: 分析关注的市场对象、变化与风险，生成研究报告。

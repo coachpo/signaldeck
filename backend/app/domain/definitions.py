@@ -7,6 +7,7 @@ from typing import Annotated, Any, Literal
 from pydantic import Field, field_validator, model_validator
 
 from app.domain.mappings import validate_condition, validate_mapping
+from app.domain.presentation import WorkflowPresentation
 from app.domain.schema_contract import validate_schema
 from app.domain.tool_contracts import QUALIFIED_ID, ToolReadCachePolicy
 from app.schemas.common import CamelModel
@@ -101,6 +102,16 @@ class NodeDefinition(CamelModel):
 
 
 class WorkflowDefinition(CamelModel):
+    description: str | None = Field(default=None, max_length=10000, exclude_if=lambda v: v is None)
+    presentation: WorkflowPresentation | None = Field(default=None, exclude_if=lambda v: v is None)
+
+    @field_validator("presentation", "description", mode="before")
+    @classmethod
+    def check_presentation_present(cls, value: Any) -> Any:
+        if value is None:
+            raise ValueError("Optional Workflow fields must be omitted rather than null")
+        return value
+
     name: str = Field(default="", max_length=200)
     input_schema: dict[str, Any]
     output_schema: dict[str, Any]

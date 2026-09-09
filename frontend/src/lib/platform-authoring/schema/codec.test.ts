@@ -11,7 +11,7 @@ type SchemaBuilderInput = Parameters<typeof schemaBuilderToJsonSchema>[0];
 type JsonDefaultValue = null | boolean | number | string | JsonDefaultValue[] | { [key: string]: JsonDefaultValue };
 
 function builderWithDefault(builder: SchemaBuilderInput, defaultValue: JsonDefaultValue): SchemaBuilderInput {
-  return { ...builder, defaultValue } as unknown as SchemaBuilderInput;
+  return { ...builder, annotationVersion: "signaldeck.schema/2", defaultValue } as unknown as SchemaBuilderInput;
 }
 
 const metadataRichBuilder = {
@@ -211,18 +211,22 @@ describe("schema codec", () => {
 
   it("writes primitive builder defaultValue entries as JSON Schema defaults", () => {
     expect(schemaBuilderToJsonSchema(builderWithDefault({ kind: "string" }, "AAPL"))).toEqual({
+      "x-signaldeck-schema": "signaldeck.schema/2",
       default: "AAPL",
       type: "string",
     });
     expect(schemaBuilderToJsonSchema(builderWithDefault({ kind: "integer" }, 10))).toEqual({
+      "x-signaldeck-schema": "signaldeck.schema/2",
       default: 10,
       type: "integer",
     });
     expect(schemaBuilderToJsonSchema(builderWithDefault({ kind: "number" }, 10.5))).toEqual({
+      "x-signaldeck-schema": "signaldeck.schema/2",
       default: 10.5,
       type: "number",
     });
     expect(schemaBuilderToJsonSchema(builderWithDefault({ kind: "boolean" }, false))).toEqual({
+      "x-signaldeck-schema": "signaldeck.schema/2",
       default: false,
       type: "boolean",
     });
@@ -259,20 +263,23 @@ describe("schema codec", () => {
       { ticker: "MSFT", lots: [5], filters: {} },
     );
     const defaultedJsonSchema = {
+      "x-signaldeck-schema": "signaldeck.schema/2",
       default: { ticker: "MSFT", lots: [5], filters: {} },
       properties: {
         filters: {
+          "x-signaldeck-schema": "signaldeck.schema/2",
           default: { sector: "technology" },
           properties: { sector: { type: "string" } },
           required: [],
           type: "object",
         },
         lots: {
+          "x-signaldeck-schema": "signaldeck.schema/2",
           default: [10, 20],
           items: { type: "integer" },
           type: "array",
         },
-        ticker: { default: "AAPL", title: "Ticker", type: "string" },
+        ticker: { "x-signaldeck-schema": "signaldeck.schema/2", default: "AAPL", title: "Ticker", type: "string" },
       },
       required: [],
       type: "object",
@@ -290,6 +297,7 @@ describe("schema codec", () => {
     const result = parseSchemaJsonText(
       JSON.stringify(
         {
+          "x-signaldeck-schema": "signaldeck.schema/2",
           default: "AAPL",
           type: "string",
         },
@@ -359,5 +367,35 @@ describe("schema codec", () => {
       title: null,
       description: null,
     });
+  });
+});
+
+describe("versioned schema annotations", () => {
+  it("requires per-node opt-in and never inherits the root marker", () => {
+    const parsed = parseSchemaJsonObject({
+      "x-signaldeck-schema": "signaldeck.schema/2", type: "object",
+      properties: { arbitrary: { type: "string", default: "a" } },
+    });
+    expect(parsed.issues).toContainEqual(expect.objectContaining({ field: "jsonSchema.properties.arbitrary.default" }));
+    expect(parseSchemaJsonObject({ type: "string", examples: ["a"] }).issues).not.toEqual([]);
+  });
+  it("preserves marker, empty examples and constraint declarations without adding annotations elsewhere", () => {
+    const schema = { type: "array", minItems: 1, items: {
+      "x-signaldeck-schema": "signaldeck.schema/2", type: "string", minLength: 1,
+      default: "a", examples: [],
+    } };
+    const parsed = parseSchemaJsonObject(schema);
+    expect(parsed.issues).toEqual([]);
+    expect(schemaBuilderToJsonSchema(parsed.builder!)).toEqual(schema);
+    const legacy = parseSchemaJsonObject({ type: "string" });
+    expect(schemaBuilderToJsonSchema(legacy.builder!)).toEqual({ type: "string" });
+  });
+  it("validates examples and defaults against preserved constraints", () => {
+    const parsed = parseSchemaJsonObject({ "x-signaldeck-schema": "signaldeck.schema/2", type: "string", minLength: 2, default: "a", examples: ["valid", ""] });
+    expect(parsed.issues.map((issue) => issue.field)).toEqual(["jsonSchema.default", "jsonSchema.examples[1]"]);
+    expect(parseSchemaJsonObject({ type: "string", minLength: -1 }).issues).not.toEqual([]);
+  });
+  it("keeps explicit null as an error for a non-nullable scalar rather than silently omitting it", () => {
+    expect(parseSchemaJsonObject({ "x-signaldeck-schema": "signaldeck.schema/2", type: "string", default: null }).issues).toContainEqual(expect.objectContaining({ field: "jsonSchema.default" }));
   });
 });

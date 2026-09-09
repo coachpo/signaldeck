@@ -259,6 +259,7 @@ async function main() {
   backendEnv = {
     ...process.env,
     DATABASE_URL: e2eDatabaseUrl,
+    SIGNALDECK_WORKFLOW_DATA_DIR: resolve(backendDir, "..", "demo"),
     SIGNALDECK_CONNECTION_PRESETS_FILE: presetsPath,
     OPENAI_API_KEY: "sk-e2e-fake-provider",
     OPENAI_BASE_URL: fakeProviderBaseUrl,

@@ -75,6 +75,7 @@ def tool(
     *,
     write=False,
     resources=(),
+    result_links=None,
 ):
     return {
         "toolId": f"{plugin_id}/{name}",
@@ -86,6 +87,7 @@ def tool(
         "resourceRequirements": list(resources),
         "timeoutSeconds": 30.0,
         "maxAttempts": 2 if write else 1,
+        **({"resultLinks": result_links} if result_links is not None else {}),
     }
 
 

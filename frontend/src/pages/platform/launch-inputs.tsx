@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { SchemaValueEntryForm } from "@/components/platform-authoring/generated-form/schema-form";
+import { SchemaValueEntryForm, type InputHint } from "@/components/platform-authoring/generated-form/schema-form";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -18,11 +18,15 @@ import {
 import type { Json, JsonObject } from "@/lib/types/workflow-platform";
 export function LaunchInputs({
   schema,
+  inputHints,
+  technical = true,
   value,
   onChange,
   onDirtyChange,
 }: {
   schema: JsonObject;
+  inputHints?: readonly InputHint[];
+  technical?: boolean;
   value: Json;
   onChange: (value: Json) => void;
   onDirtyChange: (dirty: boolean) => void;
@@ -52,14 +56,17 @@ export function LaunchInputs({
     <Tabs defaultValue={formSupported ? "form" : "json"}>
       <TabsList>
         <TabsTrigger value="form" disabled={!formSupported}>
-          Input form
+          {technical ? "Input form" : "填写输入"}
         </TabsTrigger>
-        <TabsTrigger value="json">Advanced JSON</TabsTrigger>
+        <TabsTrigger value="json">{technical ? "Advanced JSON" : "JSON 输入"}</TabsTrigger>
       </TabsList>
       <TabsContent value="form">
         {state.schema && draft && (
           <SchemaValueEntryForm
-            label="Workflow parameters"
+            label={technical ? "Workflow parameters" : "任务输入"}
+            technical={technical}
+            disabled={json !== null}
+            inputHints={inputHints}
             schema={state.schema}
             value={draft}
             onChange={(next) => {
@@ -75,12 +82,12 @@ export function LaunchInputs({
         <div className="flex flex-col gap-3">
           {!formSupported && (
             <InventoryStatePanel
-              title="Advanced JSON input"
-              description="Use JSON for this root value or schema. The server validates the complete input contract at launch."
+              title={technical ? "Advanced JSON input" : "使用 JSON 填写输入"}
+              description={technical ? "Use JSON for this root value or schema. The server validates the complete input contract at launch." : "此任务需要使用 JSON 编辑完整输入。填写后先应用，再开始任务。"}
             />
           )}
           <Textarea
-            aria-label="Parameters JSON"
+            aria-label={technical ? "Parameters JSON" : "任务输入 JSON"}
             value={json ?? JSON.stringify(value, null, 2)}
             onChange={(e) => {
               setJson(e.target.value);
@@ -95,12 +102,12 @@ export function LaunchInputs({
             </p>
           )}
           <Button variant="outline" onClick={apply}>
-            Apply parameters JSON
+            {technical ? "Apply parameters JSON" : "应用 JSON 输入"}
           </Button>
+          {json !== null && <Button variant="ghost" onClick={() => { setJson(null); setError(""); onDirtyChange(false); }}>{technical ? "Discard parameters JSON" : "放弃 JSON 修改"}</Button>}
           {json !== null && (
             <p className="text-sm text-muted-foreground">
-              Apply this JSON before launching. The run uses the last applied
-              value.
+              {technical ? "Apply this JSON before launching. The run uses the last applied value." : "请先应用或放弃当前 JSON 修改，再开始任务。"}
             </p>
           )}
         </div>

@@ -276,3 +276,33 @@ def test_stale_dependency_lock_cannot_start_worker(tmp_path: Path) -> None:
     with pytest.raises(CoreArtifactError, match="dependency closure"):
         worker_command(store, bundle.digest, tmp_path / "environments")
     assert not (tmp_path / "environments" / bundle.digest.removeprefix("sha256:")).exists()
+
+
+def test_external_workflow_yaml_does_not_change_core_digest(tmp_path: Path) -> None:
+    root = source(tmp_path)
+    data = root / "workflows"
+    data.mkdir()
+    data_file = data / "unrelated.yaml"
+    data_file.write_text("metadata: {key: arbitrary}\n")
+    store = CoreArtifactStore(tmp_path / "artifacts", root)
+    before = store.publish()
+    data_file.write_text("metadata: {key: renamed}\n")
+    assert store.publish() == before
+    data_file.unlink()
+    assert store.publish() == before
+    assert not any("workflows" in name for name in before.manifest["files"])
+    assert store.verify(before.digest) == before
+
+
+def test_historical_embedded_data_bundle_keeps_its_own_manifest(tmp_path: Path) -> None:
+    root = source(tmp_path)
+    old_module = root / "app/package_seeds.py"
+    old_module.write_text("SOURCES = {'old-example': 'immutable historical source'}\n")
+    store = CoreArtifactStore(tmp_path / "artifacts", root)
+    historical = store.publish()
+    old_bytes = (historical.path / "app/package_seeds.py").read_bytes()
+    old_module.write_text("# External data importer\n")
+    current = store.publish()
+    assert current.digest != historical.digest
+    assert store.verify(historical.digest) == historical
+    assert (historical.path / "app/package_seeds.py").read_bytes() == old_bytes

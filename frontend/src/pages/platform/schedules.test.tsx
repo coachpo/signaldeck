@@ -18,8 +18,9 @@ it("inherits business input and keeps one creation identity after an uncertain r
               inputSchema: {
                 type: "object",
                 properties: {
-                  title: { type: "string" },
-                  text: { type: "string" },
+                  includeRisk: { type: "boolean", "x-signaldeck-schema": "signaldeck.schema/2", default: true },
+                  title: { type: "string", title: "标题" },
+                  text: { type: "string", title: "原文" },
                 },
                 required: ["title", "text"],
               },
@@ -76,8 +77,8 @@ it("inherits business input and keeps one creation identity after an uncertain r
   );
   expect(screen.getByRole("textbox", { name: "原文" })).toHaveValue("原文内容");
   expect(
-    screen.queryByRole("tab", { name: "Advanced JSON" }),
-  ).not.toBeInTheDocument();
+    screen.getByRole("tab", { name: "JSON 输入" }),
+  ).toBeVisible();
   fireEvent.click(screen.getByRole("button", { name: "启用自动执行" }));
   await waitFor(() => expect(submitted).toHaveLength(1));
   await screen.findByText(/尚未确认新安排是否已生效/);

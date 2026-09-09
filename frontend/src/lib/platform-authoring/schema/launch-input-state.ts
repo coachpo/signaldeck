@@ -73,10 +73,6 @@ function hasOwnKey(value: object, key: string): boolean {
   return Object.prototype.hasOwnProperty.call(value, key);
 }
 
-function hasSchemaDefault(schema: SchemaIRNode): boolean {
-  return hasOwnKey(schema, "defaultValue");
-}
-
 function nullableType(value: unknown): string | null {
   if (!Array.isArray(value) || value.length !== 2 || !value.includes("null")) {
     return null;
@@ -181,7 +177,7 @@ function createScalarValueEntryFromPayload(
         ? createPrimitiveValueEntry(value as JsonPrimitive, pathTokens)
         : null;
     case "literal":
-      return createPrimitiveValueEntry(schema.value, pathTokens);
+      return encodeValueEntry(value, pathTokens);
     default:
       return null;
   }
@@ -237,7 +233,7 @@ function createDraftFromPayloadNode(
     );
   }
 
-  return createValueEntryForSchema(schema, pathTokens);
+  return encodeValueEntry(value, pathTokens);
 }
 
 function createObjectFieldsFromPayload(
@@ -251,22 +247,12 @@ function createObjectFieldsFromPayload(
   );
   const knownFieldNames = new Set(sortedFields.map((field) => field.name));
   const knownFields = sortedFields
-    .filter(
-      (field) =>
-        hasOwnKey(value, field.name) ||
-        field.required !== false ||
-        hasSchemaDefault(field.schema),
-    )
+    .filter((field) => hasOwnKey(value, field.name))
     .map((field) => {
       const fieldPath = extendPath(pathTokens, field.name);
-      const fieldValue = hasOwnKey(value, field.name)
-        ? createDraftFromPayloadNode(
-            field.schema,
-            value[field.name],
-            fieldPath,
-            nullablePaths,
-          )
-        : createValueEntryForSchema(field.schema, fieldPath);
+      const fieldValue = createDraftFromPayloadNode(
+        field.schema, value[field.name], fieldPath, nullablePaths,
+      );
       return createValueEntryObjectField(field.name, fieldValue, fieldPath);
     });
   const extraFields = Object.entries(value)
@@ -661,7 +647,7 @@ export function createLaunchInputState(inputSchema: unknown): LaunchInputState {
   const objectDraft =
     createLaunchDraftFromPayload(
       { nullablePathKeys: normalized.nullablePathKeys, schema },
-      {},
+      decodeValueEntry(createValueEntryForSchema(schema)) as UnknownRecord,
     ) ?? createObjectValueEntry([], []);
   const payload = createLaunchPayloadFromDraft(objectDraft);
   return {

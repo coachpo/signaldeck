@@ -84,7 +84,7 @@ export function TasksPage() {
                   <p className="text-sm">
                     {task.supported
                       ? "选择后核对所需连接和保存位置。"
-                      : "定义已自定义，请在专家工作区检查业务输入。"}
+                      : "此任务通过完整 JSON 编辑输入。"}
                   </p>
                   <TaskRecent
                     packageKey={task.packageKey}
@@ -92,13 +92,9 @@ export function TasksPage() {
                   />
                   <Button asChild>
                     <Link
-                      to={
-                        task.supported
-                          ? `/tasks/new?packageKey=${encodeURIComponent(task.packageKey)}&workflowKey=${encodeURIComponent(task.workflowKey)}`
-                          : `/workflow-packages/${encodeURIComponent(task.packageKey)}/run`
-                      }
+                      to={`/tasks/new?packageKey=${encodeURIComponent(task.packageKey)}&workflowKey=${encodeURIComponent(task.workflowKey)}`}
                     >
-                      {task.supported ? "选择任务" : "专家执行"}
+                      选择任务
                     </Link>
                   </Button>
                 </section>

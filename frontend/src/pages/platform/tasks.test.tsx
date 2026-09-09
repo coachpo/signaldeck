@@ -31,13 +31,16 @@ vi.mock("@/hooks/use-workflow-platform", () => ({
           key: "research_notes",
           packageHash: `test-${mocks.hash}`,
           definition: {
+            metadata: { key: "research_notes", name: "Notes" },
             workflows: {
               capture: {
+                name: "保存原文",
+                presentation: { version: "signaldeck.presentation/1", inputHints: [{ref: "workflow.input.text", control: "textarea"}] },
                 inputSchema: mocks.schema ?? {
                   type: "object",
                   properties: {
-                    title: { type: "string", minLength: 1 },
-                    text: { type: "string" },
+                    title: { type: "string", title: "标题", minLength: 1 },
+                    text: { type: "string", title: "原文" },
                   },
                   required: ["title", "text"],
                 },
@@ -113,18 +116,18 @@ it("shows the catalog authoring entry only in expert mode while keeping ordinary
   expect(mocks.launch).not.toHaveBeenCalled();
   expect(mocks.save).not.toHaveBeenCalled();
 });
-it("keeps the expert execution fallback for a customized task in ordinary mode", () => {
+it("keeps a customized task discoverable in ordinary mode", () => {
   mocks.schema = {
     type: "object",
-    properties: { title: { type: "string" }, text: { type: "string" }, extra: { type: "string" } },
+    properties: { title: { type: "string" }, text: { type: "string", title: "原文" }, extra: { type: "string" } },
     required: ["title", "text", "extra"],
   };
   render(<Page path="/tasks" />);
-  expect(screen.getByRole("link", { name: "专家执行" })).toHaveAttribute("href", "/workflow-packages/research_notes/run");
+  expect(screen.getByRole("link", { name: "选择任务" })).toHaveAttribute("href", "/tasks/new?packageKey=research_notes&workflowKey=capture");
   expect(screen.queryByRole("link", { name: "全部任务定义与专家制作" })).not.toBeInTheDocument();
 });
 it.each([
-  [null, { type: ["string", "null"], default: "authored default" }],
+  [null, { type: ["string", "null"], "x-signaldeck-schema": "signaldeck.schema/2", default: "authored default" }],
   [[], { type: "array", items: { type: "string" } }],
   ["scalar input", { type: "string" }],
   [0, { type: "number" }],
@@ -160,12 +163,13 @@ it.each([
 it("retains an explicit historical null instead of the current schema default", async () => {
   mocks.expert = true;
   mocks.historical = {
+    workflow: { name: "Frozen task", inputSchema: { type: ["string", "null"] }, outputSchema: {}, nodes: {}, outputMapping: {} },
     sourceRunId: "nullable-original",
     packageKey: "nullable-task",
     workflowKey: "main",
     packageHash: "nullable-hash",
     parameters: null,
-    inputSchema: { type: ["string", "null"], default: "authored default" },
+    inputSchema: { type: ["string", "null"], "x-signaldeck-schema": "signaldeck.schema/2", default: "authored default" },
   };
   render(<Page />);
   expect(screen.getByLabelText("Parameters JSON")).toHaveValue("null");
@@ -278,13 +282,13 @@ it("retains an unapplied expert draft through ordinary mode and requires applyin
   expect(screen.queryByRole("button", { name: "核对连接与本次设置" })).not.toBeInTheDocument();
   mocks.expert = true;
   view.rerender(<Page />);
-  fireEvent.click(screen.getByRole("tab", { name: "Advanced JSON" }));
+  fireEvent.mouseDown(screen.getByRole("tab", { name: "Advanced JSON" }), { button: 0, ctrlKey: false });
   fireEvent.change(screen.getByLabelText("Parameters JSON"), {
     target: { value: '{"title":"draft"' },
   });
   mocks.expert = false;
   view.rerender(<Page />);
-  expect(screen.getByLabelText("Parameters JSON")).toHaveValue(
+  expect(screen.getByLabelText("任务输入 JSON")).toHaveValue(
     '{"title":"draft"',
   );
   expect(
@@ -317,4 +321,17 @@ it("lets an explicit binding rejection be repaired and prepared again", async ()
   expect(
     screen.queryByRole("button", { name: "使用同一请求重试" }),
   ).not.toBeInTheDocument();
+});
+
+it("preserves explicit false and omitted schema/2 defaults when editing and saving a preset", async () => {
+  mocks.schema = {type:"object",properties:{title:{type:"string",title:"标题"},includeRisk:{type:"boolean","x-signaldeck-schema":"signaldeck.schema/2",default:true},reportId:{type:"string","x-signaldeck-schema":"signaldeck.schema/2",default:"suggestion"}},required:["title","includeRisk"]};
+  mocks.preset = {id:`exact-${mocks.hash}`,name:"Explicit inputs",packageKey:"research_notes",workflowKey:"capture",packageHash:`test-${mocks.hash}`,parameters:{title:"old",includeRisk:false},hasParameters:true,isFavorite:false,isPinned:false,currentPackageHash:`test-${mocks.hash}`,needsRevalidation:false,validationStatus:"valid",validationErrors:[]};
+  render(<Page path={`/tasks/new?presetId=${mocks.preset.id}`} />);
+  fireEvent.change(screen.getByLabelText("标题"),{target:{value:"edited"}});
+  fireEvent.click(screen.getByText("保存常用输入或收藏任务（可选）"));
+  fireEvent.click(screen.getByRole("button",{name:"更新此配置"}));
+  await waitFor(()=>expect(mocks.save).toHaveBeenCalledTimes(1));
+  expect(mocks.save.mock.calls[0][0].parameters).toEqual({title:"edited",includeRisk:false});
+  await waitFor(()=>expect(mocks.prepare).toHaveBeenCalled());
+  expect(mocks.prepare.mock.calls.at(-1)![0].parameters).toEqual({title:"edited",includeRisk:false});
 });

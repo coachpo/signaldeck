@@ -5,6 +5,9 @@ interface SchemaIRBase {
   title?: string | null;
   description?: string | null;
   defaultValue?: JsonValue;
+  annotationVersion?: "signaldeck.schema/1" | "signaldeck.schema/2";
+  examples?: JsonValue[];
+  constraints?: Record<string, JsonValue>;
 }
 
 export interface SchemaIRString extends SchemaIRBase {

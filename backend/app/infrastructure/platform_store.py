@@ -36,43 +36,6 @@ class PlatformStore(PlatformRunStore):
             lock_identity(session, "platform-schema-initialization")
             PlatformBase.metadata.create_all(session.connection())
 
-    def save_seed_package(
-        self,
-        package_key: str,
-        source: str,
-        definition: dict[str, Any],
-        plan: dict[str, Any],
-        package_hash: str,
-    ) -> bool:
-        """Install a missing seed atomically; an operator's package always wins."""
-        with self.session_factory() as session, session.begin():
-            lock_identity(session, "package:" + package_key)
-            if session.get(PackagePointerRow, package_key) is not None:
-                return False
-            revision = session.get(PackageRevisionRow, (package_key, package_hash))
-            if revision is not None:
-                if (revision.source, revision.definition, revision.plan) != (
-                    source,
-                    definition,
-                    plan,
-                ):
-                    raise ApplicationError(
-                        "revision_conflict", "Immutable revision differs", status=409
-                    )
-            else:
-                session.add(
-                    PackageRevisionRow(
-                        package_key=package_key,
-                        package_hash=package_hash,
-                        source=source,
-                        definition=deepcopy(definition),
-                        plan=deepcopy(plan),
-                        created_at=datetime.now(UTC),
-                    )
-                )
-            session.add(PackagePointerRow(package_key=package_key, package_hash=package_hash))
-            return True
-
     def save_package(
         self,
         package_key: str,
@@ -81,8 +44,28 @@ class PlatformStore(PlatformRunStore):
         plan: dict[str, Any],
         package_hash: str,
     ) -> dict[str, Any]:
+        self.import_package(package_key, source, definition, plan, package_hash, missing_only=False)
+        result = self.get_package(package_key, package_hash)
+        assert result is not None
+        return result
+
+    def import_package(
+        self,
+        package_key: str,
+        source: str,
+        definition: dict[str, Any],
+        plan: dict[str, Any],
+        package_hash: str,
+        *,
+        missing_only: bool,
+    ) -> str:
+        """Serialize imports and ordinary saves on the same package identity lock."""
         with self.session_factory() as session, session.begin():
             lock_identity(session, "package:" + package_key)
+            pointer = session.get(PackagePointerRow, package_key)
+            if missing_only and pointer is not None:
+                return "preserved"
+            outcome = "created" if pointer is None else "updated"
             revision = session.get(PackageRevisionRow, (package_key, package_hash))
             if revision is not None:
                 if (
@@ -104,14 +87,11 @@ class PlatformStore(PlatformRunStore):
                         created_at=datetime.now(UTC),
                     )
                 )
-            pointer = session.get(PackagePointerRow, package_key)
             if pointer is None:
                 session.add(PackagePointerRow(package_key=package_key, package_hash=package_hash))
             else:
                 pointer.package_hash = package_hash
-        result = self.get_package(package_key, package_hash)
-        assert result is not None
-        return result
+        return outcome
 
     def get_package(
         self, package_key: str, revision_hash: str | None = None
