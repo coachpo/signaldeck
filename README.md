@@ -65,6 +65,7 @@ SIGNALDECK_CONNECTION_PRESETS_FILE=/absolute/path/connections.json ./start.sh --
 - [`docs/README.md`](docs/README.md)：文档索引与权威边界。
 - [`docs/产品说明.md`](docs/产品说明.md)：产品范围、流程、需求和验收。
 - [`docs/架构说明.md`](docs/架构说明.md)：当前组件、数据流、部署边界和架构例外。
+- [`docs/工作流解耦方案.md`](docs/工作流解耦方案.md)：工作流耦合研究与改造建议，尚未实施；原则与验收见产品说明。
 - [`CONTRIBUTING.md`](CONTRIBUTING.md)：开发环境、启动、检查、测试、工作流和完成定义。
 - [`docs/开发规范.md`](docs/开发规范.md)：项目特有的技术和实现规则。
 - [`docs/源代码规模与职责规则.md`](docs/源代码规模与职责规则.md)：通用的规模与职责规则。
