@@ -13,7 +13,7 @@ RUN pnpm install --frozen-lockfile
 COPY frontend/ ./
 RUN VITE_API_BASE_URL="$VITE_API_BASE_URL" pnpm run build
 
-FROM python:3.13.13-slim@sha256:aa938a849bcb82dce8f49480f056ab82bf5c1c3ebc294f0430f37b6820e7f286 AS runtime
+FROM python:3.14.7-slim@sha256:cad9a2c871761c413caa6fdd6441c783451e740a48aaeba60ae62a8b53525ef6 AS runtime
 
 LABEL org.opencontainers.image.title="SignalDeck local/demo combined image" \
       org.opencontainers.image.description="Local/demo-only combined SignalDeck app; not a supported production artifact." \
