@@ -79,6 +79,8 @@ Core 与插件只交换值合同，不交换 ORM、Session 或万能 Context。F
 
 发送网络请求前，Core 保留 operation 和 attempt。插件必须准确声明 effect；不要把写操作声明为 read 来获得自动重试或缓存。写响应丢失、超时或取消可能已有外部效果，Core 会保留 `unknown` 并使用同一个 operationId 查询或去重。
 
+运行读取按冻结的显式 effect 区分只读结果 unknown 与写入效果 unknown；缺少可靠 effect 的历史证据保守处理，不用当前发布重解释。只读失败不意味着可能保存，真实写入 unknown 的核实和去重保护不变。
+
 Core 对同 operation 的活跃执行互斥，重叠 Activity 在原 deadline 内等待既有结果；这不能替代插件在自身业务事务中的去重。旧写效果仍未核实时，本次重投的凭据或发布检查失败也不能把旧效果改成已知失败。查询 `not_found` 必须能证明该操作没有产生效果，不能把仍在处理或暂时不可见解释为不存在。
 
 当前 Finance Agent-report 写入和 Notes 写入用同一 PostgreSQL 事务保存业务效果及不可变 operation result，operation advisory lock 防止并发重复。相同 ID 携带不同参数、工具或资源 scope 会被拒绝。`signaldeck/operations/query` 在事务进行中返回 unknown，提交后返回原成功结果，确认回滚/不存在后返回 not_found，并再次校验调用归属与 scope。
@@ -88,6 +90,16 @@ Core 对同 operation 的活跃执行互斥，重叠 Activity 在原 deadline �
 取消使用标准 MCP `notifications/cancelled`，`requestId` 必须匹配当前活动 `tools/call`，协议和会话身份必须与该调用一致。当前共享插件 runtime 保留会话内请求关联，使通知能够到达正在执行的调用。插件应尽力停止对应工作；同步 provider 调用或已提交事务可能继续完成，收到通知或 HTTP 断开都不能作为效果回滚凭据。Core 在有界时间内尝试发送通知，并保留原 operationId 与无法确认的写效果状态；通知失败不得触发盲目重写。
 
 读操作默认取新数据。跨 Run cache 必须由 Agent 显式声明受限 TTL，缓存来源可追溯且仅引用确认成功的读 operation；插件不得在新 Run provider 失败时悄悄返回先前 Run 的值。
+
+## Notes 来源与检索合同
+
+Notes 1.2.0 的闭合 create 输入可选 `sourceKind: original|derived` 和 `sourceNoteIds`；省略类别保持 `unclassified`，不推断为原始资料。来源 ID 为不重复、最多 50 项的非空字符串，仅 derived 可带非空引用；插件在当前 `notes-workspace` 授权 collection 内核实每个 ID 指向已存在的不可变笔记，缺失或跨集合引用拒绝。笔记、来源旁表与操作回执同事务提交，失败不留下部分来源或业务写入。
+
+所有新合同的笔记输出包含 `sourceKind: original|derived|unclassified` 和 `sourceNoteIds`。search 可选 `includeDerived`，省略为 true 以保留普通 API 调用方语义；显式 false 只排除明确 derived，保留历史未分类记录。search 的顶层 `sourceNoteIds` 恰好对应本次返回的 notes，包通过显式映射将这些确认引用传给派生笔记，不让模型编造 ID。
+
+整理笔记包将 `includeDerived` 声明为普通业务输入，默认及缺失映射为 false；总结保存为 derived，保存原文为 original。Notes 页面同样提供明确的包含派生内容选择，默认排除；详情继续可查看原始及历史未分类记录和来源引用。这是插件数据与包检索策略，不是 Core 对业务 ID 的特殊处理，也不建立隐式跨 Run memory 或缓存。
+
+新版本通过独立制品和新 endpoint 发布；旧 Run 保留原 release/contract 与回执，不把当前新增字段补入旧冻结输出。`note_provenance` 的新增表初始化不修改旧笔记，具体存储见[数据模型](data-model.md#插件业务数据)。更新示例包形成新修订，missing-only 导入不覆盖既有操作者版本；旧包/hash 和旧 Run 不自动获得新检索策略。
 
 ## 独立接入与升级
 

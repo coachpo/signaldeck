@@ -282,6 +282,15 @@ describe("ordinary results", () => {
     expect(requests[1]).toEqual(requests[0]);
     await waitFor(() => expect(router.state.location.pathname).toBe("/runs/accepted-rerun"));
   });
+  it("keeps uncertain reads visible and allows rerun without save verification", async () => {
+    vi.stubGlobal("fetch", fetcher({ contentStatus: "not_available", body: null, readUnknownEvidenceIds: ["read-op"] }));
+    mount();
+    expect(await screen.findByText("读取结果未确认")).toBeVisible();
+    expect(screen.queryByText("保存状态待核实")).not.toBeInTheDocument();
+    fireEvent.click(await screen.findByRole("button", { name: "再运行一次" }));
+    expect(await screen.findByRole("button", { name: "确认并开始新运行" })).toBeEnabled();
+    expect(screen.queryByRole("checkbox", { name: "我已核实目标位置与执行证据，确认需要再次执行" })).not.toBeInTheDocument();
+  });
   it("requires explicit verification before repeating an unknown write", async () => {
     vi.stubGlobal("fetch", fetcher({ contentStatus: "unknown", body: null }));
     mount();

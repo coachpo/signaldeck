@@ -167,7 +167,11 @@ class SignalDeckWorkflow:
                     cancellation_type=workflow.ChildWorkflowCancellationType.WAIT_CANCELLATION_COMPLETED,
                 )
                 result = await await_cancel_once(child)
-                if result["status"] != "failed" or not self._can_restart(agent):
+                if (
+                    result["status"] != "failed"
+                    or result.get("errorCode") == "model_output_limit_exceeded"
+                    or not self._can_restart(agent)
+                ):
                     break
             self.nodes[node_id] = result
         except asyncio.CancelledError:

@@ -230,6 +230,7 @@ export function ResultHistoryPage() {
                     <ResourceStatusBadge
                       label={resultStatusLabels[run.status] ?? run.status}
                     />
+                    {run.hasUnknownResults && <ResourceStatusBadge label="读取结果未确认" />}
                     {run.hasUnknownEffects && (
                       <ResourceStatusBadge label="保存状态待核实" />
                     )}

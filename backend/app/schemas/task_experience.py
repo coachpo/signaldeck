@@ -106,5 +106,6 @@ class ResultRead(CamelModel):
     missing: list[str] = Field(default_factory=list)
     attachments: list[ResultAttachment] = Field(default_factory=list)
     unknown_evidence_ids: list[str] = Field(default_factory=list)
+    read_unknown_evidence_ids: list[str] = Field(default_factory=list)
     freshness: list[JsonValue] = Field(default_factory=list)
     error_code: str | None = None

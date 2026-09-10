@@ -68,7 +68,7 @@
     }
   },
   "research_notes": {
-    "contentHash": "c03fdf9571e19814dab31f9b6017a3431c065d454dae8c51dd487c98b43b3c99",
+    "contentHash": "74c0eb23437a33433cbe3be90394a06aa079ea77ad047b86eba705f0fc354e81",
     "tools": [
       "example/notes/create",
       "example/notes/search"
@@ -129,10 +129,14 @@
             "source": "prior",
             "target": "save",
             "sources": [
-              "control"
+              "condition",
+              "control",
+              "input"
             ],
             "paths": [
-              "$.workflows.research.nodes.save.dependsOn.0"
+              "$.workflows.research.nodes.save.condition.args.0.ref",
+              "$.workflows.research.nodes.save.dependsOn.0",
+              "$.workflows.research.nodes.save.inputMapping.object.sourceNoteIds.ref"
             ]
           }
         ]

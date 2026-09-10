@@ -7,6 +7,7 @@ from typing import Literal
 
 from sqlalchemy import or_, select
 
+from app.application.effect_projection import unknown_evidence
 from app.application.model_failure_projection import project_model_failure
 from app.domain.execution import ApplicationError, ExecutionEvidence
 from app.infrastructure.platform_models import EvidenceRow, RunRow
@@ -70,7 +71,7 @@ class AttentionStore:
                 # An unresolved logical operation becoming confirmed changes this identity
                 # even when the Run's terminal status and ID remain unchanged.
                 identity = _identity(["run", run.id, run.status, run.finished_at, facts])
-                unknown = any(p.get("status") == "unknown" for _, p in records)
+                writes, reads = unknown_evidence(run.spec, [p for _, p in records])
                 occurred = max(
                     [run.finished_at or run.created_at]
                     + [_time(p.get("finishedAt"), run.created_at) for _, p in records]
@@ -89,7 +90,8 @@ class AttentionStore:
                         status=run.status,
                         run_id=run.id,
                         occurred_at=occurred,
-                        has_unknown_effects=unknown,
+                        has_unknown_effects=bool(writes),
+                        has_unknown_results=bool(reads),
                         error_code=run.error_code,
                         error_category=category,
                     )

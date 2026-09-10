@@ -6,6 +6,7 @@ from typing import Literal
 from sqlalchemy import String, case, cast, func, or_, select
 from sqlalchemy.orm import Session, sessionmaker
 
+from app.application.effect_projection import unknown_evidence
 from app.infrastructure.platform_models import EvidenceRow, RunRow
 from app.infrastructure.result_metadata_store import ResultMetadataRow
 
@@ -26,7 +27,7 @@ def query_history(
     sort: Literal["created_desc", "created_asc", "title_asc", "title_desc"] = "created_desc",
     limit: int = 50,
     offset: int = 0,
-) -> tuple[list[RunRow], int, set[str]]:
+) -> tuple[list[RunRow], int, set[str], set[str]]:
     workflow = RunRow.spec["definition"]["workflows"].op("->")(RunRow.spec["workflowKey"].astext)
     declaration = workflow["presentation"]["title"]
     selected_path = func.string_to_array(
@@ -109,17 +110,21 @@ def query_history(
         rows = list(
             session.scalars(query.order_by(ordering, RunRow.id).limit(limit).offset(offset))
         )
-        unknown_ids = (
-            set(
-                session.scalars(
-                    select(EvidenceRow.run_id).where(
-                        EvidenceRow.run_id.in_([row.id for row in rows]),
-                        EvidenceRow.payload["status"].astext == "unknown",
-                        EvidenceRow.payload["kind"].astext != "attempt",
-                    )
+        records: dict[str, list[dict]] = {}
+        if rows:
+            for item in session.scalars(
+                select(EvidenceRow).where(
+                    EvidenceRow.run_id.in_([row.id for row in rows]),
+                    EvidenceRow.payload["status"].astext == "unknown",
+                    EvidenceRow.payload["kind"].astext != "attempt",
                 )
-            )
-            if rows
-            else set()
-        )
-        return rows, total, unknown_ids
+            ):
+                records.setdefault(item.run_id, []).append(item.payload)
+        unknown_ids, read_unknown_ids = set(), set()
+        for row in rows:
+            writes, reads = unknown_evidence(row.spec, records.get(row.id, []))
+            if writes:
+                unknown_ids.add(row.id)
+            if reads:
+                read_unknown_ids.add(row.id)
+        return rows, total, unknown_ids, read_unknown_ids

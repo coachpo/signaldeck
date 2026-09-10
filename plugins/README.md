@@ -17,12 +17,12 @@ Build context is this `plugins` directory, not the individual project directory:
 ```sh
 docker build -f finance/Dockerfile -t signaldeck-finance:1.0.0 .
 docker build -f digital_oracle/Dockerfile -t signaldeck-digital-oracle:1.0.0 .
-docker build -f notes/Dockerfile -t signaldeck-notes:1.1.0 .
+docker build -f notes/Dockerfile -t signaldeck-notes:1.2.0 .
 ```
 
 Each image pins Python 3.14.0 and uv 0.9.8 by image digest and contains an independently frozen `uv.lock`. Direct application dependencies include MCP 1.26.0, FastAPI 0.136.3, Pydantic 2.12.5, SQLAlchemy 2.0.51, psycopg 3.3.4 and JSON Schema 4.26.0. MCP protocol is **2025-11-25**.
 
-Finance and Notes require `PLUGIN_DATABASE_URL`, pointing to a separately owned PostgreSQL database/role. Neither falls back to Core's `DATABASE_URL`. Startup creates only that plugin's business tables and operation journal. Finance owns `reports`, `text_templates` and `market_quotes`; Notes owns `notes`; each owns its own `plugin_operations`. Oracle has no business persistence requirement. Existing Core business data is **not** migrated, reset or read by these services.
+Finance and Notes require `PLUGIN_DATABASE_URL`, pointing to a separately owned PostgreSQL database/role. Neither falls back to Core's `DATABASE_URL`. Startup creates only that plugin's business tables and operation journal. Finance owns `reports`, `text_templates` and `market_quotes`; Notes owns `notes` and `note_provenance`; each owns its own `plugin_operations`. Oracle has no business persistence requirement. Existing Core business data is **not** migrated, reset or read by these services.
 
 For a local Python process, run `uv sync --frozen` in the chosen project. Set `PYTHONPATH` to that project directory plus `plugins/runtime`, then use one of:
 
@@ -44,8 +44,8 @@ The descriptor's tool definitions are the sole source of `tools/list`, dispatch 
 
 | Tool | Arguments | Required resource and non-sensitive scope |
 | --- | --- | --- |
-| `example/notes/create` | `title`, `text` | `notes-workspace`: `{"collection":"research"}` |
-| `example/notes/search` | Optional `query`, `limit` | `notes-workspace`: `{"collection":"research"}` |
+| `example/notes/create` | `title`, `text`; optional `sourceKind`, `sourceNoteIds` | `notes-workspace`: `{"collection":"research"}` |
+| `example/notes/search` | Optional `query`, `limit`, `includeDerived` | `notes-workspace`: `{"collection":"research"}` |
 | `signaldeck/finance/market_data_quote_lookup` | `symbols` | `finance-market-data`: `{"allowedSymbols":["MSFT","AAPL"]}` |
 | Other Finance market tools | See published contract | `finance-market-data`: `allowedSymbols` limits symbol arguments |
 | `signaldeck/finance/reports_create` | `name`, `content` | No resource required; persists immutable Agent provenance from the call identity |
@@ -59,6 +59,8 @@ Each business invocation carries the exact four-field release identity in `_meta
 Release upgrades use a **new immutable artifact and endpoint**. Retain the old image/process and old endpoint while frozen Runs still reference them. Changing a running endpoint to a new release causes old requests to fail explicitly; it does not substitute new code. The independent upgrade test runs Notes 1.0.0 and 1.1.0 simultaneously, confirms distinct artifact identity, rejects a mismatched binding, and continues calls to the original release.
 
 Notes writes and Finance Agent-report writes use a PostgreSQL transaction for the business effect and immutable operation result. An operation-scoped advisory lock prevents concurrent duplication. Reuse of an operation ID with different arguments, tool or scope is rejected. `signaldeck/operations/query` returns `unknown` while the effect transaction holds the lock, `succeeded` plus the saved result after commit, or authoritative `not_found` after rollback/absence. It also checks the stored tool grant and resource scope before exposing a result. This deduplication covers these database writes, not arbitrary remote-provider side effects.
+
+Notes 1.2.0 adds explicit original/derived provenance and confirmed same-collection source references, committed atomically with notes and operation receipts. A new `note_provenance` sidecar table is initialized without altering or backfilling `notes`; historical records remain unclassified. Generic search defaults to including derived records, while the revised research package and workspace page explicitly default to excluding them. See the [public Notes contract](../docs/writing-extensions.md#notes-来源与检索合同) for fields and upgrade boundaries. This source revision does not deploy or convert an existing instance.
 
 Agent-created Finance reports cannot be overwritten or deleted through the business API. The Notes service creates immutable records; subsequent work creates a new operation/record.
 

@@ -19,6 +19,7 @@ export interface AttentionItem {
   triggerId: string | null;
   occurredAt: string;
   hasUnknownEffects: boolean;
+  hasUnknownResults?: boolean;
   errorCode: string | null;
   errorCategory: ModelErrorCategory | null;
   isRead: boolean;

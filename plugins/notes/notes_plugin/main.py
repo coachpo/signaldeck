@@ -3,10 +3,10 @@
 import os
 from pathlib import Path
 
-from notes_plugin.web import install_workspace, literal_match
+from notes_plugin.web import install_workspace, literal_match, project, source_filter
 from plugin_runtime.operations import Journal, OperationBase
 from plugin_runtime.server import application, obj, release, tool
-from sqlalchemy import String, Text, create_engine, select
+from sqlalchemy import JSON, ForeignKey, String, Text, create_engine, select
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
 
 
@@ -22,6 +22,13 @@ class Note(Base):
     text: Mapped[str] = mapped_column(Text)
 
 
+class NoteProvenance(Base):
+    __tablename__ = "note_provenance"
+    note_id: Mapped[str] = mapped_column(ForeignKey("notes.id"), primary_key=True)
+    source_kind: Mapped[str] = mapped_column(String(20))
+    source_ids: Mapped[list[str]] = mapped_column(JSON)
+
+
 def create_app(database_url=None):
     db_url = database_url or os.environ.get("PLUGIN_DATABASE_URL")
     if not db_url:
@@ -29,14 +36,25 @@ def create_app(database_url=None):
     engine = create_engine(db_url, hide_parameters=True)
     sessions = sessionmaker(engine, expire_on_commit=False)
     journal = Journal(sessions)
+    source_ids_schema = {
+        "type": "array",
+        "items": {"type": "string", "minLength": 1, "maxLength": 200},
+        "maxItems": 50,
+        "uniqueItems": True,
+    }
     note_schema = obj(
         {
             "id": {"type": "string"},
             "collection": {"type": "string"},
             "title": {"type": "string"},
             "text": {"type": "string"},
+            "sourceKind": {
+                "type": "string",
+                "enum": ["original", "derived", "unclassified"],
+            },
+            "sourceNoteIds": source_ids_schema,
         },
-        ("id", "collection", "title", "text"),
+        ("id", "collection", "title", "text", "sourceKind", "sourceNoteIds"),
     )
     definitions = [
         tool(
@@ -46,11 +64,17 @@ def create_app(database_url=None):
                 {
                     "title": {"type": "string", "minLength": 1, "maxLength": 200},
                     "text": {"type": "string", "maxLength": 100000},
+                    "sourceKind": {"type": "string", "enum": ["original", "derived"]},
+                    "sourceNoteIds": source_ids_schema,
                 },
                 ("title", "text"),
             ),
             note_schema,
-            "Store an immutable note, deduplicated by the operation identity.",
+            (
+                "Store an immutable note with explicit provenance and confirmed same-collection "
+                "source IDs. Omitted sourceKind remains unclassified. Original notes cannot cite "
+                "sources. Deduplicated by operation identity."
+            ),
             write=True,
             result_links=[
                 {
@@ -70,10 +94,21 @@ def create_app(database_url=None):
                 {
                     "query": {"type": "string", "maxLength": 200},
                     "limit": {"type": "integer", "minimum": 1, "maximum": 50},
+                    "includeDerived": {"type": "boolean"},
                 }
             ),
-            obj({"notes": {"type": "array", "items": note_schema}}, ("notes",)),
-            "Search this plugin’s notes by title and content.",
+            obj(
+                {
+                    "notes": {"type": "array", "items": note_schema},
+                    "sourceNoteIds": source_ids_schema,
+                },
+                ("notes", "sourceNoteIds"),
+            ),
+            (
+                "Search this collection by literal title/content. includeDerived defaults to true; "
+                "false excludes explicitly derived notes and retains historical unclassified "
+                "records. sourceNoteIds exactly identifies returned notes."
+            ),
             resources=("notes-workspace",),
         ),
     ]
@@ -97,9 +132,32 @@ def create_app(database_url=None):
                     "title": arguments["title"],
                     "text": arguments["text"],
                 }
+                kind = arguments.get("sourceKind", "unclassified")
+                sources = arguments.get("sourceNoteIds", [])
+                if kind not in {"original", "derived", "unclassified"} or (
+                    sources and kind != "derived"
+                ):
+                    raise ValueError("notes_invalid_provenance")
+                if len(sources) > 50 or len(set(sources)) != len(sources):
+                    raise ValueError("notes_invalid_sources")
+                confirmed = set(
+                    session.scalars(
+                        select(Note.id).where(
+                            Note.collection == collection, Note.id.in_(sources)
+                        )
+                    )
+                )
+                if confirmed != set(sources):
+                    raise ValueError("notes_sources_not_available")
                 session.add(Note(**result))
                 session.flush()
-                return result
+                session.add(
+                    NoteProvenance(
+                        note_id=result["id"], source_kind=kind, source_ids=sources
+                    )
+                )
+                session.flush()
+                return {**result, "sourceKind": kind, "sourceNoteIds": sources}
 
             return journal.write(
                 context["operationId"],
@@ -109,23 +167,23 @@ def create_app(database_url=None):
                 scope=context["resourceBindings"],
             )
         with sessions() as session:
-            rows = session.scalars(
-                select(Note)
-                .where(Note.collection == collection)
-                .where(literal_match(Note, arguments.get("query", "")))
-                .order_by(Note.id)
-                .limit(arguments.get("limit", 20))
+            rows = list(
+                session.scalars(
+                    select(Note)
+                    .where(Note.collection == collection)
+                    .where(literal_match(Note, arguments.get("query", "")))
+                    .where(
+                        source_filter(
+                            Note, NoteProvenance, arguments.get("includeDerived", True)
+                        )
+                    )
+                    .order_by(Note.id)
+                    .limit(arguments.get("limit", 20))
+                )
             )
             return {
-                "notes": [
-                    {
-                        "id": n.id,
-                        "collection": n.collection,
-                        "title": n.title,
-                        "text": n.text,
-                    }
-                    for n in rows
-                ]
+                "notes": [project(n, session, NoteProvenance) for n in rows],
+                "sourceNoteIds": [n.id for n in rows],
             }
 
     def startup():
@@ -146,6 +204,6 @@ def create_app(database_url=None):
         ),
     )
     app = application(binding, execute, journal.query, startup=startup)
-    install_workspace(app, sessions, Note)
+    install_workspace(app, sessions, Note, NoteProvenance)
     app.state.engine, app.state.execute, app.state.journal = engine, execute, journal
     return app

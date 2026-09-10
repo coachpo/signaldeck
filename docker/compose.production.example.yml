@@ -79,7 +79,7 @@ services:
 
   notes:
     profiles: ["notes"]
-    image: ${SIGNALDECK_NOTES_IMAGE:-signaldeck-notes:1.1.0}
+    image: ${SIGNALDECK_NOTES_IMAGE:-signaldeck-notes:1.2.0}
     environment:
       PLUGIN_DATABASE_URL: ${NOTES_DATABASE_URL:-}
       PLUGIN_ENDPOINT: http://notes:8000/mcp/

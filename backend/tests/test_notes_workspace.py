@@ -120,3 +120,136 @@ def test_notes_link_is_frozen_and_old_release_has_no_implicit_link(database_url)
     assert project_result(old_run).sections[0].value == "Saved body"
     assert project_result(run).sections[0].value == "Saved body"
     app.state.engine.dispose()
+
+
+def test_notes_provenance_atomic_scope_and_explicit_filter(database_url):
+    import pytest
+
+    app = notes_app(database_url)
+    create, search = "example/notes/create", "example/notes/search"
+    with TestClient(app) as client:
+        original = {"title": "Claim A", "text": "One", "sourceKind": "original"}
+        app.state.execute(create, original, invocation(create, "original"))
+        # Historical records have no sidecar; content never determines classification.
+        with app.state.engine.begin() as connection:
+            connection.execute(
+                text(
+                    "INSERT INTO notes (id, collection, title, text) "
+                    "VALUES ('legacy', 'research', 'Summary', 'derived-looking text')"
+                )
+            )
+        for index in range(3):
+            found = app.state.execute(
+                search, {"includeDerived": False}, invocation(search, f"search-{index}")
+            )
+            assert found["sourceNoteIds"] == ["legacy", "original"]
+            args = {
+                "title": "Summary",
+                "text": "Both claims remain",
+                "sourceKind": "derived",
+                "sourceNoteIds": found["sourceNoteIds"],
+            }
+            context = invocation(create, f"derived-{index}")
+            saved = app.state.execute(create, args, context)
+            assert app.state.execute(create, args, context) == saved
+            assert app.state.journal.query(context["operationId"])["output"] == saved
+        app.state.execute(
+            create,
+            {**original, "title": "Claim B", "text": "Contradiction"},
+            invocation(create, "new-original"),
+        )
+        assert app.state.execute(search, {"includeDerived": False}, invocation(search, "fresh"))[
+            "sourceNoteIds"
+        ] == ["legacy", "new-original", "original"]
+        assert (
+            len(
+                app.state.execute(search, {"includeDerived": True}, invocation(search, "all"))[
+                    "notes"
+                ]
+            )
+            == 6
+        )
+        other = invocation(create, "other")
+        other["resourceBindings"]["notes-workspace"]["collection"] = "private"
+        app.state.execute(create, original, other)
+        for index, sources in enumerate((["absent"], ["other"], ["original", "original"])):
+            with pytest.raises(ValueError):
+                app.state.execute(
+                    create,
+                    {
+                        "title": "Invalid",
+                        "text": "No write",
+                        "sourceKind": "derived",
+                        "sourceNoteIds": sources,
+                    },
+                    invocation(create, f"invalid-{index}"),
+                )
+            assert app.state.journal.query(f"invalid-{index}") == {"status": "not_found"}
+            assert client.get("/api/note", params={"id": f"invalid-{index}"}).status_code == 404
+        with pytest.raises(ValueError):
+            app.state.execute(
+                create,
+                {**original, "sourceNoteIds": ["original"]},
+                invocation(create, "original-with-sources"),
+            )
+        legacy = client.get("/api/note", params={"id": "legacy"}).json()
+        assert legacy["sourceKind"] == "unclassified" and legacy["sourceNoteIds"] == []
+        assert legacy["text"] == "derived-looking text"
+        assert (
+            len(
+                client.get(
+                    "/api/notes",
+                    params={"collection": "research", "includeDerived": False},
+                ).json()["notes"]
+            )
+            == 3
+        )
+        assert (
+            len(
+                client.get(
+                    "/api/notes",
+                    params={"collection": "research", "includeDerived": True},
+                ).json()["notes"]
+            )
+            == 6
+        )
+        assert (
+            client.get(
+                "/api/notes",
+                params={"collection": "research", "includeDerived": "invalid"},
+            ).status_code
+            == 422
+        )
+        with app.state.engine.connect() as connection:
+            assert (
+                connection.execute(
+                    text("SELECT count(*) FROM note_provenance WHERE note_id = 'legacy'")
+                ).scalar()
+                == 0
+            )
+    app.state.engine.dispose()
+
+
+def test_notes_rolls_back_business_record_when_provenance_write_fails(database_url):
+    import pytest
+    from sqlalchemy.exc import IntegrityError
+
+    app = notes_app(database_url)
+    create = "example/notes/create"
+    with TestClient(app) as client:
+        with app.state.engine.begin() as connection:
+            connection.execute(
+                text("ALTER TABLE note_provenance ADD CONSTRAINT test_reject CHECK (false)")
+            )
+        with pytest.raises(IntegrityError):
+            app.state.execute(
+                create,
+                {"title": "Atomic", "text": "Must roll back", "sourceKind": "original"},
+                invocation(create, "rollback"),
+            )
+        assert client.get("/api/note", params={"id": "rollback"}).status_code == 404
+        assert app.state.journal.query("rollback") == {"status": "not_found"}
+        with app.state.engine.connect() as connection:
+            assert connection.execute(text("SELECT count(*) FROM notes")).scalar() == 0
+            assert connection.execute(text("SELECT count(*) FROM note_provenance")).scalar() == 0
+    app.state.engine.dispose()

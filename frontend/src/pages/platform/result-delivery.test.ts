@@ -38,6 +38,13 @@ describe("confirmed content selection", () => {
     expect(text).toContain("资料A");
     expect(text).toContain("数据时间：未提供");
   });
+  it("exports read uncertainty without claiming an unconfirmed save", () => {
+    const input = { ...result, body: "confirmed", contentStatus: "partial" as const, readUnknownEvidenceIds: ["read-op"] };
+    const text = exportMarkdown(input, confirmedContents(input), {});
+    expect(text).toContain("读取结果未确认");
+    expect(text).toContain("read-op");
+    expect(text).not.toContain("保存状态待核实");
+  });
   it("requires explicit artifact loading and records excluded/deferred content", () => {
     const input = { ...result, body: "inline", deferredSections: ["长正文"], attachments: [{ kind: "artifact" as const, label: "产物", reference: { digest: `sha256:${"a".repeat(64)}`, mediaType: "application/json", sizeBytes: 999 } }] };
     const options = confirmedContents(input);

@@ -85,6 +85,7 @@ export function ResultRepeat({
               </Link>
             </Button>
           )}
+          {!!result.readUnknownEvidenceIds?.length && <p>上次读取结果未确认，可重新读取；无需核实该读取是否保存。</p>}
           {result.contentStatus === "unknown" && (
             <label className="flex items-start gap-2 text-sm">
               <input

@@ -19,6 +19,7 @@ class AttentionItem(CamelModel):
     trigger_id: str | None = None
     occurred_at: datetime
     has_unknown_effects: bool = False
+    has_unknown_results: bool = False
     error_code: str | None = None
     error_category: ModelErrorCategory | None = None
     is_read: bool = False

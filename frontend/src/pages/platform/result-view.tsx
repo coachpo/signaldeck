@@ -100,6 +100,10 @@ function ResultContent({ result }: { result: RunResult }) {
           description="已经完成的保存或其他外部操作仍会保留。"
         />
       )}
+      {!!result.readUnknownEvidenceIds?.length && (
+        <InlineStatePanel tone="warning" title="读取结果未确认"
+          description="只读调用未取得确认结果，可检查执行证据或重新运行。此读取不涉及保存。" />
+      )}
       {result.contentStatus === "unknown" && (
         <InlineStatePanel
           tone="warning"
@@ -243,6 +247,11 @@ function ResultContent({ result }: { result: RunResult }) {
       )}
       <ModelUsagePanel runId={result.runId} />
       <div className="flex flex-wrap gap-2">
+        {result.readUnknownEvidenceIds?.map((id) => (
+          <Button key={id} asChild variant="outline">
+            <Link to={`?${runSearch(search, { tab: "evidence", target: id })}`}>查看未确认的读取</Link>
+          </Button>
+        ))}
         {result.unknownEvidenceIds.map((id) => (
           <Button key={id} asChild variant="outline">
             <Link to={`?${runSearch(search, { tab: "evidence", target: id })}`}>

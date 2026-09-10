@@ -14,6 +14,7 @@ from pydantic_ai.exceptions import ModelHTTPError, UnexpectedModelBehavior
 from pydantic_ai.messages import ModelMessage, ModelMessagesTypeAdapter, ModelResponse
 from pydantic_ai.models import Model, ModelRequestParameters
 from pydantic_ai.models.openai import OpenAIChatModel, OpenAIResponsesModel
+from pydantic_ai.profiles.openai import OpenAIModelProfile
 from pydantic_ai.providers.openai import OpenAIProvider
 from pydantic_ai.settings import ModelSettings
 from temporalio import activity
@@ -23,7 +24,11 @@ from app.domain.execution import ApplicationError as DomainApplicationError
 from app.domain.execution import ExecutionEvidence
 from app.domain.model_diagnostics import model_binding_digest
 from app.domain.resources import ResolvedModelConfiguration
-from app.infrastructure.model_usage_capture import ReportedModelUsage
+from app.infrastructure.model_usage_capture import (
+    ModelOutputLimitExceeded,
+    ModelResponseFailure,
+    ReportedModelUsage,
+)
 from app.infrastructure.temporal_payloads import pack_value, unpack_value
 from app.infrastructure.temporal_ports import ArtifactValues, BoundCredentialReader, ModelEvidence
 
@@ -58,6 +63,8 @@ class GatewayModel(Model):
         confirmed = await asyncio.to_thread(store.get_evidence, model_id)
         if confirmed is not None and confirmed.status == "succeeded":
             return RESPONSE.validate_python(unpack_value(artifacts, confirmed.output))
+        if confirmed is not None and confirmed.error_code == "model_output_limit_exceeded":
+            raise ApplicationError("model_output_limit_exceeded", non_retryable=True)
         input_value = pack_value(
             artifacts,
             {
@@ -72,6 +79,10 @@ class GatewayModel(Model):
         binding_metadata = {
             "resourceId": context["resourceId"],
             "modelBindingDigest": model_binding_digest(context["binding"]),
+            "outputTokenLimit": settings.get("max_tokens"),
+            "outputTokenLimitParameter": ResolvedModelConfiguration.model_validate(
+                context["binding"]
+            ).output_token_limit_parameter,
         }
         evidence = ExecutionEvidence(
             id=model_id,
@@ -113,8 +124,7 @@ class GatewayModel(Model):
             started_at=datetime.now(UTC),
             metadata={
                 "networkKind": "model_request",
-                "resourceId": context["resourceId"],
-                "modelBindingDigest": model_binding_digest(context["binding"]),
+                **binding_metadata,
             },
         )
         await asyncio.to_thread(store.record_evidence, network)
@@ -130,7 +140,11 @@ class GatewayModel(Model):
                     network.model_copy(
                         update={
                             "status": "succeeded",
-                            "metadata": {**network.metadata, "usage": reported_usage},
+                            "metadata": {
+                                **network.metadata,
+                                "usage": reported_usage,
+                                "finishReason": response.finish_reason,
+                            },
                             "output": output,
                             "finished_at": datetime.now(UTC),
                         }
@@ -138,7 +152,11 @@ class GatewayModel(Model):
                     evidence.model_copy(
                         update={
                             "status": "succeeded",
-                            "metadata": {**binding_metadata, "usage": reported_usage},
+                            "metadata": {
+                                **binding_metadata,
+                                "usage": reported_usage,
+                                "finishReason": response.finish_reason,
+                            },
                             "output": output,
                             "finished_at": datetime.now(UTC),
                         }
@@ -204,7 +222,7 @@ class GatewayModel(Model):
         if remaining <= 0:
             raise ApplicationError("deadline_exceeded", non_retryable=True)
         api_key = credentials.get("apiKey", "")
-        reported_usage = ReportedModelUsage(binding.api_style)
+        reported_usage = ReportedModelUsage(binding.api_style, settings.get("max_tokens"))
         async with httpx2.AsyncClient(
             timeout=min(binding.timeout_seconds, remaining),
             event_hooks={"response": [reported_usage.observe]},
@@ -222,9 +240,12 @@ class GatewayModel(Model):
             model = model_type(
                 binding.model_id,
                 provider=provider,
-                profile={
-                    "json_schema_transformer": None,
-                },
+                profile=OpenAIModelProfile(
+                    json_schema_transformer=None,
+                    openai_chat_supports_max_completion_tokens=(
+                        binding.output_token_limit_parameter != "max_tokens"
+                    ),
+                ),
             )
             # Exact declared constraints must reach the adapter unchanged.
             _, rendered = model.prepare_request(cast(ModelSettings, settings), parameters)
@@ -232,7 +253,14 @@ class GatewayModel(Model):
                 tool.parameters_json_schema for tool in parameters.function_tools
             ]:
                 raise ApplicationError("provider_schema_unsupported", non_retryable=True)
-            response = await model.request(messages, cast(ModelSettings, settings), parameters)
+            try:
+                response = await model.request(messages, cast(ModelSettings, settings), parameters)
+            except Exception as exc:
+                reported_usage.check_limit()
+                raise ModelResponseFailure(
+                    exc, reported_usage.value, reported_usage.finish_reason
+                ) from None
+            reported_usage.check_limit()
             encoded = json.dumps(RESPONSE.dump_python(response, mode="json"))
             if any(
                 isinstance(value, str) and value and value in encoded
@@ -243,6 +271,30 @@ class GatewayModel(Model):
 
 
 def model_failure(exc: Exception) -> tuple[str, bool, dict[str, Any]]:
+    if isinstance(exc, ModelResponseFailure):
+        code, non_retryable, metadata = model_failure(exc.cause)
+        return (
+            code,
+            non_retryable,
+            {
+                **metadata,
+                "usage": exc.usage,
+                "finishReason": exc.finish_reason,
+            },
+        )
+    if isinstance(exc, ModelOutputLimitExceeded):
+        return (
+            "model_output_limit_exceeded",
+            True,
+            {
+                "failureType": "execution_contract",
+                "errorCategory": "output_limit",
+                "networkStarted": True,
+                "usage": exc.usage,
+                "outputTokenLimit": exc.limit,
+                "finishReason": exc.finish_reason,
+            },
+        )
     if isinstance(exc, ApplicationError):
         return (
             exc.message,

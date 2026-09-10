@@ -38,6 +38,7 @@ export function AttentionPage() {
         <span className="text-sm">{item.isRead ? "更新已查看" : "新更新"}</span>
       </div>
       <time className="text-sm text-muted-foreground" dateTime={item.occurredAt}>{new Date(item.occurredAt).toLocaleString()}</time>
+      {item.hasUnknownResults && <p className="text-sm">读取结果未确认。可查看执行证据或重新读取，无需核实该读取是否保存。</p>}
       {item.hasUnknownEffects && <p className="text-sm">保存状态待核实。请核对目标位置和执行证据；标为已查看不会确认操作成功。</p>}
       {item.errorCode && <ExecutionDiagnostic code={item.errorCode} category={item.errorCategory} />}
       <div className="flex flex-wrap gap-2">

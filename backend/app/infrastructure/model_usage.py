@@ -43,13 +43,13 @@ def _duration(start: datetime | None, end: datetime | None) -> int | None:
 
 
 def _reported_usage(row: dict[str, Any], store: PlatformStore) -> tuple[int | None, int | None]:
-    if row["status"] != "succeeded":
-        return None, None
     metadata = row.get("metadata", {})
     if "usage" in metadata:
         usage = metadata["usage"]
         if isinstance(usage, dict):
             return token_count(usage.get("inputTokens")), token_count(usage.get("outputTokens"))
+        return None, None
+    if row["status"] != "succeeded":
         return None, None
     # Old SDK responses default absent counters to zero. Positive recorded values
     # are usable; zero has no presence evidence and must remain unknown.

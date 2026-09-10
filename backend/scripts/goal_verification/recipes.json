@@ -1,0 +1,559 @@
+{
+  "pu-connect-feedback": {
+    "groups": [
+      "backend",
+      "frontend",
+      "e2e"
+    ],
+    "requiredTestPatterns": [
+      "task-connections",
+      "task_experience",
+      "four ordinary tasks"
+    ],
+    "observedArtifacts": [
+      "e2e:outputs/playwright/task-experience/four-scenario-run-artifact-evidence.json"
+    ]
+  },
+  "pu-markdown": {
+    "groups": [
+      "frontend",
+      "e2e",
+      "real"
+    ],
+    "requiredTestPatterns": [
+      "markdown-content",
+      "result-content",
+      "four ordinary tasks"
+    ],
+    "observedArtifacts": [
+      "real:browser-online.json"
+    ],
+    "image": "result"
+  },
+  "pu-model-diagnostics": {
+    "groups": [
+      "backend",
+      "real"
+    ],
+    "requiredTestPatterns": [
+      "model_diagnostics"
+    ],
+    "observedArtifacts": [
+      "real:runs.json",
+      "real:browser-online-snapshot.json"
+    ]
+  },
+  "pu-diagnostic-ui": {
+    "groups": [
+      "frontend",
+      "e2e",
+      "real"
+    ],
+    "requiredTestPatterns": [
+      "execution-diagnostic",
+      "task-preparation",
+      "scheduled"
+    ],
+    "observedArtifacts": [
+      "real:browser-online.json",
+      "real:read-write-faults.json"
+    ]
+  },
+  "pu-s1-verify": {
+    "groups": [
+      "backend",
+      "frontend",
+      "e2e",
+      "real"
+    ],
+    "requiredTestPatterns": [
+      "model_diagnostics",
+      "markdown-content",
+      "four ordinary tasks"
+    ],
+    "observedArtifacts": [
+      "e2e:outputs/playwright/task-experience/four-scenario-run-artifact-evidence.json",
+      "real:runs.json"
+    ]
+  },
+  "pu-result-disclosure": {
+    "groups": [
+      "frontend",
+      "e2e",
+      "real"
+    ],
+    "requiredTestPatterns": [
+      "result-view",
+      "task-preparation"
+    ],
+    "observedArtifacts": [
+      "real:browser-online.json"
+    ],
+    "image": "result"
+  },
+  "pu-result-export": {
+    "groups": [
+      "frontend",
+      "e2e",
+      "fault",
+      "real"
+    ],
+    "requiredTestPatterns": [
+      "result-delivery",
+      "result-export",
+      "actual independent write"
+    ],
+    "observedArtifacts": [
+      "real:export.md",
+      "fault:outputs/playwright/faults/unknown-plugin-offline-evidence.json"
+    ]
+  },
+  "pu-s2-verify": {
+    "groups": [
+      "frontend",
+      "e2e",
+      "fault",
+      "finance",
+      "real"
+    ],
+    "requiredTestPatterns": [
+      "personal workflow",
+      "actual independent write"
+    ],
+    "observedArtifacts": [
+      "real:export.md",
+      "real:offline.json",
+      "fault:outputs/playwright/faults/unknown-plugin-offline-evidence.json"
+    ]
+  },
+  "pu-usage-projection": {
+    "groups": [
+      "backend",
+      "real"
+    ],
+    "requiredTestPatterns": [
+      "model_usage"
+    ],
+    "observedArtifacts": [
+      "real:runs.json",
+      "real:browser-online-snapshot.json"
+    ]
+  },
+  "pu-budget-contract": {
+    "groups": [
+      "backend",
+      "real"
+    ],
+    "requiredTestPatterns": [
+      "model_budget_contract",
+      "model_output_enforcement"
+    ],
+    "observedArtifacts": [
+      "real:limits.json",
+      "real:provider-observations.jsonl"
+    ]
+  },
+  "pu-model-controls": {
+    "groups": [
+      "frontend",
+      "e2e",
+      "real"
+    ],
+    "requiredTestPatterns": [
+      "model-usage-panel",
+      "optional output budget"
+    ],
+    "observedArtifacts": [
+      "e2e:outputs/playwright/personal-use-s3/verification.json",
+      "real:browser-online.json"
+    ]
+  },
+  "pu-s3-verify": {
+    "groups": [
+      "backend",
+      "frontend",
+      "e2e",
+      "real"
+    ],
+    "requiredTestPatterns": [
+      "model_budget_contract",
+      "model_usage_runtime",
+      "optional output budget"
+    ],
+    "observedArtifacts": [
+      "real:limits.json",
+      "real:runs.json",
+      "e2e:outputs/playwright/personal-use-s3/verification.json"
+    ]
+  },
+  "pu-result-metadata": {
+    "groups": [
+      "backend",
+      "e2e"
+    ],
+    "requiredTestPatterns": [
+      "result_organizer",
+      "personal workflow"
+    ],
+    "observedArtifacts": [
+      "e2e:outputs/playwright/personal-use/cross-sprint.json"
+    ]
+  },
+  "pu-result-organizer": {
+    "groups": [
+      "backend",
+      "frontend",
+      "e2e"
+    ],
+    "requiredTestPatterns": [
+      "result_organizer",
+      "result-metadata",
+      "personal workflow"
+    ],
+    "observedArtifacts": [
+      "e2e:outputs/playwright/personal-use/cross-sprint.json"
+    ]
+  },
+  "pu-attention-inbox": {
+    "groups": [
+      "backend",
+      "frontend",
+      "e2e",
+      "real"
+    ],
+    "requiredTestPatterns": [
+      "result_organizer",
+      "attention",
+      "scheduled"
+    ],
+    "observedArtifacts": [
+      "real:read-write-faults.json",
+      "real:schedule.json",
+      "real:online-histories.json"
+    ]
+  },
+  "pu-s4-verify": {
+    "groups": [
+      "backend",
+      "frontend",
+      "e2e",
+      "real"
+    ],
+    "requiredTestPatterns": [
+      "result_organizer",
+      "personal workflow"
+    ],
+    "observedArtifacts": [
+      "real:schedule.json",
+      "real:source-sets.json",
+      "real:browser-online.json",
+      "real:schedule-browser.json"
+    ]
+  },
+  "pu-draft-contract": {
+    "groups": [
+      "backend",
+      "e2e"
+    ],
+    "requiredTestPatterns": [
+      "task_drafts",
+      "personal workflow"
+    ],
+    "observedArtifacts": [
+      "e2e:outputs/playwright/personal-use/cross-sprint.json"
+    ]
+  },
+  "pu-draft-ui": {
+    "groups": [
+      "backend",
+      "frontend",
+      "e2e"
+    ],
+    "requiredTestPatterns": [
+      "task_drafts",
+      "launch-inputs",
+      "personal workflow"
+    ],
+    "observedArtifacts": [
+      "e2e:outputs/playwright/personal-use/cross-sprint.json"
+    ]
+  },
+  "pu-result-compare": {
+    "groups": [
+      "frontend",
+      "e2e",
+      "fault",
+      "real"
+    ],
+    "requiredTestPatterns": [
+      "result-compare",
+      "result-diff",
+      "personal workflow"
+    ],
+    "observedArtifacts": [
+      "real:browser-online.json",
+      "real:offline.json",
+      "e2e:outputs/playwright/personal-use/cross-sprint.json"
+    ],
+    "image": "comparison"
+  },
+  "pu-s5-verify": {
+    "groups": [
+      "backend",
+      "frontend",
+      "e2e",
+      "fault",
+      "real"
+    ],
+    "requiredTestPatterns": [
+      "task_drafts",
+      "personal workflow",
+      "result-compare"
+    ],
+    "observedArtifacts": [
+      "e2e:outputs/playwright/personal-use/cross-sprint.json",
+      "real:offline.json"
+    ]
+  },
+  "pu-notes-read-api": {
+    "groups": [
+      "backend",
+      "real"
+    ],
+    "requiredTestPatterns": [
+      "notes_workspace",
+      "independent_plugins"
+    ],
+    "observedArtifacts": [
+      "real:runs.json",
+      "real:source-sets.json",
+      "real:include-derived.json"
+    ]
+  },
+  "pu-notes-page": {
+    "groups": [
+      "backend",
+      "real"
+    ],
+    "requiredTestPatterns": [
+      "notes_workspace"
+    ],
+    "observedArtifacts": [
+      "real:browser-online.json"
+    ],
+    "image": "notes"
+  },
+  "pu-notes-links": {
+    "groups": [
+      "backend",
+      "e2e",
+      "fault",
+      "real"
+    ],
+    "requiredTestPatterns": [
+      "notes_link_is_frozen",
+      "personal workflow"
+    ],
+    "observedArtifacts": [
+      "real:browser-online.json",
+      "real:double-offline.json"
+    ]
+  },
+  "pu-s6-verify": {
+    "groups": [
+      "backend",
+      "frontend",
+      "e2e",
+      "fault",
+      "finance",
+      "real"
+    ],
+    "requiredTestPatterns": [
+      "notes_workspace",
+      "personal workflow",
+      "decoupl"
+    ],
+    "observedArtifacts": [
+      "real:source-sets.json",
+      "real:active-tools.json",
+      "real:double-offline.json",
+      "real:browser-offline.json",
+      "real:schedule-browser.json"
+    ]
+  },
+  "pu-real-final-workflows": {
+    "groups": [
+      "real"
+    ],
+    "requiredTestPatterns": [],
+    "observedArtifacts": [
+      "real:runs.json",
+      "real:source-sets.json",
+      "real:schedule.json",
+      "real:limits.json",
+      "real:active-tools.json",
+      "real:schedule-browser.json"
+    ]
+  },
+  "pu-final-gates": {
+    "groups": [
+      "backend",
+      "frontend",
+      "e2e",
+      "fault",
+      "finance",
+      "real",
+      "static",
+      "runner-check"
+    ],
+    "requiredTestPatterns": [
+      "model_budget_contract",
+      "personal workflow",
+      "actual independent write"
+    ],
+    "observedArtifacts": [
+      "real:cleanup.json"
+    ],
+    "final": true
+  },
+  "pu-gap-output-protocol": {
+    "groups": [
+      "backend",
+      "real"
+    ],
+    "requiredTestPatterns": [
+      "model_budget_contract"
+    ],
+    "observedArtifacts": [
+      "real:limits.json",
+      "real:provider-observations.jsonl"
+    ]
+  },
+  "pu-gap-output-enforcement": {
+    "groups": [
+      "backend"
+    ],
+    "requiredTestPatterns": [
+      "model_output_enforcement",
+      "model_usage_runtime"
+    ],
+    "observedArtifacts": []
+  },
+  "pu-gap-read-write-outcomes": {
+    "groups": [
+      "backend",
+      "fault",
+      "real"
+    ],
+    "requiredTestPatterns": [
+      "effect_projection",
+      "tool_gateway_unknown_reconcile",
+      "actual independent write"
+    ],
+    "observedArtifacts": [
+      "real:read-write-faults.json",
+      "fault:outputs/playwright/faults/unknown-plugin-offline-evidence.json"
+    ]
+  },
+  "pu-gap-read-write-ui": {
+    "groups": [
+      "frontend",
+      "fault",
+      "real"
+    ],
+    "requiredTestPatterns": [
+      "result-delivery",
+      "result-view",
+      "actual independent write"
+    ],
+    "observedArtifacts": [
+      "real:browser-online.json",
+      "real:browser-offline.json",
+      "real:export.md",
+      "real:offline.json"
+    ]
+  },
+  "pu-gap-note-provenance": {
+    "groups": [
+      "backend",
+      "real"
+    ],
+    "requiredTestPatterns": [
+      "notes_provenance_atomic_scope",
+      "notes_rolls_back",
+      "independent_plugins"
+    ],
+    "observedArtifacts": [
+      "real:runs.json",
+      "real:source-sets.json"
+    ]
+  },
+  "pu-gap-note-retrieval": {
+    "groups": [
+      "backend",
+      "real"
+    ],
+    "requiredTestPatterns": [
+      "notes_workspace",
+      "target_seeds"
+    ],
+    "observedArtifacts": [
+      "real:source-sets.json",
+      "real:include-derived.json",
+      "real:browser-online.json"
+    ]
+  },
+  "pu-gap-legacy-contracts": {
+    "groups": [
+      "backend",
+      "e2e",
+      "fault",
+      "real"
+    ],
+    "requiredTestPatterns": [
+      "effect_projection",
+      "independent_plugins",
+      "decoupl"
+    ],
+    "observedArtifacts": [
+      "real:double-offline.json"
+    ]
+  },
+  "pu-gap-real-workflows": {
+    "groups": [
+      "real"
+    ],
+    "requiredTestPatterns": [],
+    "observedArtifacts": [
+      "real:limits.json",
+      "real:runs.json",
+      "real:source-sets.json",
+      "real:schedule.json",
+      "real:read-write-faults.json",
+      "real:active-tools.json",
+      "real:schedule-browser.json"
+    ]
+  },
+  "pu-gap-final-gates": {
+    "groups": [
+      "backend",
+      "frontend",
+      "e2e",
+      "fault",
+      "finance",
+      "real",
+      "static",
+      "runner-check"
+    ],
+    "requiredTestPatterns": [
+      "effect_projection",
+      "model_output_enforcement",
+      "personal workflow",
+      "actual independent write"
+    ],
+    "observedArtifacts": [
+      "real:cleanup.json"
+    ],
+    "final": true
+  }
+}

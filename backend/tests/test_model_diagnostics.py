@@ -9,7 +9,10 @@ from pydantic_ai.exceptions import ModelHTTPError
 from app.domain.execution import ExecutionEvidence
 from app.domain.model_diagnostics import model_binding_digest
 from app.infrastructure.model_runtime import model_failure
-from tests.test_task_experience import configured, platform  # noqa: F401
+from tests.test_task_experience import configured
+from tests.test_task_experience import platform as platform_fixture
+
+platform = platform_fixture
 
 
 @pytest.mark.parametrize(
@@ -55,7 +58,11 @@ def test_malformed_provider_body_is_unknown(body):
     assert model_failure(ModelHTTPError(400, "model", body))[2]["errorCategory"] == "unknown"
 
 
-def test_observations_are_offline_and_bound_to_frozen_identity(platform):  # noqa: F811
+@pytest.mark.parametrize(
+    "code,category",
+    [("model_http_error", "quota"), ("model_output_limit_exceeded", "output_limit")],
+)
+def test_observations_are_offline_and_bound_to_frozen_identity(platform, code, category):
     client, store, _ = platform
     configured(client, store, model=True)
     launched = client.post(
@@ -96,7 +103,7 @@ def test_observations_are_offline_and_bound_to_frozen_identity(platform):  # noq
         status="failed",
         started_at=now,
         finished_at=now,
-        error_code="model_http_error",
+        error_code=code,
     )
     # The old request remains an unknown cause and cannot be reclassified.
     store.record_evidence(
@@ -114,11 +121,12 @@ def test_observations_are_offline_and_bound_to_frozen_identity(platform):  # noq
         "networkKind": "model_request",
         "resourceId": "local-model",
         "modelBindingDigest": model_binding_digest(binding),
-        "errorCategory": "quota",
+        "errorCategory": category,
         "httpStatus": 400,
     }
     store.record_evidence(ExecutionEvidence(id="confirmed", **base, metadata=metadata))
-    assert observation()["errorCategory"] == "quota"
+    assert observation()["errorCategory"] == category
+    assert observation()["errorCode"] == code
     prepared = client.post(
         "/api/workflow-packages/api-package/prepare",
         json={"workflowKey": "main", "parameters": {"text": "hello"}},
@@ -165,7 +173,11 @@ def test_observations_are_offline_and_bound_to_frozen_identity(platform):  # noq
     )
 
 
-def test_result_category_follows_failed_node_and_not_recovered_attempt(platform):  # noqa: F811
+@pytest.mark.parametrize(
+    "code,category",
+    [("model_http_error", "quota"), ("model_output_limit_exceeded", "output_limit")],
+)
+def test_result_category_follows_failed_node_and_not_recovered_attempt(platform, code, category):
     from app.application.result_projection import project_result
 
     client, store, _ = platform
@@ -183,7 +195,7 @@ def test_result_category_follows_failed_node_and_not_recovered_attempt(platform)
             node_id="echo",
             kind="node",
             status="failed",
-            error_code="model_http_error",
+            error_code=code,
         ),
         ExecutionEvidence(
             id="model",
@@ -191,13 +203,13 @@ def test_result_category_follows_failed_node_and_not_recovered_attempt(platform)
             node_id="echo",
             kind="model",
             status="failed",
-            error_code="model_http_error",
-            metadata={"errorCategory": "quota"},
+            error_code=code,
+            metadata={"errorCategory": category},
         ),
     ]
-    assert project_result(run).error_category == "quota"
+    assert project_result(run).error_category == category
     run.evidence[1].metadata = {}
     assert project_result(run).error_category is None
-    run.evidence[1].metadata = {"errorCategory": "quota"}
+    run.evidence[1].metadata = {"errorCategory": category}
     run.evidence[0].status = "succeeded"
     assert project_result(run).error_category is None

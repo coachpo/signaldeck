@@ -18,11 +18,26 @@ def literal_match(note, query):
     )
 
 
-def project(note):
-    return {key: getattr(note, key) for key in ("id", "collection", "title", "text")}
+def source_filter(note, provenance, include_derived):
+    return (
+        True
+        if include_derived
+        else ~select(provenance.note_id)
+        .where(provenance.note_id == note.id, provenance.source_kind == "derived")
+        .exists()
+    )
 
 
-def install_workspace(app, sessions, note):
+def project(note, session, provenance):
+    metadata = session.get(provenance, note.id)
+    return {
+        **{key: getattr(note, key) for key in ("id", "collection", "title", "text")},
+        "sourceKind": metadata.source_kind if metadata else "unclassified",
+        "sourceNoteIds": metadata.source_ids if metadata else [],
+    }
+
+
+def install_workspace(app, sessions, note, provenance):
     web = Path(__file__).parent / "web"
     app.mount("/assets", StaticFiles(directory=web), name="notes-assets")
 
@@ -68,18 +83,21 @@ def install_workspace(app, sessions, note):
     def notes(
         collection: str = Query(min_length=1, max_length=200),
         query: str = Query(default="", max_length=200),
+        includeDerived: bool = Query(default=True),
         after: str | None = Query(default=None, max_length=200),
         limit: int = Query(default=20, ge=1, le=50),
     ):
         statement = select(note).where(
-            note.collection == collection, literal_match(note, query)
+            note.collection == collection,
+            literal_match(note, query),
+            source_filter(note, provenance, includeDerived),
         )
         if after is not None:
             statement = statement.where(note.id > after)
         with sessions() as session:
             rows = list(session.scalars(statement.order_by(note.id).limit(limit + 1)))
             return {
-                "notes": [project(row) for row in rows[:limit]],
+                "notes": [project(row, session, provenance) for row in rows[:limit]],
                 "nextCursor": rows[limit - 1].id if len(rows) > limit else None,
             }
 
@@ -96,4 +114,4 @@ def install_workspace(app, sessions, note):
                         "details": [],
                     },
                 )
-            return project(row)
+            return project(row, session, provenance)

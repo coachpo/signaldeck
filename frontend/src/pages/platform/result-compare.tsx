@@ -126,6 +126,7 @@ function ComparisonIdentity({ result }: { result: RunResult }) {
   return <div className="flex min-w-0 flex-col gap-2 text-sm">
     <Link className="break-all underline" to={`/runs/${encodeURIComponent(result.runId)}`}>{result.title} · {result.runId}</Link>
     <p>状态：{resultStatusLabels[result.status] ?? result.status} · 内容：{result.contentStatus}</p>
+    {!!result.readUnknownEvidenceIds?.length && <p>读取结果未确认；当前仅比较已确认内容，该读取不涉及保存。</p>}
     {result.contentStatus === "unknown" && <p>保存状态待核实；当前仅比较已确认内容。</p>}
     {result.cancelRequestedAt && <p>已请求取消；已确认的外部操作仍会保留。</p>}
     {(result.status === "queued" || result.status === "running") && <p>执行尚未结束，确认内容可能继续更新。</p>}

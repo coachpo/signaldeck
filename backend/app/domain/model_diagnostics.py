@@ -5,8 +5,18 @@ from typing import Literal
 
 from app.schemas.common import CamelModel
 
-ModelErrorCategory = Literal["quota", "authentication", "rate_limit", "model", "input", "unknown"]
-MODEL_ERROR_CATEGORIES = {"quota", "authentication", "rate_limit", "model", "input", "unknown"}
+ModelErrorCategory = Literal[
+    "quota", "authentication", "rate_limit", "model", "input", "output_limit", "unknown"
+]
+MODEL_ERROR_CATEGORIES = {
+    "quota",
+    "authentication",
+    "rate_limit",
+    "model",
+    "input",
+    "output_limit",
+    "unknown",
+}
 
 
 class ModelObservation(CamelModel):

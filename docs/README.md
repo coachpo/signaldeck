@@ -20,6 +20,8 @@
 
 ## 专项文档
 
+- [三项实测优化交付与验证](planning/observed-gaps-verification.md)：输出上限、读写不确定性与Notes来源过滤的C1–C8映射、同版本真实流程和数据/部署边界。
+
 - [个人使用优化实施计划](planning/personal-use-implementation-plan.md)与[Sprint Backlog](planning/personal-use-sprint-backlog.md)：PU-S1–S6 的24项主体任务、依赖及保留边界。
 - [个人使用优化共同验收](planning/personal-use-verification.md)：当前工作区的C1–C11交付映射、各阶段与最终版本验证；区分继承的S1证据及本轮新增验证。
 - [`planning/sprint-backlog.md`](planning/sprint-backlog.md)：已完成简化操作 S1–S6 的任务分解及 P/UX 追溯，保留当时自动化验收方式调整。

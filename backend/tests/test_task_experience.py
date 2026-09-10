@@ -514,9 +514,18 @@ def test_finance_receipt_owner_follows_frozen_deterministic_mapping(platform, la
     assert report.plugin_id == "signaldeck/finance" and report.evidence_id == "save-node"
 
 
-def test_attention_group_and_summary_use_logical_unknown_not_old_network_attempt(platform):
+@pytest.mark.parametrize("effect", ["read", "write"])
+def test_attention_group_and_summary_use_logical_unknown_not_old_network_attempt(platform, effect):
     client, store, _ = platform
-    configured(client, store)
+    from app.domain.tool_contracts import PluginRelease, tool_contract_digest
+
+    client.post("/api/workflow-packages", json={"manifestSource": source()})
+    frozen = PluginRelease.model_validate(release())
+    tools = (frozen.tools[0].model_copy(update={"effect": effect}),)
+    frozen = frozen.model_copy(
+        update={"tools": tools, "contract_digest": tool_contract_digest(tools)}
+    )
+    store.install_plugin("example/echo", frozen.model_dump(mode="json", by_alias=True))
     record = client.post(
         "/api/workflow-packages/api-package/launches",
         json={
@@ -559,8 +568,22 @@ def test_attention_group_and_summary_use_logical_unknown_not_old_network_attempt
         ]
     )
     history = client.get("/api/runs", params={"group": "attention"}).json()
-    assert history["total"] == 1 and history["items"][0]["hasUnknownEffects"] is True
-    assert client.get(f"/api/runs/{run_id}").json()["hasUnknownEffects"] is True
+    assert history["total"] == 1
+    detail = client.get(f"/api/runs/{run_id}").json()
+    attention = client.get("/api/attention").json()["items"][0]
+    for projection in (history["items"][0], detail, attention):
+        assert projection["hasUnknownEffects"] is (effect == "write")
+        assert projection["hasUnknownResults"] is (effect == "read")
+    result = client.get(f"/api/runs/{run_id}/result").json()
+    assert result["unknownEvidenceIds"] == (["tool"] if effect == "write" else [])
+    assert result["readUnknownEvidenceIds"] == (["tool"] if effect == "read" else [])
+    assert next(item for item in detail["evidence"] if item["id"] == "tool")["status"] == "unknown"
+    marked = client.patch(
+        f"/api/attention/{attention['id']}", json={"expectedRevision": 0, "isRead": True}
+    )
+    assert marked.status_code == 200
+    assert client.get("/api/attention").json()["total"] == (1 if effect == "write" else 0)
+    assert client.get("/api/runs", params={"group": "attention"}).json()["total"] == 1
     store.record_evidence(
         ExecutionEvidence(
             id="tool",
@@ -575,6 +598,67 @@ def test_attention_group_and_summary_use_logical_unknown_not_old_network_attempt
     )
     assert client.get("/api/runs", params={"group": "attention"}).json()["total"] == 0
     assert client.get(f"/api/runs/{run_id}").json()["hasUnknownEffects"] is False
+
+
+@pytest.mark.parametrize("kind", ["model", "agent", "node"])
+def test_readonly_execution_timeout_is_visible_without_a_save_warning(platform, kind):
+    client, store, _ = platform
+    configured(client, store, model=True)
+    definition = json.loads(source(model=True))
+    definition["agents"]["echo"]["tools"] = []
+    assert (
+        client.patch(
+            "/api/workflow-packages/api-package", json={"manifestSource": json.dumps(definition)}
+        ).status_code
+        == 200
+    )
+    run = client.post(
+        "/api/workflow-packages/api-package/launches",
+        json={"workflowKey": "main", "parameters": {"text": "hello"}, "launchId": "timeout"},
+    ).json()
+    item = ExecutionEvidence(
+        id="uncertain",
+        run_id=run["id"],
+        node_id="echo",
+        kind=kind,
+        parent_id={"model": "owner-agent", "agent": "owner-node", "node": None}[kind],
+        status="unknown",
+        error_code="model_request_failed",
+    )
+    if kind != "node":
+        store.record_evidence(
+            ExecutionEvidence(
+                id="owner-node",
+                run_id=run["id"],
+                node_id="echo",
+                kind="node",
+                status="failed",
+            )
+        )
+    if kind == "model":
+        store.record_evidence(
+            ExecutionEvidence(
+                id="owner-agent",
+                run_id=run["id"],
+                node_id="echo",
+                kind="agent",
+                status="failed",
+                parent_id="owner-node",
+            )
+        )
+    store.record_evidence(item)
+    store.project_run(run["id"], "failed")
+    detail = client.get(f'/api/runs/{run["id"]}').json()
+    history = client.get("/api/runs", params={"group": "attention"}).json()
+    attention = client.get("/api/attention").json()
+    for projection in (detail, history["items"][0], attention["items"][0]):
+        assert projection["hasUnknownEffects"] is False
+        assert projection["hasUnknownResults"] is True
+    result = client.get(f'/api/runs/{run["id"]}/result').json()
+    assert result["contentStatus"] == "not_available"
+    assert result["unknownEvidenceIds"] == []
+    assert result["readUnknownEvidenceIds"] == [item.id]
+    assert store.get_evidence(item.id) == item
 
 
 def test_result_preserves_structured_source_warnings(platform):

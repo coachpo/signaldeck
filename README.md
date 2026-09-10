@@ -64,6 +64,8 @@ SIGNALDECK_CONNECTION_PRESETS_FILE=/absolute/path/connections.json ./start.sh --
 
 ## 文档
 
+- [三项实测优化验证](docs/planning/observed-gaps-verification.md)：输出上限、只读/写入不确定性与Notes来源过滤的本地交付记录。
+
 - [`docs/README.md`](docs/README.md)：文档索引与权威边界。
 - [`docs/产品说明.md`](docs/产品说明.md)：产品范围、流程、需求和验收。
 - [`docs/架构说明.md`](docs/架构说明.md)：当前组件、数据流、部署边界和架构例外。

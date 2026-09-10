@@ -26,7 +26,7 @@ Run 创建、身份冲突检查、取消请求和投递确认由 [`PlatformRunSt
 
 Run status 为 `queued`、`running`、`succeeded`、`failed`、`cancelled`；evidence status 还包括 `pending`、`blocked`、`skipped`、`timed_out`、`unknown`。取消请求只设置请求时间并产生 command，不能直接把正在执行的 Run 改成 cancelled。最终 projection 消费引擎终态，不拥有调度权。
 
-业务标题从固定 spec 的参数和定义派生，`hasUnknownEffects` 从非 `attempt` evidence 的 `unknown` 状态派生；它们没有独立持久列。业务结果阅读模型由 Run 输出和已确认的节点/工具输出投影，不另存结果表。历史筛选、计数与排序在数据库完成；分页的 `snapshotAt` 仅限制 Run 创建时间上界。查询与阅读边界见 [`架构说明`](架构说明.md#前端与-http)。
+业务标题从固定 spec 的参数和定义派生，`hasUnknownEffects` 从非 `attempt` 的 unknown 逻辑证据结合 Run 冻结工具 effect 派生，唯一明确 read 的工具证据投影为 `hasUnknownResults`；结果阅读模型对应 `readUnknownEvidenceIds`，`unknownEvidenceIds` 保留可能写入身份。write 或无法可靠分类的历史证据仍属于可能写入。分类只读已有 spec/payload，不改写历史 evidence，也不读取当前发布；它们没有独立持久列。业务结果阅读模型由 Run 输出和已确认的节点/工具输出投影，不另存结果表。历史筛选、计数与排序在数据库完成；分页的 `snapshotAt` 仅限制 Run 创建时间上界。查询与阅读边界见 [`架构说明`](架构说明.md#前端与-http)。
 
 ## 常用配置与收藏
 
@@ -90,9 +90,9 @@ Core closure 使用另一目录，manifest 固定文件字节、锁文件和 Pyt
 
 ## 插件业务数据
 
-Finance 自己定义 `text_templates`、`reports`、`market_quotes` 和 `plugin_operations`；Notes 自己定义 `notes` 与 `plugin_operations`。Digital Oracle 当前无业务持久化要求。插件 PostgreSQL 用户不能读取 Core 私有表；Core metadata 不包含这些业务表。
+Finance 自己定义 `text_templates`、`reports`、`market_quotes` 和 `plugin_operations`；Notes 自己定义 `notes`、`note_provenance` 与 `plugin_operations`。Digital Oracle 当前无业务持久化要求。插件 PostgreSQL 用户不能读取 Core 私有表；Core metadata 不包含这些业务表。
 
-Finance 的普通 report API 与 Agent report 写入有不同生命周期：Agent 来源报告禁止覆盖或删除。Notes 记录不可变。两种写路径在同一插件事务提交业务效果与 operation result，并通过 operation lock 和输入/工具/scope 身份核验去重。详情见 [`writing-extensions.md`](writing-extensions.md)。
+Finance 的普通 report API 与 Agent report 写入有不同生命周期：Agent 来源报告禁止覆盖或删除。Notes 记录不可变。Notes 1.2.0 新增旁表 `note_provenance`，以 `note_id` 外键关联 `notes.id`，保存 `source_kind` 和 JSON `source_ids`；新笔记、来源与操作回执同事务提交。初始化只创建缺失表，不 ALTER 或回填原 notes。无旁表记录时读投影为 `unclassified` 和空引用，不按内容猜测或改写历史。引用只能指向授权集合中已存在的笔记，详细输入及检索规则见[插件接入](writing-extensions.md#notes-来源与检索合同)。两种写路径在同一插件事务提交业务效果与 operation result，并通过 operation lock 和输入/工具/scope 身份核验去重。详情见 [`writing-extensions.md`](writing-extensions.md)。
 
 ## 初始化与数据影响
 
@@ -114,10 +114,12 @@ Finance 的普通 report API 与 Agent report 写入有不同生命周期：Agen
 
 `GET/PATCH /api/runs/{id}/metadata` 使用 `expectedRevision`（缺省记录为0）及显式非null修改字段；未提交字段不覆盖，过期版本返回409。标为已读在同一事务写入当前Run变化的查看回执；取消收藏或清空note仅删除标记内容。Run、spec、输出和调用证据不受修改。
 
-`GET /api/attention` 从全库当前完成/失败/取消/unknown Run及无Run失败fire投影，再过滤分页。Run变化身份基于状态与非网络attempt逻辑证据的状态/错误，重复观察更新时间不会创建新身份；unknown核实后的逻辑状态会改变身份。fire身份基于冻结触发/引擎身份和状态/错误，不因重复观察时间更新而重复。`PATCH /api/attention/{identity}` 使用 `expectedRevision` 写当前更新的 `isRead`；过时身份或读标记冲突返回409。已查看的unknown继续出现在待处理视图。
+`GET /api/attention` 从全库当前完成/失败/取消/unknown Run及无Run失败fire投影，再过滤分页。Run变化身份基于状态与非网络attempt逻辑证据的状态/错误，重复观察更新时间不会创建新身份；unknown核实后的逻辑状态会改变身份。fire身份基于冻结触发/引擎身份和状态/错误，不因重复观察时间更新而重复。`PATCH /api/attention/{identity}` 使用 `expectedRevision` 写当前更新的 `isRead`；过时身份或读标记冲突返回409。已查看的写入效果 unknown 继续出现在待处理视图；只读结果 unknown 可通过查看回执清除待看状态，但原执行失败与证据仍可发现。
 
 此列表首次纳入已有记录的当前事实，不保留全部历史事件；`snapshotAt` 为当前事实发生时间上界，状态变化可能使旧分页中的条目退出当前窗口。刷新移除窗口与页码取得新状态。上述两张独立新表由现有初始化注册并创建，不修改旧表，也不提供旧数据迁移或删除。
 
+只读不确定投影还包括冻结 `model` 策略的未知模型回复，以及冻结工具授权完整且无写工具的未知 Agent/节点。模型请求不会自身执行已声明工具；真正工具写入的逻辑 unknown 仍独立保留。分类仅更新读取结果，不改写原 evidence；历史缺失策略或授权时不补默认值。
+
 ## 模型用量读投影
 
-成功模型及对应网络尝试的 `metadata.usage` 仅保存供应商实际报告的 `inputTokens`/`outputTokens`（缺少时为null）。同一逻辑模型 ID 的网络重试、确认副本和恢复不重复计数；失败网络未报告的消耗不推断。旧 SDK 输出的默认零值没有存在性依据时保留未知。运行汇总和按调用首次开始时间归属的当地日汇总读取现有证据，不新增计费表；按冻结模型配置分组，保留用量及耗时覆盖数量。
+收到模型响应时（包括已报告输出超限而拒绝的响应），模型及对应网络尝试的 `metadata.usage` 仅保存供应商实际报告的 `inputTokens`/`outputTokens`（缺少时为null）。同一逻辑模型 ID 的网络重试、确认副本和恢复不重复计数；失败网络未报告的消耗不推断。实际请求的 `outputTokenLimit`、`outputTokenLimitParameter` 与闭合结束原因 `finishReason` 保存在调用证据；供应商已报告输出超过请求上限时保存 `model_output_limit_exceeded` 失败、`output_limit` 安全类别及 usage（聚合运行失败保留此分类），恢复仍拒绝该响应，不将其文本变为成功输出。旧 SDK 输出的默认零值没有存在性依据时保留未知。运行汇总和按调用首次开始时间归属的当地日汇总读取现有证据，不新增计费表；按冻结模型配置分组，保留用量及耗时覆盖数量。

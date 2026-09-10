@@ -43,6 +43,7 @@ export interface RunResult {
   missing: string[];
   attachments: ResultAttachment[];
   unknownEvidenceIds: string[];
+  readUnknownEvidenceIds?: string[];
   freshness: Json[];
   errorCode: string | null;
 }

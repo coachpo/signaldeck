@@ -322,7 +322,7 @@ def test_real_mcp_third_plugin_upgrade_keeps_old_release_and_dedupes(database_ur
     shutil.copytree(
         PLUGINS / "notes", tmp_path / "notes", ignore=shutil.ignore_patterns("__pycache__", ".venv")
     )
-    (tmp_path / "notes" / "VERSION").write_text("1.2.0\n")
+    (tmp_path / "notes" / "VERSION").write_text("1.3.0\n")
     upgraded_source = tmp_path / "notes" / "notes_plugin" / "main.py"
     original = upgraded_source.read_text()
     changed = original.replace('"text": arguments["text"],', '"text": arguments["text"].upper(),')
@@ -333,7 +333,7 @@ def test_real_mcp_third_plugin_upgrade_keeps_old_release_and_dedupes(database_ur
 
     async def scenario():
         assert old_release["artifactDigest"] != new_release["artifactDigest"]
-        assert old_release["releaseId"] == "1.1.0" and new_release["releaseId"] == "1.2.0"
+        assert old_release["releaseId"] == "1.2.0" and new_release["releaseId"] == "1.3.0"
         context = invocation("example/notes/create")
         async with streamable_http_client(old_url) as (read, write, _):
             async with ClientSession(read, write) as session:
@@ -517,3 +517,70 @@ def test_plugin_release_never_projects_credentials_from_urls(monkeypatch):
     with pytest.raises(ValueError) as error:
         notes_app("postgresql+psycopg://localhost/unused")
     assert "must-not-leak" not in str(error.value)
+
+
+def test_notes_1_1_schema_remains_live_beside_1_2(database_url, tmp_path):
+    # Executable 1.1 source captured from a518c65e, before provenance existed.
+    shutil.copytree(
+        PLUGINS / "runtime", tmp_path / "runtime", ignore=shutil.ignore_patterns("__pycache__")
+    )
+    shutil.copytree(
+        PLUGINS / "notes", tmp_path / "notes", ignore=shutil.ignore_patterns("__pycache__", ".venv")
+    )
+    legacy = Path(__file__).parent / "fixtures" / "notes_1_1"
+    for name in ("main.py", "web.py"):
+        shutil.copyfile(legacy / f"{name}.txt", tmp_path / "notes" / "notes_plugin" / name)
+    (tmp_path / "notes" / "VERSION").write_text("1.1.0\n")
+    old, old_url, old_release = _launch(tmp_path, database_url, _free_port())
+    new = None
+
+    async def call(url, release, operation, arguments):
+        async with streamable_http_client(url) as (read, write, _):
+            async with ClientSession(read, write) as session:
+                await session.initialize()
+                return await session.call_tool(
+                    "example/notes/create",
+                    arguments,
+                    meta={
+                        "signaldeck/release": {
+                            key: release[key]
+                            for key in ("pluginId", "releaseId", "artifactDigest", "contractDigest")
+                        },
+                        "signaldeck/context": invocation("example/notes/create", operation),
+                    },
+                )
+
+    try:
+        arguments = {"title": "Summary", "text": "Original historical bytes"}
+        saved = asyncio.run(call(old_url, old_release, "legacy-frozen", arguments))
+        assert not saved.isError
+        assert set(saved.structuredContent) == {"id", "collection", "title", "text"}
+        new, new_url, new_release = _launch(PLUGINS, database_url, _free_port())
+        assert new_release["releaseId"] == "1.2.0"
+        assert new_release["contractDigest"] != old_release["contractDigest"]
+        assert asyncio.run(call(new_url, old_release, "legacy-frozen", arguments)).isError
+        repeated = asyncio.run(call(old_url, old_release, "legacy-frozen", arguments))
+        assert repeated.structuredContent == saved.structuredContent
+        fresh = asyncio.run(
+            call(new_url, new_release, "new-release", {**arguments, "sourceKind": "original"})
+        )
+        assert not fresh.isError and fresh.structuredContent["sourceKind"] == "original"
+        with httpx.Client() as client:
+            response = client.get(
+                new_url.replace("/mcp/", "/api/note"), params={"id": "legacy-frozen"}
+            )
+            assert response.json() == {
+                **saved.structuredContent,
+                "sourceKind": "unclassified",
+                "sourceNoteIds": [],
+            }
+        # New startup has not changed what the original process returns.
+        assert (
+            asyncio.run(call(old_url, old_release, "legacy-frozen", arguments)).structuredContent
+            == saved.structuredContent
+        )
+    finally:
+        for process in (old, new):
+            if process is not None:
+                process.terminate()
+                process.wait(timeout=10)

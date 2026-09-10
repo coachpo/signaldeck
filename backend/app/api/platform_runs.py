@@ -56,7 +56,7 @@ def list_runs(
     snapshot_at = snapshot_at.replace(tzinfo=UTC) if snapshot_at.tzinfo is None else snapshot_at
     if created_to is not None and created_to.tzinfo is None:
         created_to = created_to.replace(tzinfo=UTC)
-    rows, total, unknown_ids = query_history(
+    rows, total, unknown_ids, read_unknown_ids = query_history(
         store.session_factory,
         q=q,
         group=group,
@@ -77,7 +77,12 @@ def list_runs(
         items=[
             HistoryRun(
                 **store._summary(row)
-                .model_copy(update={"has_unknown_effects": row.id in unknown_ids})
+                .model_copy(
+                    update={
+                        "has_unknown_effects": row.id in unknown_ids,
+                        "has_unknown_results": row.id in read_unknown_ids,
+                    }
+                )
                 .model_dump(),
                 metadata=annotations.get(row.id, ResultMetadataRead(run_id=row.id)),
             )

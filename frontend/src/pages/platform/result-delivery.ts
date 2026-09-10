@@ -65,6 +65,7 @@ export function exportMarkdown(result: RunResult, selected: ConfirmedContent[], 
   ];
   if (result.errorCode) lines.push(`执行错误码：${result.errorCode}${result.errorCategory ? `；安全类别：${result.errorCategory}` : ""}`);
   if (result.cancelRequestedAt) lines.push(`取消请求时间：${result.cancelRequestedAt}。已经确认的外部操作仍会保留。`);
+  if (result.readUnknownEvidenceIds?.length) lines.push(`读取结果未确认；该读取不涉及保存。执行证据：${result.readUnknownEvidenceIds.join("、")}`);
   if (result.contentStatus === "unknown") lines.push("保存状态待核实；以下仅为已确认内容，不代表所有操作成功。");
   if (result.contentStatus === "partial") lines.push("本次仅有部分确认内容。");
   if (result.missing.length) lines.push(`缺失资料：\n${literal(result.missing)}`);

@@ -6,7 +6,7 @@ import re
 from typing import Any, Literal
 from urllib.parse import urlsplit
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 
 from app.domain.model_diagnostics import ModelObservation
 from app.schemas.common import CamelModel
@@ -26,12 +26,42 @@ def validate_public_url(value: str) -> str:
     return value.rstrip("/")
 
 
+class ProviderCapabilities(CamelModel):
+    output_token_limit_parameter: Literal[
+        "max_tokens", "max_completion_tokens", "max_output_tokens"
+    ]
+
+
 class ModelConfiguration(CamelModel):
     name: str = Field(default="", max_length=200)
     base_url: str
     model_id: str = Field(min_length=1, max_length=200)
     api_style: Literal["chat_completions", "responses"] = "chat_completions"
     timeout_seconds: int = Field(default=60, ge=1, le=3600)
+    provider_capabilities: ProviderCapabilities | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
+
+    @field_validator("provider_capabilities", mode="before")
+    @classmethod
+    def omitted_capabilities(cls, value: Any) -> Any:
+        if value is None:
+            raise ValueError("providerCapabilities must be omitted rather than null")
+        return value
+
+    @model_validator(mode="after")
+    def compatible_output_parameter(self) -> ModelConfiguration:
+        if self.provider_capabilities is not None:
+            parameter = self.provider_capabilities.output_token_limit_parameter
+            if (parameter == "max_output_tokens") != (self.api_style == "responses"):
+                raise ValueError("Output token limit parameter must match apiStyle")
+        return self
+
+    @property
+    def output_token_limit_parameter(self) -> str:
+        if self.provider_capabilities is not None:
+            return self.provider_capabilities.output_token_limit_parameter
+        return "max_output_tokens" if self.api_style == "responses" else "max_completion_tokens"
 
     @field_validator("base_url")
     @classmethod

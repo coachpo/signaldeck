@@ -2,8 +2,9 @@ apiVersion: signaldeck.workflowPackage/v2
 metadata:
   key: research_notes
   name: Research notes
-  description: Search the research collection, optionally edit a note with a model, and store
-    an immutable record. Save original text without a model using the capture workflow.
+  description: Search the research collection, optionally edit a note with a model,
+    and store an immutable record. Save original text without a model using the capture
+    workflow.
 agents:
   find_notes:
     name: Search research collection
@@ -17,6 +18,8 @@ agents:
           type: integer
           minimum: 1
           maximum: 50
+        includeDerived:
+          type: boolean
       required: []
       unevaluatedProperties: false
     outputSchema:
@@ -35,14 +38,39 @@ agents:
                 type: string
               text:
                 type: string
+              sourceKind:
+                type: string
+                enum:
+                - original
+                - derived
+                - unclassified
+              sourceNoteIds:
+                type: array
+                items:
+                  type: string
+                  minLength: 1
+                  maxLength: 200
+                maxItems: 50
+                uniqueItems: true
             required:
             - id
             - collection
             - title
             - text
+            - sourceKind
+            - sourceNoteIds
             unevaluatedProperties: false
+        sourceNoteIds:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 200
+          maxItems: 50
+          uniqueItems: true
       required:
       - notes
+      - sourceNoteIds
       unevaluatedProperties: false
     strategy:
       kind: deterministic
@@ -85,14 +113,39 @@ agents:
                     type: string
                   text:
                     type: string
+                  sourceKind:
+                    type: string
+                    enum:
+                    - original
+                    - derived
+                    - unclassified
+                  sourceNoteIds:
+                    type: array
+                    items:
+                      type: string
+                      minLength: 1
+                      maxLength: 200
+                    maxItems: 50
+                    uniqueItems: true
                 required:
                 - id
                 - collection
                 - title
                 - text
+                - sourceKind
+                - sourceNoteIds
                 unevaluatedProperties: false
+            sourceNoteIds:
+              type: array
+              items:
+                type: string
+                minLength: 1
+                maxLength: 200
+              maxItems: 50
+              uniqueItems: true
           required:
           - notes
+          - sourceNoteIds
           unevaluatedProperties: false
       required:
       - text
@@ -108,9 +161,11 @@ agents:
     strategy:
       kind: model
       modelRef: research-model
-      prompt: Edit the supplied research text into a clear note. Use prior notes only as attributed
-        context and retain uncertainty. Do not invent external facts or claim new research.
-        Keep the text under 100000 characters.
+      prompt: Edit the supplied research text into a clear note. Use prior notes only
+        as attributed context and retain uncertainty. Do not invent external facts
+        or claim new research. Keep the text under 100000 characters. Preserve conflicting
+        original claims and attribute them by note ID. Never resolve contradictions
+        by inventing agreement.
     tools: []
     resources: []
     budget:
@@ -131,6 +186,19 @@ agents:
         text:
           type: string
           maxLength: 100000
+        sourceKind:
+          type: string
+          enum:
+          - original
+          - derived
+        sourceNoteIds:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 200
+          maxItems: 50
+          uniqueItems: true
       required:
       - title
       - text
@@ -146,11 +214,27 @@ agents:
           type: string
         text:
           type: string
+        sourceKind:
+          type: string
+          enum:
+          - original
+          - derived
+          - unclassified
+        sourceNoteIds:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 200
+          maxItems: 50
+          uniqueItems: true
       required:
       - id
       - collection
       - title
       - text
+      - sourceKind
+      - sourceNoteIds
       unevaluatedProperties: false
     strategy:
       kind: deterministic
@@ -191,6 +275,11 @@ workflows:
         summarize:
           type: boolean
           title: 整理并总结原文
+        includeDerived:
+          type: boolean
+          title: 包含整理生成的笔记
+          default: false
+          x-signaldeck-schema: signaldeck.schema/2
       required:
       - title
       - text
@@ -207,11 +296,27 @@ workflows:
           type: string
         text:
           type: string
+        sourceKind:
+          type: string
+          enum:
+          - original
+          - derived
+          - unclassified
+        sourceNoteIds:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 200
+          maxItems: 50
+          uniqueItems: true
       required:
       - id
       - collection
       - title
       - text
+      - sourceKind
+      - sourceNoteIds
       unevaluatedProperties: false
     nodes:
       prior:
@@ -222,6 +327,10 @@ workflows:
               ref: workflow.input.query
             limit:
               value: 20
+            includeDerived:
+              ref: workflow.input.includeDerived
+              onMissing:
+                value: false
       edit:
         uses: summarize
         inputMapping:
@@ -250,6 +359,16 @@ workflows:
               ref: nodes.edit.output.text
               onMissing:
                 ref: workflow.input.text
+            sourceKind:
+              value: derived
+            sourceNoteIds:
+              ref: nodes.prior.output.sourceNoteIds
+              onMissing:
+                value: []
+        condition:
+          op: exists
+          args:
+          - ref: nodes.prior.output
     outputMapping:
       ref: nodes.save.output
     maxParallelNodes: 4
@@ -285,7 +404,7 @@ workflows:
         toolId: example/notes/create
         linkKey: note
         required: true
-    description: 结合已有笔记整理资料，并保存新的笔记。
+    description: 默认仅检索原始及历史未分类笔记，保留来源与矛盾后保存派生笔记；可显式选择包含派生内容。
   capture:
     name: 保存原文
     inputSchema:
@@ -315,17 +434,41 @@ workflows:
           type: string
         text:
           type: string
+        sourceKind:
+          type: string
+          enum:
+          - original
+          - derived
+          - unclassified
+        sourceNoteIds:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 200
+          maxItems: 50
+          uniqueItems: true
       required:
       - id
       - collection
       - title
       - text
+      - sourceKind
+      - sourceNoteIds
       unevaluatedProperties: false
     nodes:
       save:
         uses: write_note
         inputMapping:
-          ref: workflow.input
+          object:
+            title:
+              ref: workflow.input.title
+            text:
+              ref: workflow.input.text
+            sourceKind:
+              value: original
+            sourceNoteIds:
+              value: []
     outputMapping:
       ref: nodes.save.output
     maxParallelNodes: 4

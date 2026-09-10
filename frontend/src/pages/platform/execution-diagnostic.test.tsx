@@ -15,6 +15,17 @@ it("does not reinterpret historical HTTP errors as quota or input errors", () =>
   expect(screen.getByText(/具体原因未知/)).toBeVisible();
   expect(screen.queryByText(/额度不足/)).not.toBeInTheDocument();
 });
+it("explains a reported output limit violation even with unknown model category", () => {
+  render(<ExecutionDiagnostic code="model_output_limit_exceeded" category="unknown" />);
+  expect(screen.getByText(/输出超过本次上限/)).toBeVisible();
+  expect(screen.getByText(/已发生的用量仍保留/)).toBeVisible();
+  expect(screen.queryByText(/具体原因未知/)).not.toBeInTheDocument();
+});
+it("preserves an output limit diagnosis through an aggregate workflow failure", () => {
+  render(<ExecutionDiagnostic code="workflow_nodes_failed" category="output_limit" />);
+  expect(screen.getByText(/输出超过本次上限/)).toBeVisible();
+  expect(screen.queryByText(/不接受本次输入/)).not.toBeInTheDocument();
+});
 it("shows authentication handling and an exact recent evidence link", () => {
   render(<MemoryRouter><ModelObservationDetails observation={{
     status: "failed", observedAt: "2026-09-10T09:00:00Z", errorCode: "model_http_error",

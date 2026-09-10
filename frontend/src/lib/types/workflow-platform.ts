@@ -111,6 +111,8 @@ export interface LaunchOrigin {
   scheduledAt?: string | null;
 }
 export interface RunSummary {
+  hasUnknownEffects?: boolean;
+  hasUnknownResults?: boolean;
   id: string;
   packageKey: string;
   workflowKey: string;
@@ -169,7 +171,7 @@ export interface RunDetail extends RunSummary {
   errorCode?: string | null;
   evidence: ExecutionEvidence[];
 }
-export type ModelErrorCategory = "quota" | "authentication" | "rate_limit" | "model" | "input" | "unknown";
+export type ModelErrorCategory = "quota" | "authentication" | "rate_limit" | "model" | "input" | "output_limit" | "unknown";
 export interface ModelObservation {
   status: "not_observed" | "succeeded" | "failed" | "unknown";
   observedAt: string | null;

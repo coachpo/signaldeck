@@ -68,12 +68,14 @@ def evidence(kind, output, **kwargs):
     )
 
 
-def test_declared_link_uses_confirmed_frozen_tool_output_offline_and_preserves_ownership():
+@pytest.mark.parametrize("effect", ["read", "write"])
+def test_declared_link_uses_confirmed_frozen_tool_output_offline_and_preserves_ownership(effect):
     run = run_fixture()
     schema = {"type": "object", "properties": {"externalKey": {"type": "string"}}}
     tool = ToolDefinition(
         tool_id="example/echo/copy",
         owner_plugin_id="example/echo",
+        effect=effect,
         input_schema=schema,
         output_schema=schema,
         result_links=[
@@ -116,7 +118,10 @@ def test_declared_link_uses_confirmed_frozen_tool_output_offline_and_preserves_o
     )
     run.evidence[1].status = "unknown"
     assert all(s.kind != "link" for s in project_result(run).sections)
-    assert project_result(run).content_status == "unknown"
+    uncertain = project_result(run)
+    assert uncertain.content_status == ("unknown" if effect == "write" else "partial")
+    assert uncertain.unknown_evidence_ids == (["tool"] if effect == "write" else [])
+    assert uncertain.read_unknown_evidence_ids == (["tool"] if effect == "read" else [])
 
 
 def test_historical_business_looking_keys_are_plain_values_and_optional_skip_is_not_missing():

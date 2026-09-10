@@ -1,9 +1,27 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type APIRequestContext } from "@playwright/test";
+import type { AttentionList } from "../src/lib/types/result-metadata";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { parse, stringify } from "yaml";
 import { apiBase } from "./platform-fixtures";
 import { startHeldPlugin } from "./held-plugin-fixture";
+
+async function findAttention(request: APIRequestContext, runId: string, view: "all" | "attention") {
+  let snapshotAt: string | undefined;
+  let offset = 0;
+  for (;;) {
+    const response = await request.get(`${apiBase}/attention`, {
+      params: { view, limit: 25, offset, ...(snapshotAt ? { snapshotAt } : {}) },
+    });
+    expect(response.ok(), await response.text()).toBe(true);
+    const page: AttentionList = await response.json();
+    snapshotAt ??= page.snapshotAt;
+    const item = page.items.find((item) => item.runId === runId);
+    if (item) return item;
+    offset += page.limit;
+    if (offset >= page.total) throw new Error(`Run ${runId} missing from ${view} attention snapshot ${snapshotAt}`);
+  }
+}
 
 test("actual independent write remains unknown after cancellation and history survives plugin shutdown", async ({page,request}, testInfo) => {
   test.setTimeout(150000);
@@ -81,6 +99,35 @@ test("actual independent write remains unknown after cancellation and history su
     const largeResult = await (await request.get(`${apiBase}/runs/${largeId}/result`)).json();
     expect(largeResult.deferredSections).toContain("大正文");
     expect(largeResult.attachments.length).toBeGreaterThan(0);
+    const readKey = `${key}-read`;
+    const readDefinition = parse(source);
+    const readTool = plugin.binding.tools[1];
+    readDefinition.metadata = { key: readKey, name: "读取失败仍可查看" };
+    readDefinition.agents.reader = { ...readDefinition.agents.writer, name: "读取资料",
+      strategy: { kind: "deterministic", toolId: readTool.toolId, inputMapping: { ref: "agent.input" }, outputMapping: { ref: "tool.output" } }, tools: [readTool.toolId] };
+    readDefinition.workflows.main.nodes.after.uses = "reader";
+    const savedRead = await request.post(`${apiBase}/workflow-packages`, { data: { manifestSource: stringify(readDefinition, { aliasDuplicateObjects: false }) } });
+    expect(savedRead.ok(), await savedRead.text()).toBe(true);
+    const readLaunch = await request.post(`${apiBase}/workflow-packages/${readKey}/launches`, { data: { workflowKey: "main", parameters: { value: 30, delay: 0, tag: "Confirmed before read failure" }, launchId: crypto.randomUUID() } });
+    expect(readLaunch.ok(), await readLaunch.text()).toBe(true);
+    const readId = (await readLaunch.json()).id;
+    await expect.poll(async () => (await (await request.get(`${apiBase}/runs/${readId}`)).json()).status, { timeout: 60000 }).toBe("failed");
+    const readRun = await (await request.get(`${apiBase}/runs/${readId}`)).json();
+    const readResult = await (await request.get(`${apiBase}/runs/${readId}/result`)).json();
+    const readFault = JSON.parse(readFileSync(join(plugin.directory, "read-fault.json"), "utf8"));
+    expect(readRun.hasUnknownEffects).toBe(false);
+    expect(readRun.hasUnknownResults).toBe(true);
+    expect(readResult.contentStatus).toBe("partial");
+    expect(readResult.unknownEvidenceIds).toEqual([]);
+    expect(readResult.readUnknownEvidenceIds).toEqual([readFault.operationId]);
+    expect(readRun.evidence).toEqual(expect.arrayContaining([expect.objectContaining({ id: readFault.operationId, status: "unknown", errorCode: "plugin_operation_error" })]));
+    await page.goto(`/runs/${readId}`);
+    await expect(page.getByText("读取结果未确认", { exact: true })).toBeVisible();
+    await expect(page.getByText("保存状态待核实", { exact: true })).toHaveCount(0);
+    await page.getByRole("button", { name: "再运行一次", exact: true }).click();
+    await expect(page.getByRole("button", { name: "确认并开始新运行", exact: true })).toBeEnabled();
+    await expect(page.getByLabel("我已核实目标位置与执行证据，确认需要再次执行")).toHaveCount(0);
+    await page.goto(`/runs/${runId}`);
     await plugin.stop();
     expect(await request.get(`${plugin.baseUrl}/health`,{timeout:500}).catch(() => null)).toBeNull();
     await page.reload();
@@ -95,7 +142,8 @@ test("actual independent write remains unknown after cancellation and history su
     expect(await (await request.get(`${apiBase}/runs/${confirmedId}/result`)).json()).toEqual(confirmedResult);
     const requests = readFileSync(join(plugin.directory,"requests.jsonl"),"utf8").trim().split("\n").map(line => JSON.parse(line));
     const writes = requests.filter(item => item.method === "tools/call" && item.params.name === tool.toolId);
-    expect(writes).toHaveLength(5);
+    expect(writes).toHaveLength(6);
+    expect(requests.filter(item => item.method === "tools/call" && item.params.name === readTool.toolId)).toHaveLength(1);
     expect(writes.filter(item => item.params.arguments.tag === "Controlled external effect")).toHaveLength(1);
     expect(writes.filter(item => item.params.arguments.tag === "Confirmed offline output")).toHaveLength(2);
     const history = await (await request.get(`${apiBase}/runs`,{params:{packageKey:key}})).json();
@@ -121,6 +169,23 @@ test("actual independent write remains unknown after cancellation and history su
       expect(await (await request.get(`${apiBase}/runs/${confirmedId}`)).json()).toEqual(confirmedRun);
       expect(await (await request.get(`${apiBase}/runs/${confirmedId}/result`)).json()).toEqual(confirmedResult);
     }
+    expect(await (await request.get(`${apiBase}/runs/${readId}`)).json()).toEqual(readRun);
+    expect(await (await request.get(`${apiBase}/runs/${readId}/result`)).json()).toEqual(readResult);
+    const readHistory = await (await request.get(`${apiBase}/runs`, { params: { group: "attention", packageKey: readKey } })).json();
+    expect(readHistory.items).toEqual([expect.objectContaining({ id: readId, hasUnknownEffects: false, hasUnknownResults: true })]);
+    const readUpdate = await findAttention(request, readId, "attention");
+    expect(readUpdate.hasUnknownEffects).toBe(false);
+    expect(readUpdate.hasUnknownResults).toBe(true);
+    await page.goto(`/runs/${readId}`);
+    const readDownloadPromise = page.waitForEvent("download");
+    await page.getByRole("button", { name: "导出 Markdown", exact: true }).click();
+    const readPath = join(directory, "offline-read-failure.md");
+    await (await readDownloadPromise).saveAs(readPath);
+    expect(readFileSync(readPath, "utf8")).toContain("读取结果未确认");
+    expect(readFileSync(readPath, "utf8")).not.toContain("保存状态待核实");
+    await page.goto(`/runs/compare?left=${confirmedId}&right=${readId}`);
+    await expect(page.getByRole("region", { name: "右侧结果", exact: true })).toContainText("读取结果未确认");
+    await expect(page.getByRole("region", { name: "右侧结果", exact: true })).not.toContainText("保存状态待核实");
     // Export, annotation, updates and comparison must still use persisted facts.
     await page.goto(`/runs/${confirmedId}`);
     const downloaded = page.waitForEvent("download");
@@ -140,17 +205,14 @@ test("actual independent write remains unknown after cancellation and history su
     });
     expect(annotated.ok(), await annotated.text()).toBe(true);
     expect(await (await request.get(`${apiBase}/runs/${confirmedId}`)).json()).toEqual(confirmedRun);
-    const updates = await (await request.get(`${apiBase}/attention?view=all`)).json();
-    const unresolvedUpdate = updates.items.find((item: { runId: string }) => item.runId === runId);
+    const unresolvedUpdate = await findAttention(request, runId, "all");
     expect(unresolvedUpdate.hasUnknownEffects).toBe(true);
     const viewed = await request.patch(`${apiBase}/attention/${unresolvedUpdate.id}`, {
       data: { expectedRevision: unresolvedUpdate.revision, isRead: true },
     });
     expect(viewed.ok(), await viewed.text()).toBe(true);
-    const remainingUpdates = await (await request.get(`${apiBase}/attention`)).json();
-    expect(remainingUpdates.items).toEqual(expect.arrayContaining([
-      expect.objectContaining({ id: unresolvedUpdate.id, isRead: true, hasUnknownEffects: true }),
-    ]));
+    const remainingUpdate = await findAttention(request, runId, "attention");
+    expect(remainingUpdate).toEqual(expect.objectContaining({ id: unresolvedUpdate.id, isRead: true, hasUnknownEffects: true }));
     await page.goto(`/runs/compare?left=${confirmedId}&right=${runId}&leftSection=section:0`);
     await expect(page.getByRole("region", { name: "左侧结果", exact: true })).toContainText("Confirmed offline output");
     await expect(page.getByRole("region", { name: "右侧结果", exact: true })).toContainText("保存状态待核实");
@@ -178,7 +240,7 @@ test("actual independent write remains unknown after cancellation and history su
     await expect(page.getByRole("button", { name: "读取左侧所选附件", exact: true })).toBeVisible();
     await page.getByRole("button", { name: "读取左侧所选附件", exact: true }).click();
     await expect(page.getByRole("region", { name: "左侧结果", exact: true })).toContainText("large-confirmed-content-");
-    const observation = {engineStopped,run:before,effectAfterCancellation:effect,confirmedRun,confirmedResult,pluginStopped:true,writeRequests:writes,methods:requests.map(item => item.method),exportedPath,largeId,largeResult,largePath,artifactRequests,annotation:await annotated.json(),unresolvedUpdate:await viewed.json()};
+    const observation = {readRun,readResult,readFault,readHistory,readUpdate,readPath,engineStopped,run:before,effectAfterCancellation:effect,confirmedRun,confirmedResult,pluginStopped:true,writeRequests:writes,methods:requests.map(item => item.method),exportedPath,largeId,largeResult,largePath,artifactRequests,annotation:await annotated.json(),unresolvedUpdate:await viewed.json()};
     writeFileSync(join(directory,"unknown-plugin-offline-evidence.json"),JSON.stringify(observation,null,2));
     await testInfo.attach("unknown-plugin-offline-evidence.json",{body:JSON.stringify(observation,null,2),contentType:"application/json"});
   } finally { await plugin.dispose(); }

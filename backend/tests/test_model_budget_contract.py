@@ -7,6 +7,7 @@ from types import SimpleNamespace
 
 import pytest
 from fastapi import FastAPI, Request
+from pydantic import ValidationError
 from pydantic_ai.exceptions import UsageLimitExceeded
 from pydantic_ai.messages import ModelRequest, UserPromptPart
 from pydantic_ai.models import ModelRequestParameters
@@ -14,6 +15,8 @@ from pydantic_ai.usage import RunUsage
 
 from app.domain.compiler import compile_package
 from app.domain.definition_parser import parse_package_source
+from app.domain.model_diagnostics import model_binding_digest
+from app.domain.resources import ModelConfiguration
 from app.domain.schema_contract import DomainValidationError
 from app.infrastructure.artifact_store import ArtifactStore
 from app.infrastructure.model_runtime import GatewayModel
@@ -122,12 +125,74 @@ def test_output_limit_changes_only_new_frozen_runs(platform):
     assert prepared["effectiveSettings"]["agents"]["echo"]["budget"]["maxOutputTokens"] == 128
 
 
+def test_provider_capabilities_preserve_omitted_binding_and_freeze_selection(platform):
+    client, store, _ = platform
+    configured(client, store, model=True)
+    config = store.get_resource("local-model")["config"]
+    assert "providerCapabilities" not in config
+    binding = {**config, "credentialRevision": "one"}
+    from app.domain.tool_contracts import canonical_digest
+
+    assert model_binding_digest(binding) == canonical_digest(
+        {"name": "", "apiStyle": "chat_completions", "timeoutSeconds": 60, **binding}
+    )
+    launch = {"workflowKey": "main", "parameters": {"text": "hello"}}
+    old = client.post(
+        "/api/workflow-packages/api-package/launches", json={**launch, "launchId": "profile-old"}
+    ).json()
+    capability = {"outputTokenLimitParameter": "max_tokens"}
+    store.save_resource("local-model", "model", {**config, "providerCapabilities": capability})
+    new = client.post(
+        "/api/workflow-packages/api-package/launches", json={**launch, "launchId": "profile-new"}
+    ).json()
+    assert "providerCapabilities" not in store.get_run(old["id"]).spec.model_bindings["local-model"]
+    assert (
+        store.get_run(new["id"]).spec.model_bindings["local-model"]["providerCapabilities"]
+        == capability
+    )
+    assert model_binding_digest(
+        {**binding, "providerCapabilities": capability}
+    ) != model_binding_digest(binding)
+
+
 @pytest.mark.parametrize(
-    "style,field",
-    [("chat_completions", "max_completion_tokens"), ("responses", "max_output_tokens")],
+    "style,capabilities",
+    [
+        ("chat_completions", None),
+        ("chat_completions", {}),
+        ("chat_completions", {"outputTokenLimitParameter": "automatic"}),
+        ("chat_completions", {"outputTokenLimitParameter": "max_output_tokens"}),
+        ("responses", {"outputTokenLimitParameter": "max_tokens"}),
+        ("responses", {"outputTokenLimitParameter": "max_completion_tokens"}),
+        ("chat_completions", {"outputTokenLimitParameter": "max_tokens", "extra": True}),
+    ],
+)
+def test_provider_capability_is_closed_and_protocol_specific(style, capabilities):
+    with pytest.raises(ValidationError):
+        ModelConfiguration.model_validate(
+            {
+                "baseUrl": "http://localhost/v1",
+                "modelId": "arbitrary",
+                "apiStyle": style,
+                "providerCapabilities": capabilities,
+            }
+        )
+
+
+@pytest.mark.parametrize(
+    "style,field,explicit",
+    [
+        ("chat_completions", "max_completion_tokens", False),
+        ("responses", "max_output_tokens", False),
+        ("chat_completions", "max_tokens", True),
+        ("chat_completions", "max_completion_tokens", True),
+        ("responses", "max_output_tokens", True),
+    ],
 )
 @pytest.mark.parametrize("report_usage", [True, False])
-def test_actual_adapter_wire_output_cap_and_usage_presence(tmp_path, style, field, report_usage):
+def test_actual_adapter_wire_output_cap_and_usage_presence(
+    tmp_path, style, field, explicit, report_usage
+):
     async def scenario():
         app = FastAPI()
         calls = []
@@ -177,12 +242,20 @@ def test_actual_adapter_wire_output_cap_and_usage_presence(tmp_path, style, fiel
                         "modelId": "test",
                         "apiStyle": style,
                         "credentialRevision": "one",
+                        **(
+                            {"providerCapabilities": {"outputTokenLimitParameter": field}}
+                            if explicit
+                            else {}
+                        ),
                     },
                     "deadline": (datetime.now(UTC) + timedelta(seconds=30)).isoformat(),
                 },
             )
         assert len(calls) == 1
         assert calls[0][field] == 12
+        assert set(calls[0]) & {"max_tokens", "max_completion_tokens", "max_output_tokens"} == {
+            field
+        }
         assert usage == (
             {"inputTokens": 3, "outputTokens": 0}
             if report_usage

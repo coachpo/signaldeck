@@ -3,6 +3,7 @@
 from typing import Any, Literal
 from urllib.parse import urlencode, urljoin
 
+from app.application.effect_projection import unknown_evidence
 from app.application.model_failure_projection import project_model_failure
 from app.domain.definitions import DeterministicStrategy, PackageDefinition
 from app.domain.execution import ExecutionEvidence, RunDetail
@@ -61,6 +62,9 @@ def project_result(run: RunDetail) -> ResultRead:
         run.evidence, key=lambda e: (e.finished_at or run.created_at, e.id), reverse=True
     )
     result.error_category = project_model_failure(run.error_code, evidence)
+    result.unknown_evidence_ids, result.read_unknown_evidence_ids = unknown_evidence(
+        run.spec.model_dump(by_alias=True), [e.model_dump(by_alias=True) for e in evidence]
+    )
     confirmed = [e for e in evidence if e.status == "succeeded" and e.kind in {"node", "tool"}]
 
     def owner(item: ExecutionEvidence | None) -> ExecutionEvidence | None:
@@ -135,8 +139,6 @@ def project_result(run: RunDetail) -> ResultRead:
     artifacts(run.output)
     item: ExecutionEvidence | None
     for item in evidence:
-        if item.status == "unknown" and item.kind != "attempt":
-            result.unknown_evidence_ids.append(item.id)
         if item.kind == "node":
             if item.status == "skipped":
                 result.skipped.append(item.node_id)
@@ -275,6 +277,10 @@ def project_result(run: RunDetail) -> ResultRead:
         result.content_status = "unknown"
     elif result.sections or result.attachments:
         result.content_status = (
-            "partial" if result.missing or run.status in {"failed", "cancelled"} else "available"
+            "partial"
+            if result.missing
+            or result.read_unknown_evidence_ids
+            or run.status in {"failed", "cancelled"}
+            else "available"
         )
     return result

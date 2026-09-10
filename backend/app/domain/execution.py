@@ -52,6 +52,7 @@ class ResolvedRunSpec(CamelModel):
 class RunSummary(CamelModel):
     title: str = ""
     has_unknown_effects: bool = False
+    has_unknown_results: bool = False
     id: str
     package_key: str
     workflow_key: str

@@ -111,6 +111,8 @@ function RunInspector({ run }: { run: RunDetail }) {
             description="The status above is reported by the execution engine. External effects already performed are retained."
           />
         )}
+        {run.hasUnknownResults && <InventoryStatePanel tone="warning" title="读取结果未确认" description="冻结工具声明为只读；此未确认结果不涉及保存。" />}
+        {run.hasUnknownEffects && <InventoryStatePanel tone="warning" title="保存状态待核实" description="外部效果尚未确认，请先核对目标位置和执行证据。" />}
         {run.errorCode && (
           <InventoryStatePanel tone="danger" title={run.errorCode} />
         )}
