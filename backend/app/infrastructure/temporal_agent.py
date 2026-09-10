@@ -9,6 +9,7 @@ from typing import Any, Literal, cast
 from pydantic_ai import Agent
 from pydantic_ai.capabilities import AbstractCapability
 from pydantic_ai.durable_exec.temporal import TemporalDurability
+from pydantic_ai.exceptions import UsageLimitExceeded
 from pydantic_ai.messages import ModelMessage, ModelResponse
 from pydantic_ai.models import Model, ModelRequestParameters
 from pydantic_ai.settings import ModelSettings
@@ -141,10 +142,17 @@ class ToolConcurrency(AbstractCapability[dict[str, Any]]):
 def model_settings(ctx: RunContext[dict[str, Any]]) -> ModelSettings:
     deps = ctx.deps
     strategy = deps["agent"]["strategy"]
+    budget = deps["agent"]["budget"]
+    remaining = budget["maxTokens"] - ctx.usage.total_tokens
+    output_limit = max(1, remaining)
+    if "maxOutputTokens" in budget:
+        if remaining <= 0:
+            raise UsageLimitExceeded("Agent token budget exhausted")
+        output_limit = min(remaining, budget["maxOutputTokens"])
     return cast(
         ModelSettings,
         {
-            "max_tokens": max(1, deps["agent"]["budget"]["maxTokens"] - ctx.usage.total_tokens),
+            "max_tokens": output_limit,
             "signaldeck_context": {
                 "runId": deps["runId"],
                 "nodeId": deps["nodeId"],

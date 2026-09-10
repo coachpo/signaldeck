@@ -1,3 +1,4 @@
+import { HistoryResultMarks } from "./result-metadata";
 import { Link, useSearchParams } from "react-router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,7 +28,7 @@ const selectClass =
   "h-8 min-w-0 rounded border border-input bg-background px-2 text-sm";
 export function ResultHistoryPage() {
   const packages = usePackages();
-  const tasks = availableTasks(Array.isArray(packages.data) ? packages.data : []);
+  const tasks = availableTasks(packages.data?.items ?? []);
   const [search, setSearch] = useSearchParams();
   const invalidateHistory = useInvalidateResultHistory();
   const query = new URLSearchParams(search);
@@ -62,9 +63,7 @@ export function ResultHistoryPage() {
         title: "结果",
         description: "查找和阅读所有执行记录",
         actions: (
-          <Button variant="outline" onClick={() => void refresh()}>
-            刷新
-          </Button>
+          <div className="flex flex-wrap gap-2"><Button asChild variant="outline"><Link to="/attention">执行更新</Link></Button><Button variant="outline" onClick={() => void refresh()}>刷新</Button></div>
         ),
       }}
     >
@@ -95,6 +94,12 @@ export function ResultHistoryPage() {
         }}
         filters={
           <>
+            <select aria-label="收藏筛选" className={selectClass} value={search.get("isFavorite") ?? ""} onChange={(e) => change("isFavorite", e.target.value)}>
+              <option value="">全部收藏状态</option><option value="true">已收藏</option><option value="false">未收藏</option>
+            </select>
+            <select aria-label="阅读筛选" className={selectClass} value={search.get("isRead") ?? ""} onChange={(e) => change("isRead", e.target.value)}>
+              <option value="">全部阅读状态</option><option value="false">未读</option><option value="true">已读</option>
+            </select>
             <select
               aria-label="执行状态"
               className={selectClass}
@@ -219,6 +224,7 @@ export function ResultHistoryPage() {
                     >
                       {run.title}
                     </Link>
+                    <p className="text-xs text-muted-foreground">{run.metadata?.isFavorite ? "已收藏 · " : ""}{run.metadata?.isRead ? "已读" : "未读"}{run.metadata?.note ? " · 有个人备注" : ""}</p>
                   </TableCell>
                   <TableCell>
                     <ResourceStatusBadge
@@ -241,6 +247,7 @@ export function ResultHistoryPage() {
                     {new Date(run.createdAt).toLocaleString()}
                   </TableCell>
                   <TableCell>
+                    {run.metadata && <HistoryResultMarks metadata={run.metadata} title={run.title} />}
                     <Button asChild variant="link">
                       <Link
                         to={`/tasks/new?fromRun=${encodeURIComponent(run.id)}`}

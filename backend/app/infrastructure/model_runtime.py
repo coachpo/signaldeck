@@ -21,7 +21,9 @@ from temporalio.exceptions import ApplicationError
 
 from app.domain.execution import ApplicationError as DomainApplicationError
 from app.domain.execution import ExecutionEvidence
+from app.domain.model_diagnostics import model_binding_digest
 from app.domain.resources import ResolvedModelConfiguration
+from app.infrastructure.model_usage_capture import ReportedModelUsage
 from app.infrastructure.temporal_payloads import pack_value, unpack_value
 from app.infrastructure.temporal_ports import ArtifactValues, BoundCredentialReader, ModelEvidence
 
@@ -67,6 +69,10 @@ class GatewayModel(Model):
                 ],
             },
         )
+        binding_metadata = {
+            "resourceId": context["resourceId"],
+            "modelBindingDigest": model_binding_digest(context["binding"]),
+        }
         evidence = ExecutionEvidence(
             id=model_id,
             run_id=context["runId"],
@@ -76,6 +82,7 @@ class GatewayModel(Model):
             status="running",
             input=input_value,
             started_at=datetime.now(UTC),
+            metadata=binding_metadata,
         )
         await asyncio.to_thread(store.record_evidence, evidence)
         attempt = activity.info().attempt
@@ -104,11 +111,17 @@ class GatewayModel(Model):
             attempt=attempt,
             input=input_value,
             started_at=datetime.now(UTC),
-            metadata={"networkKind": "model_request"},
+            metadata={
+                "networkKind": "model_request",
+                "resourceId": context["resourceId"],
+                "modelBindingDigest": model_binding_digest(context["binding"]),
+            },
         )
         await asyncio.to_thread(store.record_evidence, network)
         try:
-            response = await self._request_io(messages, settings, model_request_parameters, context)
+            response, reported_usage = await self._request_io(
+                messages, settings, model_request_parameters, context
+            )
             output = pack_value(artifacts, RESPONSE.dump_python(response, mode="json"))
             # Both confirmations commit together before replying to Temporal.
             await asyncio.to_thread(
@@ -117,6 +130,7 @@ class GatewayModel(Model):
                     network.model_copy(
                         update={
                             "status": "succeeded",
+                            "metadata": {**network.metadata, "usage": reported_usage},
                             "output": output,
                             "finished_at": datetime.now(UTC),
                         }
@@ -124,6 +138,7 @@ class GatewayModel(Model):
                     evidence.model_copy(
                         update={
                             "status": "succeeded",
+                            "metadata": {**binding_metadata, "usage": reported_usage},
                             "output": output,
                             "finished_at": datetime.now(UTC),
                         }
@@ -162,6 +177,7 @@ class GatewayModel(Model):
                     evidence.model_copy(
                         update={
                             "status": "failed" if non_retryable or attempt >= 3 else "unknown",
+                            "metadata": {**binding_metadata, **failure_metadata},
                             "error_code": code,
                             "finished_at": datetime.now(UTC),
                         }
@@ -177,7 +193,7 @@ class GatewayModel(Model):
         settings: dict[str, Any],
         parameters: ModelRequestParameters,
         context: dict[str, Any],
-    ) -> ModelResponse:
+    ) -> tuple[ModelResponse, dict[str, int | None]]:
         binding = ResolvedModelConfiguration.model_validate(context["binding"])
         credentials = await asyncio.to_thread(
             self.credentials, context["resourceId"], binding.credential_revision
@@ -188,7 +204,11 @@ class GatewayModel(Model):
         if remaining <= 0:
             raise ApplicationError("deadline_exceeded", non_retryable=True)
         api_key = credentials.get("apiKey", "")
-        async with httpx2.AsyncClient(timeout=min(binding.timeout_seconds, remaining)) as http:
+        reported_usage = ReportedModelUsage(binding.api_style)
+        async with httpx2.AsyncClient(
+            timeout=min(binding.timeout_seconds, remaining),
+            event_hooks={"response": [reported_usage.observe]},
+        ) as http:
             client = AsyncOpenAI(
                 base_url=binding.base_url,
                 api_key=api_key or "local-no-credential",
@@ -219,21 +239,84 @@ class GatewayModel(Model):
                 for value in credentials.values()
             ):
                 raise ApplicationError("model_response_contains_credential", non_retryable=True)
-            return response
+            return response, reported_usage.value
 
 
 def model_failure(exc: Exception) -> tuple[str, bool, dict[str, Any]]:
     if isinstance(exc, ApplicationError):
-        return exc.message, exc.non_retryable, {"failureType": "execution_contract"}
+        return (
+            exc.message,
+            exc.non_retryable,
+            {
+                "failureType": "execution_contract",
+                "errorCategory": "unknown",
+                "networkStarted": exc.message
+                not in {"deadline_exceeded", "provider_schema_unsupported"},
+            },
+        )
     if isinstance(exc, DomainApplicationError):
-        return exc.code, True, {"failureType": "resource_contract", "networkStarted": False}
+        return (
+            exc.code,
+            True,
+            {
+                "failureType": "resource_contract",
+                "networkStarted": False,
+                "errorCategory": "unknown",
+            },
+        )
     if isinstance(exc, UnexpectedModelBehavior):
-        return "model_response_invalid", True, {"failureType": "invalid_model_response"}
+        return (
+            "model_response_invalid",
+            True,
+            {"failureType": "invalid_model_response", "errorCategory": "unknown"},
+        )
     if isinstance(exc, (ModelHTTPError, APIStatusError)):
         status = exc.status_code
         return (
             "model_http_error",
             status != 429 and status < 500,
-            {"failureType": "http_error", "httpStatus": status},
+            {
+                "failureType": "http_error",
+                "httpStatus": status,
+                "errorCategory": model_http_category(exc),
+            },
         )
-    return "model_request_failed", False, {"failureType": "transport_or_provider_error"}
+    return (
+        "model_request_failed",
+        False,
+        {"failureType": "transport_or_provider_error", "errorCategory": "unknown"},
+    )
+
+
+def model_http_category(exc: ModelHTTPError | APIStatusError) -> str:
+    # Exact structured identifiers only: provider messages may echo credentials.
+    body = exc.body
+    error = body.get("error", body) if isinstance(body, dict) else {}
+    identifiers = {
+        error.get(key)
+        for key in ("code", "type")
+        if isinstance(error, dict) and isinstance(error.get(key), str)
+    }
+    if identifiers & {
+        "insufficient_quota",
+        "insufficient_user_quota",
+        "quota_exceeded",
+        "billing_hard_limit_reached",
+        "credit_balance_too_low",
+    }:
+        return "quota"
+    if exc.status_code in {401, 403} or identifiers & {"invalid_api_key", "authentication_error"}:
+        return "authentication"
+    if exc.status_code == 429 or identifiers & {"rate_limit_exceeded"}:
+        return "rate_limit"
+    if identifiers & {"model_not_found", "model_not_available", "unsupported_model"}:
+        return "model"
+    if identifiers & {
+        "context_length_exceeded",
+        "invalid_prompt",
+        "invalid_request_error",
+        "invalid_value",
+        "unsupported_parameter",
+    }:
+        return "input"
+    return "unknown"

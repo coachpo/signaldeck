@@ -1,3 +1,4 @@
+import { ModelUsagePanel } from "./model-usage-panel";
 import { connectionName } from "./task-labels";
 import { Link } from "react-router";
 import { useState } from "react";
@@ -87,6 +88,7 @@ export function SettingsPage() {
             </FieldGroup>
           </CardContent>
         </Card>
+        <ModelUsagePanel />
         <Card>
           <CardHeader>
             <CardTitle>已连接服务</CardTitle>
@@ -147,7 +149,8 @@ export function SettingsPage() {
                   configured: true,
                   hasCredentials: resource.hasCredentials,
                   config: resource.config,
-                  observation: "not_observed",
+                  observation: resource.modelObservation?.status ?? "not_observed",
+                  modelObservation: resource.modelObservation,
                   issue: null,
                 }))}
                 onSaved={() => {

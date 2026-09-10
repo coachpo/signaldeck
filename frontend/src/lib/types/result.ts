@@ -1,4 +1,5 @@
-import type { Json, RunSummary, LaunchOrigin } from "./workflow-platform";
+import type { ResultMetadata } from "./result-metadata";
+import type { Json, RunSummary, LaunchOrigin, ModelErrorCategory } from "./workflow-platform";
 export interface ResultAttachment {
   kind: "artifact";
   label: string;
@@ -22,6 +23,7 @@ export interface ResultSection {
   severity?: "info" | "warning" | "missing" | null;
 }
 export interface RunResult {
+  errorCategory?: ModelErrorCategory | null;
   sections?: ResultSection[];
   skipped?: string[];
   deferredSections?: string[];
@@ -46,7 +48,7 @@ export interface RunResult {
 }
 export interface RunHistory {
   snapshotAt: string;
-  items: (RunSummary & { title: string; hasUnknownEffects?: boolean })[];
+  items: (RunSummary & { title: string; hasUnknownEffects?: boolean; metadata?: ResultMetadata })[];
   total: number;
   offset: number;
   limit: number;

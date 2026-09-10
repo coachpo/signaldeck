@@ -7,6 +7,9 @@ import { RunPage } from "./runs";
 import { ResultHistoryPage } from "./result-history";
 import { runFixture } from "./fixtures";
 import type { RunResult } from "@/lib/types/result";
+vi.mock("@/hooks/use-model-usage", () => ({
+  useModelUsage: () => ({ run: {}, day: {}, selectedDay: { date: "2026-09-10", timezone: "UTC" } }),
+}));
 const result: RunResult = {
   runId: "run-1",
   title: "我的研究",
@@ -77,7 +80,9 @@ function mount(path = "/runs/run-1", cachedHistory?: unknown) {
 }
 function fetcher(overrides: Partial<RunResult> = {}) {
   return vi.fn(async (url: string) =>
-    url.endsWith("/result")
+    url.endsWith("/metadata")
+      ? response({ runId: "run-1", isFavorite: false, isRead: false, note: "", revision: 0 })
+      : url.endsWith("/result")
       ? response({ ...result, ...overrides })
       : url.endsWith("/reuse")
         ? response(reuse)
@@ -88,6 +93,28 @@ function fetcher(overrides: Partial<RunResult> = {}) {
 }
 afterEach(() => vi.unstubAllGlobals());
 describe("ordinary results", () => {
+  it("keeps declared receipt and complete input available behind disclosure", async () => {
+    vi.stubGlobal("fetch", fetcher({ sections: [
+      { kind: "markdown", label: "声明正文", value: "# 唯一正文" },
+      { kind: "receipt", label: "保存信息", value: { arbitrary: "receipt-only" } },
+    ] }));
+    mount();
+    expect(await screen.findByRole("heading", { name: "唯一正文" })).toBeVisible();
+    expect(screen.getByText("保存信息（完整原值）").closest("details")).not.toHaveAttribute("open");
+    fireEvent.click(screen.getByText("保存信息（完整原值）"));
+    expect(screen.getByText("receipt-only")).toBeVisible();
+    expect(screen.getByText("本次输入（完整原值）").closest("details")).not.toHaveAttribute("open");
+    fireEvent.click(screen.getByText("本次输入（完整原值）"));
+    expect(await screen.findByText("原始内容")).toBeVisible();
+  });
+
+  it("explains a model failure while retaining the input-reuse and evidence destinations", async () => {
+    vi.stubGlobal("fetch", fetcher({ status: "failed", errorCode: "model_http_error", errorCategory: "quota", missing: [] }));
+    mount();
+    expect(await screen.findByText(/模型服务额度不足/)).toBeVisible();
+    expect(screen.getByRole("link", { name: "保留输入并检查连接" })).toHaveAttribute("href", "/tasks/new?fromRun=run-1");
+    expect(screen.getByRole("link", { name: "技术详情与调用证据" })).toHaveAttribute("href", "/runs/run-1?tab=evidence");
+  });
   it("shows body, missing information and provenance before technical evidence", async () => {
     vi.stubGlobal("fetch", fetcher());
     mount();
@@ -363,9 +390,10 @@ describe("ordinary results", () => {
     expect(
       screen.queryByText("尚无可阅读的正文或保存回执"),
     ).not.toBeInTheDocument();
-    expect(
-      await screen.findByText("# 完整正文 附件中的原文"),
-    ).toBeVisible();
+    const read = await screen.findByRole("button", { name: "阅读附件正文" });
+    expect(screen.queryByText("# 完整正文 附件中的原文")).not.toBeInTheDocument();
+    fireEvent.click(read);
+    expect(await screen.findByText("# 完整正文 附件中的原文")).toBeVisible();
   });
   it("refreshes from the first page with a new snapshot while retaining filters", async () => {
     const urls: string[] = [];

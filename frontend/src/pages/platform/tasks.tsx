@@ -1,3 +1,4 @@
+import { TaskDraftList } from "./task-draft-list";
 import {TaskRecent} from "./task-recent";
 import { useState } from "react";
 import { Link } from "react-router";
@@ -56,6 +57,7 @@ export function TasksPage() {
     >
       <div className="flex flex-col gap-5">
         <RequestError error={error} />
+        <TaskDraftList />
         <TextField
           label="搜索任务或常用配置"
           value={search}
@@ -173,4 +175,4 @@ export function TasksPage() {
     </WorkspacePageShell>
   );
 }
-export { TaskPage } from "./task-launch";
+export { TaskPage } from "./task-page";

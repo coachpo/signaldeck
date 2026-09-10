@@ -1,6 +1,5 @@
 import { useState } from "react";
-import Markdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import { MarkdownContent } from "@/components/shared/markdown-content";
 import { useArtifact } from "@/hooks/use-workflow-platform";
 import { Button } from "@/components/ui/button";
 import { workflowPlatformApi } from "@/lib/api/workflow-platform";
@@ -107,7 +106,7 @@ export function ArtifactReading({
       /* The stored bytes remain available for direct reading. */
     }
   }
-  const body = typeof value === "string" ? value : undefined;
+  const body = !mediaType.includes("json") && typeof value === "string" ? value : undefined;
   return (
     <div className="flex flex-col gap-2">
       <Button variant="outline" onClick={() => setOpen((v) => !v)}>
@@ -122,7 +121,7 @@ export function ArtifactReading({
           {artifact.isPending && <p>正在读取正文…</p>}
           {body !== undefined ? (
             <article className="min-w-0 overflow-x-auto text-sm">
-              <Markdown remarkPlugins={[remarkGfm]}>{body}</Markdown>
+              <MarkdownContent>{body}</MarkdownContent>
             </article>
           ) : (
             value !== undefined && <ResultValue value={value} />

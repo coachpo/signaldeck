@@ -68,7 +68,7 @@
     }
   },
   "research_notes": {
-    "contentHash": "a16495173897e347377cc1356ac5988e1da83e3ac1fac73e4ac7d22cfda3bb5e",
+    "contentHash": "c03fdf9571e19814dab31f9b6017a3431c065d454dae8c51dd487c98b43b3c99",
     "tools": [
       "example/notes/create",
       "example/notes/search"

@@ -1,4 +1,4 @@
-import type { Json, JsonObject, WorkflowDefinition } from "./workflow-platform";
+import type { Json, JsonObject, ModelObservation, WorkflowDefinition } from "./workflow-platform";
 export interface Preparation {
   packageKey: string;
   workflowKey: string;
@@ -12,6 +12,7 @@ export interface Preparation {
   effectiveSettings: JsonObject;
 }
 export interface Requirement {
+  modelObservation?: ModelObservation | null;
   id: string;
   kind: "model" | "tool" | "plugin";
   name: string;

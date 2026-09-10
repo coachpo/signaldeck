@@ -1,3 +1,4 @@
+import { ModelObservationDetails } from "./execution-diagnostic";
 import { connectionName } from "./task-labels";
 import { useState } from "react";
 import { Link } from "react-router";
@@ -41,6 +42,8 @@ export function TaskConnections({
                 (p) => p.resourceId === r.id && p.kind === r.kind,
               ) ?? []
             }
+            presetsPending={presets.isPending}
+            presetsFailed={Boolean(presets.error)}
             onSaved={onSaved}
           />
         ))}
@@ -63,10 +66,14 @@ export function TaskConnections({
 function ConnectionEditor({
   requirement,
   presets,
+  presetsPending,
+  presetsFailed,
   onSaved,
 }: {
   requirement: Requirement;
   presets: ConnectionPreset[];
+  presetsPending: boolean;
+  presetsFailed: boolean;
   onSaved: () => void;
 }) {
   const { saveResource } = usePlatformMutations();
@@ -88,6 +95,8 @@ function ConnectionEditor({
     const entered = Object.fromEntries(
       Object.entries(credentials).filter(([, value]) => value !== ""),
     );
+    setError(null);
+    setSaved(false);
     try {
       await saveResource.mutateAsync({
         resourceId: requirement.id,
@@ -109,11 +118,25 @@ function ConnectionEditor({
         {requirement.configured ? "管理连接" : "补齐连接"}
       </summary>
       <div className="flex flex-col gap-3 pt-3">
+        {requirement.kind === "model" && requirement.configured && (
+          <div className="flex flex-col gap-2">
+            <p className="text-sm font-medium">当前已保存连接的调用观测</p>
+            <ModelObservationDetails observation={requirement.modelObservation} />
+          </div>
+        )}
         <RequestError error={error} />
+        {presetsPending ? (
+          <p role="status">正在加载部署方服务预设…</p>
+        ) : presetsFailed ? (
+          <p role="status">服务预设加载失败，请重试；当前输入仍会保留。</p>
+        ) : !config && presets.length > 0 ? (
+          <p role="status">请选择部署方提供的服务，再确认业务范围与保存位置。</p>
+        ) : null}
         {presets.length > 0 && (
           <ChoiceField
             label="部署方提供的服务"
             value={selected}
+            disabled={presetsPending || presetsFailed}
             options={[
               ...(requirement.configured
                 ? [{ value: "current", label: "保留当前连接" }]
@@ -125,6 +148,7 @@ function ConnectionEditor({
               setCredentials({});
               setConfirmed(false);
               setSaved(false);
+              setError(null);
             }}
           />
         )}
@@ -175,7 +199,7 @@ function ConnectionEditor({
               </p>
             )}
           </>
-        ) : (
+        ) : !presetsPending && !presetsFailed && presets.length === 0 ? (
           <>
             <p className="text-sm">
               没有适用于此任务的部署方服务预设。需要先部署服务并配置连接预设；返回后输入仍会保留。
@@ -184,7 +208,7 @@ function ConnectionEditor({
               <Link to="/resources">查看高级服务配置</Link>
             </Button>
           </>
-        )}
+        ) : null}
       </div>
     </details>
   );

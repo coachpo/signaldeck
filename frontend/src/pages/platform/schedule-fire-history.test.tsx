@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router";
 import { afterEach, expect, it, vi } from "vitest";
@@ -52,6 +52,9 @@ it("distinguishes failed launch receipts from linked successful executions", asy
   );
   expect(await screen.findByText("未能启动")).toBeVisible();
   expect(screen.getByText("尚未生成结果")).toBeVisible();
+  expect(screen.getByText(/找不到任务定义/)).toBeVisible();
+  expect(screen.getByText("package_not_found")).not.toBeVisible();
+  fireEvent.click(screen.getByText("原始错误码"));
   expect(screen.getByText("package_not_found")).toBeVisible();
   expect(screen.getByRole("link", { name: "查看结果" })).toHaveAttribute(
     "href",

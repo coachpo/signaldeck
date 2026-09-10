@@ -1,6 +1,10 @@
+import { useDisplayMode } from "@/hooks/use-display-mode";
+import { ModelUsagePanel } from "./model-usage-panel";
+import { ResultMetadataControls } from "./result-metadata";
+import { ResultExport } from "./result-export";
 import { Link, useParams, useSearchParams } from "react-router";
-import Markdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import { MarkdownContent } from "@/components/shared/markdown-content";
+import { ExecutionDiagnostic } from "./execution-diagnostic";
 import { Button } from "@/components/ui/button";
 import { InventoryPageShell } from "@/components/shared/inventory-page-shell";
 import { InventoryStatePanel } from "@/components/shared/inventory-state-panel";
@@ -21,7 +25,6 @@ import { ResultRepeat } from "./result-repeat";
 import {
   ResultValue as Value,
   ResultAttachmentView as Attachment,
-  ArtifactReading,
 } from "./result-content";
 export function ResultPage() {
   const { runId } = useParams();
@@ -35,6 +38,7 @@ export function ResultPage() {
 }
 function ResultContent({ result }: { result: RunResult }) {
   const [search] = useSearchParams();
+  const { expert } = useDisplayMode();
   const primaryArtifact = result.attachments
     .filter((a) => a.kind === "artifact" && !a.evidenceId)
     .flatMap((a) => findArtifacts(a.reference))
@@ -107,8 +111,8 @@ function ResultContent({ result }: { result: RunResult }) {
         <InlineStatePanel
           tone="danger"
           title="本次任务未能完成"
-          description="请查看下方缺失信息与技术详情，修复问题后再运行。"
         >
+          <ExecutionDiagnostic code={result.errorCode} category={result.errorCategory} />
           <Button asChild variant="outline">
             <Link to={`/tasks/new?fromRun=${encodeURIComponent(result.runId)}`}>
               保留输入并检查连接
@@ -145,23 +149,18 @@ function ResultContent({ result }: { result: RunResult }) {
       ) : result.body ? (
         <article
           aria-label="结果正文"
-          className="min-w-0 overflow-x-auto rounded border border-border bg-card p-4 text-sm [&_h1]:mb-3 [&_h1]:text-xl [&_h2]:my-3 [&_h2]:text-lg [&_p]:my-2 [&_ul]:list-disc [&_ul]:pl-5"
+          className="min-w-0 rounded border border-border bg-card p-4 text-sm"
         >
-          <Markdown remarkPlugins={[remarkGfm]}>{result.body}</Markdown>
+          <MarkdownContent>{result.body}</MarkdownContent>
         </article>
       ) : result.receipt !== null ? (
-        <section className="rounded border border-border bg-card p-4">
-          <h2 className="mb-3 font-semibold">保存回执</h2>
+        <details open={expert} className="rounded border border-border bg-card p-4">
+          <summary className="cursor-pointer font-semibold">保存回执（完整原值）</summary>
           <Value value={result.receipt} />
-        </section>
+        </details>
       ) : primaryArtifact ? (
         <section aria-label="结果正文">
-          <ArtifactReading
-            key={primaryArtifact.digest}
-            digest={primaryArtifact.digest}
-            mediaType={primaryArtifact.mediaType}
-            initialOpen
-          />
+          <p>正文保存在附件中，请选择阅读或下载。</p>
         </section>
       ) : (
         <InventoryStatePanel
@@ -179,6 +178,8 @@ function ResultContent({ result }: { result: RunResult }) {
           }
         />
       )}
+      <ResultExport result={result} />
+      <ResultMetadataControls runId={result.runId} />
       <section className="grid gap-4 border-y border-border py-4 sm:grid-cols-2">
         <div>
           <h2 className="mb-2 font-semibold">来源与时间</h2>
@@ -189,7 +190,9 @@ function ResultContent({ result }: { result: RunResult }) {
               ? new Date(result.finishedAt).toLocaleString()
               : "尚未结束"}
           </p>
-          {result.sources.length ? (
+          {result.sections?.some((section) => section.kind === "sources") ? (
+            <p className="text-sm text-muted-foreground">资料来源见上方声明内容。</p>
+          ) : result.sources.length ? (
             result.sources.map((source, i) => <Value key={i} value={source} />)
           ) : (
             <p className="text-sm text-muted-foreground">未记录资料来源</p>
@@ -218,8 +221,10 @@ function ResultContent({ result }: { result: RunResult }) {
           ))}
         </div>
         <div>
-          <h2 className="mb-2 font-semibold">本次输入</h2>
-          {original.data && <Value value={original.data.parameters} />}
+          <details open={expert}>
+            <summary className="cursor-pointer font-semibold">本次输入（完整原值）</summary>
+            {original.data && <Value value={original.data.parameters} />}
+          </details>
         </div>
       </section>
       {result.attachments.length > 0 && (
@@ -236,6 +241,7 @@ function ResultContent({ result }: { result: RunResult }) {
           </ul>
         </section>
       )}
+      <ModelUsagePanel runId={result.runId} />
       <div className="flex flex-wrap gap-2">
         {result.unknownEvidenceIds.map((id) => (
           <Button key={id} asChild variant="outline">
@@ -244,6 +250,9 @@ function ResultContent({ result }: { result: RunResult }) {
             </Link>
           </Button>
         ))}
+        <Button asChild variant="outline">
+          <Link to={`/runs/compare?${new URLSearchParams({ left: result.runId })}`}>比较两次结果</Link>
+        </Button>
         <ResultRepeat result={result} original={original.data} />
         <Button asChild variant="outline">
           <Link to={`/tasks/new?fromRun=${encodeURIComponent(result.runId)}`}>

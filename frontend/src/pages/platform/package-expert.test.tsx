@@ -83,6 +83,17 @@ describe("expert properties and shared source", () => {
       "maxTokens",
     );
   });
+  it("edits and clears only the optional output limit in the same YAML source", () => {
+    render(<Editor />);
+    fireEvent.click(screen.getByRole("button", { name: "Agent · assistant" }));
+    const original = definition().agents.assistant.budget;
+    expect(original ?? {}).not.toHaveProperty("maxOutputTokens");
+    fireEvent.change(screen.getByLabelText("maxOutputTokens"), { target: { value: "256" } });
+    expect(definition().agents.assistant.budget?.maxOutputTokens).toBe(256);
+    fireEvent.change(screen.getByLabelText("maxOutputTokens"), { target: { value: "" } });
+    expect(definition().agents.assistant.budget).not.toHaveProperty("maxOutputTokens");
+    expect(screen.getByLabelText("source")).toHaveTextContent("# retain author comment");
+  });
   it("keeps invalid mapping drafts and blocks switching objects or raw replacement until discarded", () => {
     render(<Editor />);
     fireEvent.click(screen.getByRole("button", { name: "↳ answer" }));

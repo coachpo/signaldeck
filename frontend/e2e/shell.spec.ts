@@ -25,12 +25,14 @@ const routes = [
   { path: "/plugins", label: "Plugins", nav: "plugins" },
   { path: "/settings", label: "设置", nav: "settings" },
   { path: "/runs", label: "结果", nav: "runs" },
+  { path: "/attention", label: "执行更新", nav: "attention" },
 ];
 test("generic navigation owns one route shell without embedded finance pages", async ({
   page,
 }) => {
   const taskHrefs = await openSavedTaskCatalog(page);
   await expect(page.getByTestId("nav-workflow-packages")).toHaveCount(0);
+  await expect(page.getByTestId("nav-attention")).toBeVisible();
   const expertEntry = page.getByRole("link", {
     name: "全部任务定义与专家制作",
     exact: true,
@@ -76,6 +78,8 @@ for (const width of [375, 768, 1024, 1440])
       "/scheduled-tasks/new",
       "/plugins",
       "/runs",
+      "/attention",
+      "/runs/compare",
     ]) {
       if (path === "/") await openSavedTaskCatalog(page);
       else await page.goto(path);

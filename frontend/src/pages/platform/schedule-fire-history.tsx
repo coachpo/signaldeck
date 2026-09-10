@@ -1,3 +1,4 @@
+import { ExecutionDiagnostic } from "./execution-diagnostic";
 import { scheduleFireLabel } from "@/lib/schedule-frequency";
 import { useDisplayMode } from "@/hooks/use-display-mode";
 import { Link } from "react-router";
@@ -71,7 +72,7 @@ export function ScheduleFireHistory({ scheduleId }: { scheduleId: string }) {
               </p>
             </details>
             {fire.errorCode && (
-              <p className="text-sm text-destructive">{fire.errorCode}</p>
+              <ExecutionDiagnostic code={fire.errorCode} />
             )}
           </article>
         ))}

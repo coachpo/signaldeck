@@ -17,7 +17,7 @@ Build context is this `plugins` directory, not the individual project directory:
 ```sh
 docker build -f finance/Dockerfile -t signaldeck-finance:1.0.0 .
 docker build -f digital_oracle/Dockerfile -t signaldeck-digital-oracle:1.0.0 .
-docker build -f notes/Dockerfile -t signaldeck-notes:1.0.0 .
+docker build -f notes/Dockerfile -t signaldeck-notes:1.1.0 .
 ```
 
 Each image pins Python 3.14.0 and uv 0.9.8 by image digest and contains an independently frozen `uv.lock`. Direct application dependencies include MCP 1.26.0, FastAPI 0.136.3, Pydantic 2.12.5, SQLAlchemy 2.0.51, psycopg 3.3.4 and JSON Schema 4.26.0. MCP protocol is **2025-11-25**.

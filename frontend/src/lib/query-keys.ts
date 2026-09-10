@@ -18,11 +18,22 @@ export const queryKeys = {
     runs: {
       ...resourceKeys("runs"),
       history: (query: object) => [...root, "runs", "list", query] as const,
+      metadata: (id: string) => [...root, "runs", "detail", id, "metadata"] as const,
       result: (id: string) =>
         [...root, "runs", "detail", id, "result"] as const,
       reuse: (id: string) => [...root, "runs", "detail", id, "reuse"] as const,
     },
     taskPresets: resourceKeys("taskPresets"),
+    taskDrafts: resourceKeys("taskDrafts"),
+    modelUsage: {
+      all: [...root, "modelUsage"] as const,
+      run: (id: string) => [...root, "modelUsage", "run", id] as const,
+      day: (date: string, timezone: string) => [...root, "modelUsage", "day", date, timezone] as const,
+    },
+    attention: {
+      all: [...root, "attention"] as const,
+      list: (query: object) => [...root, "attention", "list", query] as const,
+    },
     schedules: {
       ...resourceKeys("schedules"),
       fires: (id: string) => [...root, "schedules", "fires", id] as const,

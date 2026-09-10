@@ -3,6 +3,7 @@
 from typing import Any, Literal
 from urllib.parse import urlencode, urljoin
 
+from app.application.model_failure_projection import project_model_failure
 from app.domain.definitions import DeterministicStrategy, PackageDefinition
 from app.domain.execution import ExecutionEvidence, RunDetail
 from app.domain.tool_contracts import PluginRelease
@@ -59,6 +60,7 @@ def project_result(run: RunDetail) -> ResultRead:
     evidence = sorted(
         run.evidence, key=lambda e: (e.finished_at or run.created_at, e.id), reverse=True
     )
+    result.error_category = project_model_failure(run.error_code, evidence)
     confirmed = [e for e in evidence if e.status == "succeeded" and e.kind in {"node", "tool"}]
 
     def owner(item: ExecutionEvidence | None) -> ExecutionEvidence | None:

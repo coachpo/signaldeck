@@ -219,7 +219,7 @@ function AppSidebar() {
       (item) =>
         item.to !== "/settings" &&
         item.to !== "/scheduled-tasks" &&
-        (expert || item.to === "/" || item.to === "/runs"),
+        (expert || item.to === "/" || item.to === "/runs" || item.to === "/attention"),
     ),
   }));
   const { isMobile, open, setOpenMobile } = useSidebar();

@@ -34,7 +34,7 @@ cd signaldeck
 
 示例 YAML 独立于 Core 可执行制品。Compose 默认只读挂载 `./demo`；可用 `SIGNALDECK_WORKFLOW_DATA_SOURCE=/absolute/path/workflows` 指定其他已有目录，或用 `SIGNALDECK_WORKFLOW_DATA_DIR='' ./start.sh --detach` 禁用示例导入。空平台仍可通过专家制作或通用 `POST /api/workflow-packages/import` 导入工作流；只改 YAML 不改变 Core digest，也无需重建前端。已有 key 的更新需要显式普通保存，重启不会自动升级。详见[独立数据导入](docs/工作流解耦方案.md#独立数据导入与分发)。
 
-默认启用 Finance、Digital Oracle 和 Notes 三个独立插件进程；Finance 的模板/报告页面位于 `http://localhost:8091`，也可从**设置 → 已连接服务**或专家插件管理的页面入口进入。可通过 `SIGNALDECK_PLUGINS` 指定逗号分隔的插件集合，例如：
+默认启用 Finance、Digital Oracle 和 Notes 三个独立插件进程；Finance 的模板/报告页面位于 `http://localhost:8091`，Notes 的只读笔记页面位于 `http://localhost:8093`（可通过 `NOTES_PORT` 改写端口），也可从**设置 → 已连接服务**或专家插件管理的页面入口进入。可通过 `SIGNALDECK_PLUGINS` 指定逗号分隔的插件集合，例如：
 
 ```bash
 SIGNALDECK_PLUGINS=notes ./start.sh --detach

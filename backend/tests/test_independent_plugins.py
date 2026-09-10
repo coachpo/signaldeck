@@ -322,7 +322,7 @@ def test_real_mcp_third_plugin_upgrade_keeps_old_release_and_dedupes(database_ur
     shutil.copytree(
         PLUGINS / "notes", tmp_path / "notes", ignore=shutil.ignore_patterns("__pycache__", ".venv")
     )
-    (tmp_path / "notes" / "VERSION").write_text("1.1.0\n")
+    (tmp_path / "notes" / "VERSION").write_text("1.2.0\n")
     upgraded_source = tmp_path / "notes" / "notes_plugin" / "main.py"
     original = upgraded_source.read_text()
     changed = original.replace('"text": arguments["text"],', '"text": arguments["text"].upper(),')
@@ -333,7 +333,7 @@ def test_real_mcp_third_plugin_upgrade_keeps_old_release_and_dedupes(database_ur
 
     async def scenario():
         assert old_release["artifactDigest"] != new_release["artifactDigest"]
-        assert old_release["releaseId"] == "1.0.0" and new_release["releaseId"] == "1.1.0"
+        assert old_release["releaseId"] == "1.1.0" and new_release["releaseId"] == "1.2.0"
         context = invocation("example/notes/create")
         async with streamable_http_client(old_url) as (read, write, _):
             async with ClientSession(read, write) as session:

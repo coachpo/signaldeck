@@ -345,17 +345,43 @@
 
   .markdown-preview {
     @apply text-sm leading-7 text-foreground;
+    overflow-wrap: anywhere;
   }
 
+  .markdown-preview :where(h1, h2, h3, h4, h5, h6) {
+    @apply mt-5 mb-2 font-semibold leading-snug;
+  }
+
+  .markdown-preview :where(h1) { @apply text-xl; }
+  .markdown-preview :where(h2) { @apply text-lg; }
+  .markdown-preview :where(h3) { @apply text-base; }
+  .markdown-preview :where(p, ul, ol, blockquote, pre, table) { @apply my-3; }
+  .markdown-preview > :first-child { @apply mt-0; }
+  .markdown-preview > :last-child { @apply mb-0; }
+  .markdown-preview :where(ul) { @apply list-disc pl-6; }
+  .markdown-preview :where(ol) { @apply list-decimal pl-6; }
+  .markdown-preview :where(li) { @apply my-1; }
+  .markdown-preview :where(li > ul, li > ol) { @apply my-1; }
+  .markdown-preview :where(blockquote) {
+    @apply border-l-2 border-border pl-4 text-muted-foreground;
+  }
   .markdown-preview :where(pre) {
-    @apply max-w-full overflow-x-auto rounded-md bg-black/5 p-3;
+    @apply max-w-full overflow-x-auto rounded-md bg-ui-surface-inset p-3 text-xs;
+    overflow-wrap: normal;
   }
-
-  .dark .markdown-preview :where(pre) {
-    @apply bg-white/[0.06];
+  .markdown-preview :where(code) {
+    @apply rounded bg-ui-surface-inset px-1 py-0.5 font-mono text-xs;
   }
-
-  .markdown-preview :where(a) {
-    @apply text-primary underline-offset-2 hover:underline;
+  .markdown-preview :where(pre code) { @apply rounded-none bg-transparent p-0; }
+  .markdown-preview :where(table) { @apply w-full border-collapse; }
+  .markdown-preview :where(th, td) {
+    @apply border border-border px-3 py-2 text-left align-top;
+    min-width: 8rem;
   }
+  .markdown-preview :where(th) { @apply bg-ui-surface-grouped font-semibold; }
+  .markdown-preview :where(a) { @apply text-primary underline underline-offset-2; }
+  .markdown-preview :where(a, pre, [role="region"]):focus-visible {
+    @apply outline-2 outline-offset-2 outline-ring;
+  }
+  .markdown-preview :where(img) { @apply max-w-full; }
 }

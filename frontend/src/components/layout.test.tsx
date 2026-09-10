@@ -30,7 +30,7 @@ function renderRoute(path: string) {
 describe("platform shell", () => {
   it("owns generic navigation without statically compiling finance pages", async () => {
     renderRoute("/");
-    for (const name of ["tasks", "runs", "settings"])
+    for (const name of ["tasks", "runs", "attention", "settings"])
       expect(await screen.findByTestId(`nav-${name}`)).toBeVisible();
     expect(
       screen.queryByTestId("nav-workflow-packages"),

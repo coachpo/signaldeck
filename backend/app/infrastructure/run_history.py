@@ -7,6 +7,7 @@ from sqlalchemy import String, case, cast, func, or_, select
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.infrastructure.platform_models import EvidenceRow, RunRow
+from app.infrastructure.result_metadata_store import ResultMetadataRow
 
 
 def query_history(
@@ -15,6 +16,8 @@ def query_history(
     q: str | None = None,
     group: Literal["active", "attention"] | None = None,
     status: str | None = None,
+    is_favorite: bool | None = None,
+    is_read: bool | None = None,
     package_key: str | None = None,
     workflow_key: str | None = None,
     origin: str | None = None,
@@ -49,6 +52,17 @@ def query_history(
         RunRow.spec["workflowKey"].astext,
     )
     query = select(RunRow)
+    for column, marked_value in (
+        (ResultMetadataRow.is_favorite, is_favorite),
+        (ResultMetadataRow.is_read, is_read),
+    ):
+        if marked_value is not None:
+            marked = (
+                select(ResultMetadataRow.run_id)
+                .where(ResultMetadataRow.run_id == RunRow.id, column.is_(True))
+                .exists()
+            )
+            query = query.where(marked if marked_value else ~marked)
     if group == "active":
         query = query.where(RunRow.status.in_(("queued", "running")))
     elif group == "attention":

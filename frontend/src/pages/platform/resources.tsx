@@ -1,3 +1,4 @@
+import { ModelObservationDetails } from "./execution-diagnostic";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -85,6 +86,7 @@ export function ResourcesPage() {
                 <span className="break-all text-xs text-muted-foreground">
                   Credential revision {resource.credentialRevision}
                 </span>
+                {resource.kind === "model" && <div className="w-full"><ModelObservationDetails observation={resource.modelObservation} /></div>}
                 <Button
                   variant="outline"
                   onClick={() => {

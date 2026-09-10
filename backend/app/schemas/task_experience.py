@@ -7,6 +7,7 @@ from pydantic import Field, JsonValue
 
 from app.domain.definitions import WorkflowDefinition
 from app.domain.execution import LaunchOrigin, RunStatus
+from app.domain.model_diagnostics import ModelErrorCategory, ModelObservation
 from app.schemas.common import CamelModel
 
 
@@ -18,6 +19,7 @@ class PrepareRequest(CamelModel):
 
 
 class PreparationRequirement(CamelModel):
+    model_observation: ModelObservation | None = None
     id: str
     kind: Literal["model", "tool", "plugin"]
     name: str
@@ -84,6 +86,7 @@ class ResultSection(CamelModel):
 
 
 class ResultRead(CamelModel):
+    error_category: ModelErrorCategory | None = None
     run_id: str
     title: str
     status: RunStatus

@@ -71,3 +71,17 @@ it("presents ordinary input labels without schema chrome and preserves JSON draf
   expect(props.onChange).not.toHaveBeenCalled();
   expect(props.onDirtyChange).toHaveBeenLastCalledWith(false);
 });
+
+it("restores unapplied invalid JSON verbatim and preserves applied values until discard", () => {
+  const onChange = vi.fn();
+  const textChange = vi.fn();
+  const unfinished = '  {"renamed": [\n';
+  render(<LaunchInputs schema={{ type: "object", properties: { renamed: { type: "string" } } }} value={{ renamed: "applied" }} initialJsonText={unfinished} onJsonTextChange={textChange} onChange={onChange} onDirtyChange={vi.fn()} />);
+  expect(screen.getByLabelText("Parameters JSON")).toHaveValue(unfinished);
+  fireEvent.click(screen.getByRole("button", { name: "Apply parameters JSON" }));
+  expect(onChange).not.toHaveBeenCalled();
+  expect(screen.getByLabelText("Parameters JSON")).toHaveValue(unfinished);
+  fireEvent.click(screen.getByRole("button", { name: "Discard parameters JSON" }));
+  expect(textChange).toHaveBeenLastCalledWith(null);
+  expect(screen.getByLabelText("Parameters JSON")).toHaveValue(JSON.stringify({ renamed: "applied" }, null, 2));
+});

@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { MemoryRouter } from "react-router";
+import { MemoryRouter, useLocation } from "react-router";
 import { useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { beforeEach, expect, it, vi } from "vitest";
@@ -8,6 +8,8 @@ import { ApiRequestError } from "@/lib/api-client";
 import type { ReuseInput, TaskPreset } from "@/lib/types/task-experience";
 import type { Json, JsonObject } from "@/lib/types/workflow-platform";
 const mocks = vi.hoisted(() => ({
+  saveDraft: vi.fn(),
+  getDraft: vi.fn(),
   prepare: vi.fn(),
   launch: vi.fn(),
   save: vi.fn(),
@@ -16,6 +18,9 @@ const mocks = vi.hoisted(() => ({
   historical: undefined as ReuseInput | undefined,
   preset: undefined as TaskPreset | undefined,
   schema: undefined as JsonObject | undefined,
+}));
+vi.mock("@/lib/api/task-drafts", () => ({
+  taskDraftApi: { list: async () => ({ items: [] }), get: (id: string) => mocks.getDraft(id), save: (input: unknown) => mocks.saveDraft(input), delete: async () => undefined },
 }));
 vi.mock("@/hooks/use-display-mode", () => ({
   useDisplayMode: () => ({ expert: mocks.expert }),
@@ -67,6 +72,7 @@ vi.mock("@/hooks/use-task-experience", async (importOriginal) => ({
     savePreset: { mutateAsync: mocks.save },
   }),
 }));
+function CurrentPath() { const location = useLocation(); return <output aria-label="Current route">{location.pathname}{location.search}</output>; }
 function Page({ path = "/tasks/new?packageKey=research_notes&workflowKey=capture" }: { path?: string }) {
   const [client] = useState(() => new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } }));
   return (
@@ -76,6 +82,7 @@ function Page({ path = "/tasks/new?packageKey=research_notes&workflowKey=capture
         path,
       ]}
     >
+      <CurrentPath />
       {path === "/tasks" ? <TasksPage /> : <TaskPage />}
     </MemoryRouter>
     </QueryClientProvider>
@@ -83,6 +90,12 @@ function Page({ path = "/tasks/new?packageKey=research_notes&workflowKey=capture
 }
 beforeEach(() => {
   mocks.hash++;
+  mocks.getDraft.mockReset();
+  mocks.saveDraft.mockReset().mockImplementation(async (input) => {
+    const saved = { ...input, revision: input.revision + 1, workflow: { name: "保存原文", inputSchema: mocks.schema ?? { type: "object", properties: { title: { type: "string", title: "标题" }, text: { type: "string", title: "原文" } }, required: ["title", "text"] } } };
+    mocks.getDraft.mockResolvedValue(saved);
+    return saved;
+  });
   mocks.expert = false;
   mocks.historical = undefined;
   mocks.preset = undefined;
@@ -334,4 +347,89 @@ it("preserves explicit false and omitted schema/2 defaults when editing and savi
   expect(mocks.save.mock.calls[0][0].parameters).toEqual({title:"edited",includeRisk:false});
   await waitFor(()=>expect(mocks.prepare).toHaveBeenCalled());
   expect(mocks.prepare.mock.calls.at(-1)![0].parameters).toEqual({title:"edited",includeRisk:false});
+});
+
+it("commits pending identity before launch and restores it after a lost response in a new editor", async () => {
+  let stored: Record<string, unknown> | undefined;
+  mocks.saveDraft.mockImplementation(async (input) => {
+    stored = { ...input, revision: input.revision + 1, workflow: { name: "Recovered", inputSchema: { type: "object", properties: { title: { type: "string", title: "标题" }, text: { type: "string", title: "原文" } }, required: ["title", "text"] } } };
+    mocks.getDraft.mockResolvedValue(stored);
+    return stored;
+  });
+  mocks.launch.mockImplementation(async () => {
+    expect(stored?.pending).toBe(true);
+    throw new Error("Response lost");
+  });
+  const first = render(<Page />);
+  await prepare();
+  fireEvent.click(screen.getByRole("button", { name: "开始任务" }));
+  await waitFor(() => expect(mocks.launch).toHaveBeenCalledTimes(1));
+  const original = mocks.launch.mock.calls[0][0];
+  await waitFor(() => expect(screen.getByLabelText("Current route").textContent).toBe(`/tasks/new?draftId=${stored!.id}`));
+  const refreshPath = screen.getByLabelText("Current route").textContent!;
+  first.unmount();
+  mocks.getDraft.mockResolvedValue(stored);
+  render(<Page path={refreshPath} />);
+  const retry = await screen.findByRole("button", { name: "使用同一请求重试" });
+  expect(screen.getByLabelText("标题")).toBeDisabled();
+  expect(screen.getByRole("button", { name: "删除草稿" })).toBeDisabled();
+  fireEvent.click(retry);
+  await waitFor(() => expect(mocks.launch).toHaveBeenCalledTimes(2));
+  expect(mocks.launch.mock.calls[1][0]).toEqual(original);
+});
+
+it("does not send a launch if the pending draft cannot be persisted", async () => {
+  mocks.saveDraft.mockRejectedValue(new Error("Draft response lost"));
+  render(<Page />);
+  await prepare();
+  fireEvent.click(screen.getByRole("button", { name: "开始任务" }));
+  await waitFor(() => expect(mocks.saveDraft).toHaveBeenCalledTimes(1));
+  expect(mocks.launch).not.toHaveBeenCalled();
+  expect(screen.getByLabelText("标题")).toBeDisabled();
+  fireEvent.click(screen.getByRole("button", { name: "使用同一请求重试" }));
+  await waitFor(() => expect(mocks.saveDraft).toHaveBeenCalledTimes(2));
+  expect(mocks.saveDraft.mock.calls[0][0]).toEqual(mocks.saveDraft.mock.calls[1][0]);
+});
+
+it("restores an unfinished draft with its frozen schema and saves invalid text without launching", async () => {
+  mocks.getDraft.mockResolvedValue({
+    id: `unfinished-${mocks.hash}`, revision: 3, name: "继续填写", packageKey: "research_notes", workflowKey: "capture", packageHash: "old-revision",
+    hasParameters: true, parameters: { renamed: null }, jsonText: '{"renamed": [', launchId: "not-submitted", pending: false,
+    needsRevalidation: true, workflow: { name: "Old definition", inputSchema: { type: "object", properties: { renamed: { type: ["string", "null"] } } } },
+  });
+  render(<Page path={`/tasks/new?draftId=unfinished-${mocks.hash}`} />);
+  expect(await screen.findByLabelText("任务输入 JSON")).toHaveValue('{"renamed": [');
+  expect(screen.getByRole("button", { name: "开始任务" })).toBeDisabled();
+  fireEvent.click(screen.getByRole("button", { name: "保存草稿" }));
+  await waitFor(() => expect(mocks.saveDraft).toHaveBeenCalledTimes(1));
+  expect(mocks.saveDraft.mock.calls[0][0]).toMatchObject({ parameters: { renamed: null }, jsonText: '{"renamed": [', packageHash: "old-revision", revision: 3 });
+  expect(mocks.launch).not.toHaveBeenCalled();
+});
+
+it("locks submission throughout pending persistence and keeps the lock across the recovery URL change", async () => {
+  let finishSave!: () => void;
+  let failLaunch!: (error: Error) => void;
+  const normalSave = mocks.saveDraft.getMockImplementation()!;
+  mocks.saveDraft.mockImplementation(async (input) => {
+    await new Promise<void>(resolve => { finishSave = resolve; });
+    return normalSave(input);
+  });
+  mocks.launch.mockImplementation(() => new Promise((_resolve, reject) => { failLaunch = reject; }));
+  render(<Page />);
+  await prepare();
+  fireEvent.click(screen.getByRole("button", { name: "开始任务" }));
+  const saving = await screen.findByRole("button", { name: "正在保存启动请求…" });
+  expect(saving).toBeDisabled();
+  expect(screen.getByRole("button", { name: "保存草稿" })).toBeDisabled();
+  expect(screen.queryByRole("button", { name: "使用同一请求重试" })).not.toBeInTheDocument();
+  fireEvent.click(saving);
+  expect(mocks.saveDraft).toHaveBeenCalledTimes(1);
+  expect(mocks.launch).not.toHaveBeenCalled();
+  finishSave();
+  await waitFor(() => expect(mocks.launch).toHaveBeenCalledTimes(1));
+  await waitFor(() => expect(screen.getByLabelText("Current route").textContent).toContain("?draftId="));
+  expect(screen.getByRole("button", { name: "正在提交…" })).toBeDisabled();
+  expect(screen.queryByRole("button", { name: "使用同一请求重试" })).not.toBeInTheDocument();
+  failLaunch(new Error("Response lost"));
+  await waitFor(() => expect(screen.getByRole("button", { name: "使用同一请求重试" })).toBeEnabled());
 });

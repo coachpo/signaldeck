@@ -3,6 +3,7 @@
 import os
 from pathlib import Path
 
+from notes_plugin.web import install_workspace, literal_match
 from plugin_runtime.operations import Journal, OperationBase
 from plugin_runtime.server import application, obj, release, tool
 from sqlalchemy import String, Text, create_engine, select
@@ -51,6 +52,15 @@ def create_app(database_url=None):
             note_schema,
             "Store an immutable note, deduplicated by the operation identity.",
             write=True,
+            result_links=[
+                {
+                    "version": "signaldeck.resultLink/1",
+                    "key": "note",
+                    "label": "打开笔记",
+                    "path": "",
+                    "query": {"noteId": "tool.output.id"},
+                }
+            ],
             resources=("notes-workspace",),
         ),
         tool(
@@ -92,29 +102,28 @@ def create_app(database_url=None):
                 return result
 
             return journal.write(
-                context["operationId"], name, arguments, effect, scope=context["resourceBindings"]
+                context["operationId"],
+                name,
+                arguments,
+                effect,
+                scope=context["resourceBindings"],
             )
         with sessions() as session:
-            # Escape wildcard metacharacters so query is a literal substring.
-            query = (
-                arguments.get("query", "")
-                .replace("\\", "\\\\")
-                .replace("%", "\\%")
-                .replace("_", "\\_")
-            )
             rows = session.scalars(
                 select(Note)
                 .where(Note.collection == collection)
-                .where(
-                    (Note.title.ilike("%" + query + "%", escape="\\"))
-                    | (Note.text.ilike("%" + query + "%", escape="\\"))
-                )
+                .where(literal_match(Note, arguments.get("query", "")))
                 .order_by(Note.id)
                 .limit(arguments.get("limit", 20))
             )
             return {
                 "notes": [
-                    {"id": n.id, "collection": n.collection, "title": n.title, "text": n.text}
+                    {
+                        "id": n.id,
+                        "collection": n.collection,
+                        "title": n.title,
+                        "text": n.text,
+                    }
                     for n in rows
                 ]
             }
@@ -130,10 +139,13 @@ def create_app(database_url=None):
         os.environ.get("PLUGIN_ENDPOINT", "http://notes:8000/mcp/"),
         definitions,
         [root, root.parent / "runtime"],
+        page_url=os.environ.get("PLUGIN_PAGE_URL", "http://localhost:8093/"),
         config_schema=obj(
-            {"collection": {"type": "string", "minLength": 1, "maxLength": 200}}, ("collection",)
+            {"collection": {"type": "string", "minLength": 1, "maxLength": 200}},
+            ("collection",),
         ),
     )
     app = application(binding, execute, journal.query, startup=startup)
+    install_workspace(app, sessions, Note)
     app.state.engine, app.state.execute, app.state.journal = engine, execute, journal
     return app

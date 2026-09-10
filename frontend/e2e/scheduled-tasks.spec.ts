@@ -236,9 +236,10 @@ test("failed scheduled launch retains a visible fire identity and failure reason
     .toBe("launch_failed");
   await page.goto(`/scheduled-tasks/${schedule.id}`);
   await expect(page.getByText("未能启动", { exact: true })).toBeVisible();
-  await expect(
-    page.getByText("workflow_not_found", { exact: true }),
-  ).toBeVisible();
+  await expect(page.getByText("找不到工作流。请检查安排中的任务选择。", { exact: true })).toBeVisible();
+  await expect(page.getByText("workflow_not_found", { exact: true })).not.toBeVisible();
+  await page.getByText("原始错误码", { exact: true }).click();
+  await expect(page.getByText("workflow_not_found", { exact: true })).toBeVisible();
   await expect(page.getByText("尚未生成结果", { exact: true })).toBeVisible();
   const records = await (
     await request.get(`${apiBase}/schedules/${schedule.id}/fires`)

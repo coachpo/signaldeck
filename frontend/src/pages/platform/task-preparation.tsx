@@ -1,3 +1,6 @@
+import { ModelBudgetSummary } from "./model-usage-panel";
+import { useDisplayMode } from "@/hooks/use-display-mode";
+import { ModelObservationDetails } from "./execution-diagnostic";
 import { connectionName } from "./task-labels";
 import type { Json } from "@/lib/types/workflow-platform";
 import type { Preparation } from "@/lib/types/task-experience";
@@ -67,6 +70,7 @@ const observationLabels = {
   unknown: "最近调用未确认",
 };
 export function TaskPreparation({ preparation }: { preparation: Preparation }) {
+  const { expert } = useDisplayMode();
   return (
     <section
       className="flex flex-col gap-3 rounded-md border border-ui-separator bg-ui-surface-grouped p-4"
@@ -101,16 +105,25 @@ export function TaskPreparation({ preparation }: { preparation: Preparation }) {
               {requirement.configured ? "已有配置" : "缺少配置"}
             </p>
             <p className="text-sm text-muted-foreground">
-              {requirement.hasCredentials ? "已保存凭据" : "未保存凭据"} ·
-              {observationLabels[requirement.observation]}
-              {requirement.observedAt &&
+              {requirement.hasCredentials ? "已保存凭据" : "未保存凭据"}
+              {requirement.kind !== "model" && ` · ${observationLabels[requirement.observation]}`}
+              {requirement.kind !== "model" && requirement.observedAt &&
                 ` · ${new Date(requirement.observedAt).toLocaleString()}`}
             </p>
+            {requirement.kind === "model" && <ModelObservationDetails observation={requirement.modelObservation} />}
             {requirement.issue && <Issue code={requirement.issue} />}
-            <SafeSettings value={requirement.config} />
+            {requirement.config.scope !== undefined && <div className="py-2 text-sm">
+              <p className="font-medium">业务范围与保存位置</p>
+              <SafeSettings value={requirement.config.scope} />
+            </div>}
+            <details open={expert}>
+              <summary className="cursor-pointer text-sm">连接技术配置（完整原值）</summary>
+              <SafeSettings value={requirement.config} />
+            </details>
           </li>
         ))}
       </ul>
+      <ModelBudgetSummary settings={preparation.effectiveSettings} />
       <details>
         <summary className="cursor-pointer text-sm">
           更多有效设置（执行限制、预算和授权）

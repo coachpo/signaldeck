@@ -11,17 +11,23 @@ from app.application.result_projection import project_result
 from app.domain.definitions import PackageDefinition
 from app.domain.execution import ApplicationError, LaunchOrigin, RunDetail, RunSummary
 from app.infrastructure.platform_store import PlatformStore
+from app.infrastructure.result_metadata_store import ResultMetadataStore
 from app.infrastructure.run_history import query_history
 from app.schemas.common import CamelModel
 from app.schemas.platform import RerunRequest
+from app.schemas.result_metadata import ResultMetadataRead
 from app.schemas.task_experience import ResultRead, ReuseRead, ReuseRequest
 
 router = APIRouter(prefix="/runs", tags=["runs"])
 Store = Annotated[PlatformStore, Depends(get_platform_store)]
 
 
+class HistoryRun(RunSummary):
+    metadata: ResultMetadataRead
+
+
 class RunList(CamelModel):
-    items: list[RunSummary]
+    items: list[HistoryRun]
     total: int
     limit: int
     offset: int
@@ -37,6 +43,8 @@ def list_runs(
     package_key: str | None = Query(default=None, alias="packageKey"),
     workflow_key: str | None = Query(default=None, alias="workflowKey"),
     origin: Literal["manual", "rerun", "reuse", "schedule"] | None = None,
+    is_favorite: bool | None = Query(default=None, alias="isFavorite"),
+    is_read: bool | None = Query(default=None, alias="isRead"),
     created_from: datetime | None = Query(default=None, alias="createdFrom"),
     created_to: datetime | None = Query(default=None, alias="createdTo"),
     sort: Literal["created_desc", "created_asc", "title_asc", "title_desc"] = "created_desc",
@@ -53,6 +61,8 @@ def list_runs(
         q=q,
         group=group,
         status=status,
+        is_favorite=is_favorite,
+        is_read=is_read,
         package_key=package_key,
         workflow_key=workflow_key,
         origin=origin,
@@ -62,9 +72,15 @@ def list_runs(
         limit=limit,
         offset=offset,
     )
+    annotations = ResultMetadataStore(store).read_many([row.id for row in rows])
     return RunList(
         items=[
-            store._summary(row).model_copy(update={"has_unknown_effects": row.id in unknown_ids})
+            HistoryRun(
+                **store._summary(row)
+                .model_copy(update={"has_unknown_effects": row.id in unknown_ids})
+                .model_dump(),
+                metadata=annotations.get(row.id, ResultMetadataRead(run_id=row.id)),
+            )
             for row in rows
         ],
         total=total,

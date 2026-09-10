@@ -149,7 +149,7 @@ export function AgentProperties({
       <ListProperty name="resources" value={agent.resources} edit={edit} />
       <Field
         label="预算"
-        description="留空继承合同默认值；不会因模式切换重置。"
+        description="maxOutputTokens 是单次模型输出上限，留空沿用剩余总 token 预算；其他字段留空继承合同默认值。"
       >
         <div className="grid gap-3 sm:grid-cols-2">
           {(
@@ -157,6 +157,7 @@ export function AgentProperties({
               "maxModelRequests",
               "maxToolCalls",
               "maxTokens",
+              "maxOutputTokens",
               "deadlineSeconds",
               "maxParallelTools",
             ] as const

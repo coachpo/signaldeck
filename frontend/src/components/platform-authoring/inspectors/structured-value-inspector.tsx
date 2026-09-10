@@ -1,6 +1,5 @@
 import { Fragment, type ComponentProps } from "react";
-import Markdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import { MarkdownContent } from "@/components/shared/markdown-content";
 
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -149,10 +148,10 @@ function MultilineStringValue({
       {enableMarkdownStringPreview ? (
         <TabsContent value="markdown">
           <div
-            className="markdown-preview compact max-w-none overflow-x-auto rounded-md bg-background px-3 py-2"
+            className="min-w-0 rounded-md bg-background px-3 py-2"
             data-structured-string-view="markdown"
           >
-            <Markdown
+            <MarkdownContent
               components={{
                 a: ({ children, href }) => (
                   <a href={href} rel="noreferrer noopener" target="_blank">
@@ -165,10 +164,9 @@ function MultilineStringValue({
                   </span>
                 ),
               }}
-              remarkPlugins={[remarkGfm]}
             >
               {value}
-            </Markdown>
+            </MarkdownContent>
           </div>
         </TabsContent>
       ) : null}

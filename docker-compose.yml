@@ -165,6 +165,9 @@ services:
     environment:
       PLUGIN_DATABASE_URL: postgresql+psycopg://signaldeck_notes:${NOTES_DB_PASSWORD:-notes-local-password}@db:5432/signaldeck_notes
       PLUGIN_ENDPOINT: http://notes:8000/mcp/
+      PLUGIN_PAGE_URL: http://localhost:${NOTES_PORT:-8093}/
+    ports:
+      - "127.0.0.1:${NOTES_PORT:-8093}:8000"
 
   bootstrap:
     image: ${SIGNALDECK_LOCAL_IMAGE_PREFIX:-signaldeck-target}-app:local

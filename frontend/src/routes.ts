@@ -149,6 +149,18 @@ const children: Definition[] = [
   route("runs", "结果", "PlayCircle", async () => ({
     Component: (await import("./pages/platform/runs")).RunsPage,
   })),
+  route("attention", "执行更新", "ClipboardList", async () => ({
+    Component: (await import("./pages/platform/attention")).AttentionPage,
+  })),
+  route(
+    "runs/compare",
+    "比较结果",
+    "PlayCircle",
+    async () => ({
+      Component: (await import("./pages/platform/result-compare")).ResultComparePage,
+    }),
+    { parent: { href: "/runs", title: "结果" } },
+  ),
   route(
     "runs/:runId",
     "结果详情",

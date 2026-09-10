@@ -29,6 +29,26 @@ test("UX01/03/06: four ordinary tasks execute with real plugins and retain reusa
       workflow: "research",
     },
   ];
+  const originalText = [
+    "# Original evidence",
+    "",
+    "Original business evidence retained unchanged.",
+    "",
+    "1. First confirmed item",
+    "2. Second confirmed item",
+    "",
+    "- Supporting evidence",
+    "",
+    "| Source | Detail |",
+    "| --- | --- |",
+    `| Notes | ${"long-column-".repeat(30)} |`,
+    "",
+    "```text",
+    "long-code-".repeat(40),
+    "```",
+    "",
+    "[Source documentation](https://example.com/evidence)",
+  ].join("\n");
   const evidence = [];
   const visualEvidence: ResponsiveObservation[] = [];
   const evidenceDirectory = resolve("../output/playwright/task-experience");
@@ -51,7 +71,7 @@ test("UX01/03/06: four ordinary tasks execute with real plugins and retain reusa
         .fill(`${scenario.title} ${observationId}`);
       await page
         .getByLabel("原文", { exact: true })
-        .fill("Original business evidence retained unchanged.");
+        .fill(originalText);
       if (scenario.workflow === "research") {
         await page.getByLabel("查找已有笔记", { exact: true }).fill("Original");
         await page.getByLabel("整理并总结原文", { exact: true }).check();
@@ -90,7 +110,7 @@ test("UX01/03/06: four ordinary tasks execute with real plugins and retain reusa
       await mode.click();
       await mode.click();
       await expect(page.getByLabel("原文", { exact: true })).toHaveValue(
-        "Original business evidence retained unchanged.",
+        originalText,
       );
       await page
         .getByText("保存常用输入或收藏任务（可选）", { exact: true })
@@ -113,7 +133,10 @@ test("UX01/03/06: four ordinary tasks execute with real plugins and retain reusa
         })
         .last();
       await connection.locator("summary").click();
-      await connection.getByLabel("部署方提供的服务").click();
+      await expect(connection.getByText("没有适用于此任务的部署方服务预设", { exact: false })).toHaveCount(0);
+      await expect(connection.getByText("请选择部署方提供的服务，再确认业务范围与保存位置。", { exact: true })).toBeVisible();
+      await connection.getByLabel("部署方提供的服务").focus();
+      await page.keyboard.press("Enter");
       await page.getByRole("option", { name: "本地受控研究服务" }).click();
       await connection.getByLabel("本地测试密钥").fill("fake-local-key");
       await connection
@@ -121,7 +144,7 @@ test("UX01/03/06: four ordinary tasks execute with real plugins and retain reusa
         .check();
       await connection.getByRole("button", { name: "保存连接" }).click();
       await expect(page.getByLabel("原文", { exact: true })).toHaveValue(
-        "Original business evidence retained unchanged.",
+        originalText,
       );
     }
     await expect(
@@ -163,7 +186,7 @@ test("UX01/03/06: four ordinary tasks execute with real plugins and retain reusa
     await page.getByRole("button", { name: "开始任务", exact: true }).click();
     if (scenario.workflow === "capture") {
       await page.getByRole("button", { name: "使用同一请求重试" }).click();
-      expect(submissions).toHaveLength(2);
+      await expect.poll(() => submissions.length).toBe(2);
       expect(submissions[1]).toBe(submissions[0]);
       await page.unroute("**/workflow-packages/research_notes/launches");
     }
@@ -212,6 +235,21 @@ test("UX01/03/06: four ordinary tasks execute with real plugins and retain reusa
         })
       ).json();
       expect(history.total).toBe(1);
+    }
+    if (scenario.workflow === "capture") {
+      const body = page.getByRole("region", { name: "笔记正文", exact: true });
+      await expect(body.locator("ol")).toHaveCSS("list-style-type", "decimal");
+      await expect(body.locator("ul")).toHaveCSS("list-style-type", "disc");
+      await expect(body.getByRole("heading", { name: "Original evidence" })).toBeVisible();
+      await body.getByRole("link", { name: "Source documentation" }).focus();
+      await expect(body.getByRole("link", { name: "Source documentation" })).toBeFocused();
+    }
+    if (scenario.title === "整理笔记") {
+      const resources = await (await request.get(`${apiBase}/resources`)).json();
+      const model = resources.items.find((item: { resourceId: string }) => item.resourceId === "research-model");
+      expect(model.modelObservation).toMatchObject({ status: "succeeded", runId });
+      expect(model.modelObservation.observedAt).toBeTruthy();
+      expect(model.modelObservation.evidenceId).toBeTruthy();
     }
     evidence.push({ scenario: scenario.title, run, result });
     writeFileSync(
@@ -288,12 +326,12 @@ test("UX01/03/06: four ordinary tasks execute with real plugins and retain reusa
     }
     if (scenario.workflow === "capture") {
       expect(result.sections.find((section: { kind: string }) => section.kind === "markdown").value).toContain(
-        "Original business evidence retained unchanged.",
+        originalText,
       );
       const before = JSON.stringify(run.spec);
       await page.getByRole("link", { name: "修改输入后开始" }).click();
       await expect(page.getByLabel("原文", { exact: true })).toHaveValue(
-        "Original business evidence retained unchanged.",
+        originalText,
       );
       await page
         .getByLabel("原文", { exact: true })

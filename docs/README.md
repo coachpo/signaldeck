@@ -20,6 +20,8 @@
 
 ## 专项文档
 
+- [个人使用优化实施计划](planning/personal-use-implementation-plan.md)与[Sprint Backlog](planning/personal-use-sprint-backlog.md)：PU-S1–S6 的24项主体任务、依赖及保留边界。
+- [个人使用优化共同验收](planning/personal-use-verification.md)：当前工作区的C1–C11交付映射、各阶段与最终版本验证；区分继承的S1证据及本轮新增验证。
 - [`planning/sprint-backlog.md`](planning/sprint-backlog.md)：已完成简化操作 S1–S6 的任务分解及 P/UX 追溯，保留当时自动化验收方式调整。
 - [`planning/sprint-delivery.md`](planning/sprint-delivery.md)：原实现阶段的 23 项交付映射和历史验证记录；不替代最终独立验收或当前规范。
 - [`planning/sprint-verification.md`](planning/sprint-verification.md)：简化操作的独立验收范围、修复、最终结果和复现入口；版本及后续状态以 `STATUS.md` 为准。

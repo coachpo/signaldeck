@@ -54,8 +54,16 @@ def prepare_task(
                 has_credentials=bool((record or {}).get("hasCredentials")),
                 config=(record or {}).get("config", {}),
                 issue=None if valid else "resource_unavailable",
+                model_observation=(
+                    (record or {}).get("modelObservation") if kind == "model" else None
+                ),
             )
         )
+    for requirement in requirements:
+        if requirement.model_observation is not None:
+            requirement.observation = requirement.model_observation.status
+            requirement.observed_at = requirement.model_observation.observed_at
+            requirement.observation_error = requirement.model_observation.error_code
     installed = {item["pluginId"]: item for item in service.store.list_plugins()}
     for key in sorted(plugins):
         item = installed.get(key)

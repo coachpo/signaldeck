@@ -41,6 +41,10 @@ SignalDeck 是一个用于 Workflow Package、Agent 定义、资源绑定、Sche
 - table 使用 `ResourceTableFrame` 包裹 route-owned table markup；route 自己负责 columns、sorting 和 pagination。
 - status 使用 `ResourceStatusBadge` 和 `ResourceStatusStrip`，不要在 route 中直接拼 colored span。
 
+## Markdown 正文
+
+声明的 Markdown 分节、历史正文、文本附件及显式 Markdown 预览统一使用 `MarkdownContent` 与 `theme.css` 中的 `.markdown-preview`。标题、段落和嵌套有序/无序列表保留层次与可见标记；表格和代码块在自身区域滚动，并可通过键盘聚焦。链接始终显示下划线。JSON 附件和普通结构化值继续按原值阅读，不自动提升为 Markdown；预览入口保留各自的链接和图片策略。
+
 ## 表单与对话框
 
 submit handler、mutation、navigation 和 toast 留在 page 或 owning feature component。shared form shell 接收 values、callback、label、description 和 validation message。

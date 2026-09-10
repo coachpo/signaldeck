@@ -23,6 +23,8 @@ export function LaunchInputs({
   value,
   onChange,
   onDirtyChange,
+  initialJsonText = null,
+  onJsonTextChange,
 }: {
   schema: JsonObject;
   inputHints?: readonly InputHint[];
@@ -30,13 +32,15 @@ export function LaunchInputs({
   value: Json;
   onChange: (value: Json) => void;
   onDirtyChange: (dirty: boolean) => void;
+  initialJsonText?: string | null;
+  onJsonTextChange?: (text: string | null) => void;
 }) {
   const state = useMemo(() => createLaunchInputState(schema), [schema]);
   const draft = isJsonObject(value)
     ? createLaunchDraftFromPayload(state, value)
     : null;
   const formSupported = state.schemaSupported && draft !== null;
-  const [json, setJson] = useState<string | null>(null);
+  const [json, setJson] = useState<string | null>(initialJsonText);
   const [error, setError] = useState("");
   function apply() {
     try {
@@ -46,6 +50,7 @@ export function LaunchInputs({
         throw new Error(issues.map((i) => `${i.field}: ${i.issue}`).join("; "));
       onChange(next);
       setJson(null);
+      onJsonTextChange?.(null);
       onDirtyChange(false);
       setError("");
     } catch (e) {
@@ -53,7 +58,7 @@ export function LaunchInputs({
     }
   }
   return (
-    <Tabs defaultValue={formSupported ? "form" : "json"}>
+    <Tabs defaultValue={formSupported && initialJsonText === null ? "form" : "json"}>
       <TabsList>
         <TabsTrigger value="form" disabled={!formSupported}>
           {technical ? "Input form" : "填写输入"}
@@ -73,6 +78,7 @@ export function LaunchInputs({
               const updated = reconcileLaunchDraftChange(state, draft, next);
               onChange(createLaunchPayloadFromDraft(updated) as JsonObject);
               setJson(null);
+      onJsonTextChange?.(null);
               onDirtyChange(false);
             }}
           />
@@ -91,6 +97,7 @@ export function LaunchInputs({
             value={json ?? JSON.stringify(value, null, 2)}
             onChange={(e) => {
               setJson(e.target.value);
+              onJsonTextChange?.(e.target.value);
               onDirtyChange(true);
             }}
             spellCheck={false}
@@ -104,7 +111,8 @@ export function LaunchInputs({
           <Button variant="outline" onClick={apply}>
             {technical ? "Apply parameters JSON" : "应用 JSON 输入"}
           </Button>
-          {json !== null && <Button variant="ghost" onClick={() => { setJson(null); setError(""); onDirtyChange(false); }}>{technical ? "Discard parameters JSON" : "放弃 JSON 修改"}</Button>}
+          {json !== null && <Button variant="ghost" onClick={() => { setJson(null);
+      onJsonTextChange?.(null); setError(""); onDirtyChange(false); }}>{technical ? "Discard parameters JSON" : "放弃 JSON 修改"}</Button>}
           {json !== null && (
             <p className="text-sm text-muted-foreground">
               {technical ? "Apply this JSON before launching. The run uses the last applied value." : "请先应用或放弃当前 JSON 修改，再开始任务。"}

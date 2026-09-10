@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from app.domain.execution import ApplicationError
 from app.infrastructure.artifact_store import ArtifactStore
+from app.infrastructure.model_observations import latest_model_observation
 from app.infrastructure.platform_models import (
     PackagePointerRow,
     PackageRevisionRow,
@@ -30,6 +31,11 @@ class PlatformStore(PlatformRunStore):
         self.artifacts = artifacts
 
     def initialize(self) -> None:
+        from app.infrastructure.result_metadata_store import (  # noqa: F401
+            AttentionReceiptRow,
+            ResultMetadataRow,
+        )
+        from app.infrastructure.task_draft_store import TaskDraftRow  # noqa: F401
         from app.infrastructure.task_preset_store import TaskPresetRow  # noqa: F401
 
         with self.session_factory() as session, session.begin():
@@ -178,6 +184,13 @@ class PlatformStore(PlatformRunStore):
                     "config": deepcopy(row.config),
                     "hasCredentials": row.has_credentials,
                     "credentialRevision": row.credential_revision,
+                    "modelObservation": (
+                        latest_model_observation(
+                            session, row.id, row.config, row.credential_revision
+                        )
+                        if row.kind == "model"
+                        else None
+                    ),
                 }
             )
 
@@ -199,6 +212,13 @@ class PlatformStore(PlatformRunStore):
                     "config": deepcopy(row.config),
                     "hasCredentials": row.has_credentials,
                     "credentialRevision": row.credential_revision,
+                    "modelObservation": (
+                        latest_model_observation(
+                            session, row.id, row.config, row.credential_revision
+                        )
+                        if row.kind == "model"
+                        else None
+                    ),
                 }
                 for row in session.execute(query.order_by(ResourceRow.id))
             ]

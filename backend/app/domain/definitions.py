@@ -21,6 +21,15 @@ class Budget(CamelModel):
     max_model_requests: int = Field(default=12, ge=1, le=1000)
     max_tool_calls: int = Field(default=32, ge=1, le=10000)
     max_tokens: int = Field(default=100000, ge=1)
+    max_output_tokens: int | None = Field(default=None, ge=1, exclude_if=lambda v: v is None)
+
+    @field_validator("max_output_tokens", mode="before")
+    @classmethod
+    def check_output_limit_present(cls, value: Any) -> Any:
+        if value is None:
+            raise ValueError("maxOutputTokens must be omitted rather than null")
+        return value
+
     deadline_seconds: int = Field(default=300, ge=1, le=86400)
     max_parallel_tools: int = Field(default=4, ge=1, le=128)
 

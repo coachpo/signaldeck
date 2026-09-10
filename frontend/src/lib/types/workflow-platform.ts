@@ -23,6 +23,7 @@ export interface AgentDefinition {
     maxModelRequests?: number;
     maxToolCalls?: number;
     maxTokens?: number;
+    maxOutputTokens?: number;
     deadlineSeconds?: number;
     maxParallelTools?: number;
   };
@@ -168,7 +169,17 @@ export interface RunDetail extends RunSummary {
   errorCode?: string | null;
   evidence: ExecutionEvidence[];
 }
+export type ModelErrorCategory = "quota" | "authentication" | "rate_limit" | "model" | "input" | "unknown";
+export interface ModelObservation {
+  status: "not_observed" | "succeeded" | "failed" | "unknown";
+  observedAt: string | null;
+  errorCode: string | null;
+  errorCategory: ModelErrorCategory | null;
+  runId: string | null;
+  evidenceId: string | null;
+}
 export interface Resource {
+  modelObservation?: ModelObservation | null;
   resourceId: string;
   kind: "model" | "tool";
   config: JsonObject;

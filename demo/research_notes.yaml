@@ -279,6 +279,12 @@ workflows:
         ref: nodes.save.output
         label: 笔记保存凭据
         required: true
+      - kind: link
+        ref: nodes.save.output
+        label: 打开笔记
+        toolId: example/notes/create
+        linkKey: note
+        required: true
     description: 结合已有笔记整理资料，并保存新的笔记。
   capture:
     name: 保存原文
@@ -345,5 +351,11 @@ workflows:
       - kind: receipt
         ref: nodes.save.output
         label: 笔记保存凭据
+        required: true
+      - kind: link
+        ref: nodes.save.output
+        label: 打开笔记
+        toolId: example/notes/create
+        linkKey: note
         required: true
     description: 直接保存标题与原文，不需要模型服务。

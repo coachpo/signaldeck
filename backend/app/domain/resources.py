@@ -8,6 +8,7 @@ from urllib.parse import urlsplit
 
 from pydantic import Field, field_validator
 
+from app.domain.model_diagnostics import ModelObservation
 from app.schemas.common import CamelModel
 
 
@@ -66,6 +67,7 @@ class ResourceWrite(CamelModel):
 
 
 class ResourceRead(CamelModel):
+    model_observation: ModelObservation | None = None
     resource_id: str
     kind: Literal["model", "tool"]
     config: dict[str, Any]

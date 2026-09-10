@@ -10,11 +10,14 @@ v2 数据模型替换旧 workflow/step/extension 表合同；本文不描述旧�
 | --- | --- |
 | `platform_package_revisions` | `(package_key, package_hash)` 主键；保存规范化 YAML、定义、所有 Workflow compiled plans 和创建时间。同身份的内容必须一致。 |
 | `platform_packages` | 当前包指针：每个 `package_key` 指向一个已有内容 hash。历史修订不随指针更新而改写。 |
+| `platform_task_drafts` | 显式任务草稿：ID、乐观 revision、闭合草稿 payload 和更新时间。与 Run、输出和计划独立；保留原包修订和来源 Run、已应用 JSON、hasParameters、未应用 jsonText、稳定 launchId、pending 与绑定 token。 |
 | `platform_task_presets` | 可选命名输入组合及任务收藏：稳定 ID、名称、package/workflow key、校验时 package hash、JSON 输入 parameters、收藏/置顶和时间戳。与包、运行、计划无级联删除关系；不充当执行定义。 |
 | `platform_resources` | model/tool 资源；非敏感 config、加密且默认 deferred 的 credentials、presence 和 credential revision。 |
 | `platform_plugin_releases` | `(plugin_id, artifact_digest)` 主键；保存不可变发布描述及工具契约。 |
 | `platform_plugins` | 插件当前发布指针和 enabled 状态；不保存插件业务实例。 |
 | `platform_runs` | Run ID、唯一 launch ID、launch intent digest、完整不可变 resolved spec、状态、输出、错误代码及时间戳；spec 内保存包/计划/绑定/来源/绝对 deadline。 |
+| `platform_result_metadata` | Run ID附属标记：乐观revision、isFavorite、isRead、note、updatedAt；不改冻结输出。 |
+| `platform_attention_receipts` | 当前执行变化身份的查看标记、乐观revision、updatedAt；不保存另一份执行状态机。 |
 | `platform_commands` | Run start/cancel outbox；保存尝试、创建和投递时间以及 admission rejection code。与 Run 创建或取消请求原子写入。 |
 | `platform_evidence` | 调用证据 ID、Run ID、parent ID 和 payload。payload 区分 node、agent、model、tool、attempt，并含 status、输入输出、时间和安全 metadata。 |
 | `platform_tool_operations` | 与工具 evidence ID 对应的 operation 状态机；保存 effect、输入摘要、参数、调用上下文和已确认结果。 |
@@ -66,7 +69,7 @@ API 使用 `hasParameters` 区分命名业务输入与无输入收藏：为 `tru
 
 ## 执行证据与内容寻址存储
 
-工具 operation 的身份、上下文和输入摘要在网络发送前保留；每次 execute/query/cache validation 是独立 attempt。已成功 operation 不允许被不同内容覆盖，写效果不确定时保留 `unknown`。模型成功与其网络 attempt 成功批量原子确认，避免部分确认。
+工具 operation 的身份、上下文和输入摘要在网络发送前保留；每次 execute/query/cache validation 是独立 attempt。已成功 operation 不允许被不同内容覆盖，写效果不确定时保留 `unknown`。模型成功与其网络 attempt 成功批量原子确认，避免部分确认。 新模型网络尝试的安全 metadata 保存 `resourceId`、`modelBindingDigest`；HTTP 失败保存白名单 `errorCategory`（quota/authentication/rate_limit/model/input/unknown），不保存供应商错误正文。最近模型观察从已有 `platform_evidence` 按当前配置和凭据修订摘要读取，不新增表或改写历史 payload。
 
 同一 operation 的执行所有权使用会话级 PostgreSQL advisory lock，不增设另一张待执行队列表。操作记录与网络尝试仍是持久证据；锁只防止存活调用的重叠执行，不能证明外部写一定没有发生。重叠调用的等待、未知结果核实和恢复边界见 [`架构说明`](架构说明.md#modeltool-gateway)。
 
@@ -98,3 +101,23 @@ Finance 的普通 report API 与 Agent report 写入有不同生命周期：Agen
 根 Compose 使用独立 `.signaldeck-target` 数据目录和独立 Core/Finance/Notes 数据库，不读取、重置或迁移旧模型连接、工作流、运行、模板及报告表。切换到该数据布局需要按 STATUS 数据政策处理；初始化路径不提供旧数据迁移。
 
 持久化回归入口包括 [`test_platform_persistence.py`](../backend/tests/test_platform_persistence.py)、[`test_execution_projection.py`](../backend/tests/test_execution_projection.py)、[`test_artifact_store_target.py`](../backend/tests/test_artifact_store_target.py)、[`test_target_seeds.py`](../backend/tests/test_target_seeds.py)、[`test_independent_plugins.py`](../backend/tests/test_independent_plugins.py) 和 [`test_terminal_projection_cancellation.py`](../backend/tests/test_terminal_projection_cancellation.py)。常用配置、派生结果和计划创建身份分别见 [`test_task_presets.py`](../backend/tests/test_task_presets.py)、[`test_task_experience.py`](../backend/tests/test_task_experience.py) 和 [`test_target_schedules.py`](../backend/tests/test_target_schedules.py)。这些入口与实际 Temporal/Worker 集成验收的完成记录一同由 [`STATUS.md`](../STATUS.md) 关联。
+
+### 显式任务草稿
+
+`task_draft_store.py` 注册独立新增表，由 Core 初始化 `create_all` 创建，不修改旧表。`GET /api/task-drafts` 与 `GET /api/task-drafts/{id}` 读取保存内容和原修订 Workflow；读取不初始化执行引擎。`PUT /api/task-drafts/{id}` 使用客户端稳定 ID 和 `revision`（新草稿为 0）；每次内容更新递增，重复同内容写入幂等，过期版本返回 `draft_conflict`（409）。`DELETE` 必须携带查询参数 `revision`，不删除 Run 或输出。
+
+草稿合同闭合；`parameters` 允许所有 JSON 根，`hasParameters=false` 保留未应用参数缺失，`jsonText` 单独保存尚未应用文本（含非法 JSON）。草稿保存不要求参数符合 Workflow schema，启动仍执行既有参数及绑定校验。`packageHash` 指向原不可变修订，读取另外报告当前 hash 与 `needsRevalidation`；`sourceRunId` 如有必须匹配原 Run 的包、Workflow 和修订。参数及 JSON 键中的资源凭据拒绝保存，错误不回显值。
+
+启动前先保存 `pending=true`、原 `launchId` 和准备检查的 `bindingToken`；待确认状态不得修改已保存输入/来源/身份。前端在获得成功 Run 回执后清理草稿，确定的启动拒绝解除 pending 后允许重新核对；网络响应丢失保留原身份。持久化失败不发送启动，重试保存使用原 ID 和内容。浏览器不持久保存这些业务值。
+
+## 结果标记与执行更新
+
+`GET/PATCH /api/runs/{id}/metadata` 使用 `expectedRevision`（缺省记录为0）及显式非null修改字段；未提交字段不覆盖，过期版本返回409。标为已读在同一事务写入当前Run变化的查看回执；取消收藏或清空note仅删除标记内容。Run、spec、输出和调用证据不受修改。
+
+`GET /api/attention` 从全库当前完成/失败/取消/unknown Run及无Run失败fire投影，再过滤分页。Run变化身份基于状态与非网络attempt逻辑证据的状态/错误，重复观察更新时间不会创建新身份；unknown核实后的逻辑状态会改变身份。fire身份基于冻结触发/引擎身份和状态/错误，不因重复观察时间更新而重复。`PATCH /api/attention/{identity}` 使用 `expectedRevision` 写当前更新的 `isRead`；过时身份或读标记冲突返回409。已查看的unknown继续出现在待处理视图。
+
+此列表首次纳入已有记录的当前事实，不保留全部历史事件；`snapshotAt` 为当前事实发生时间上界，状态变化可能使旧分页中的条目退出当前窗口。刷新移除窗口与页码取得新状态。上述两张独立新表由现有初始化注册并创建，不修改旧表，也不提供旧数据迁移或删除。
+
+## 模型用量读投影
+
+成功模型及对应网络尝试的 `metadata.usage` 仅保存供应商实际报告的 `inputTokens`/`outputTokens`（缺少时为null）。同一逻辑模型 ID 的网络重试、确认副本和恢复不重复计数；失败网络未报告的消耗不推断。旧 SDK 输出的默认零值没有存在性依据时保留未知。运行汇总和按调用首次开始时间归属的当地日汇总读取现有证据，不新增计费表；按冻结模型配置分组，保留用量及耗时覆盖数量。
