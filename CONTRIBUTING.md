@@ -50,7 +50,9 @@ Vite 默认使用 5173 端口，开发 API client 默认访问 `http://127.0.0.1
 
 ### 测试数据库与 E2E 环境
 
-Backend pytest 的数据库 fixture 优先使用 `TEST_DATABASE_URL`，其次使用 `DATABASE_URL`。两者均未设置时，fixture 会启动或复用 `signaldeck-target-test-postgres` 容器，默认分配宿主机随机端口，可通过 `LOCAL_POSTGRES_PORT` 指定端口。容器使用 `pgvector/pgvector:pg16`，数据库文件默认保存在 `backend/.data/test-postgres/`，可通过 `SIGNALDECK_TEST_POSTGRES_DIR` 改写。它与根 Compose 的数据库是不同的启动路径。
+Backend pytest 的数据库 fixture 优先使用 `TEST_DATABASE_URL`，其次使用 `DATABASE_URL`。两者均未设置时，fixture 会启动或复用 `signaldeck-target-test-postgres-volume` 容器，默认分配宿主机随机端口，可通过 `LOCAL_POSTGRES_PORT` 指定端口。容器使用 `pgvector/pgvector:pg16`，数据默认保存在 Docker 管理的命名卷 `signaldeck-target-test-postgres-data`，避免 macOS 宿主机文件共享路径上的数据库文件权限错误。它与根 Compose 的数据库是不同的启动路径。
+
+显式设置 `SIGNALDECK_TEST_POSTGRES_DIR` 仍可使用宿主机目录，此模式沿用 `signaldeck-target-test-postgres` 容器名。默认卷模式不会停止、替换或迁移旧容器及 `backend/.data/test-postgres/`；两套存储分别保留。出现 `could not open/remove file ... Permission denied` 时，不通过放宽目录权限或 SQL GRANT 掩盖物理存储错误；取消目录覆盖并使用默认卷，或通过上述数据库 URL 显式选择可用实例。停止容器保留卷，测试仅清理自己创建的临时数据库。
 
 测试连接需要有权限访问 `postgres` 管理库并创建、删除临时 database；每个数据库 fixture 创建独立的 `signaldeck_test_*` 库并在结束时删除。自动创建的本地容器和数据目录会保留，测试不把应用数据库当作临时库清空。
 

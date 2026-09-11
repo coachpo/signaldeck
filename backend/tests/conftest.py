@@ -20,15 +20,17 @@ from app.infrastructure.platform_store import PlatformStore
 from app.infrastructure.schedule_store import ScheduleStore
 from app.main import create_app
 
-LOCAL_POSTGRES_CONTAINER = "signaldeck-target-test-postgres"
 LOCAL_POSTGRES_IMAGE = "pgvector/pgvector:pg16"
 LOCAL_POSTGRES_PORT = os.environ.get("LOCAL_POSTGRES_PORT", "")
-LOCAL_POSTGRES_DATA = Path(
-    os.environ.get(
-        "SIGNALDECK_TEST_POSTGRES_DIR",
-        str(Path(__file__).resolve().parents[1] / ".data" / "test-postgres"),
-    )
-).resolve()
+_POSTGRES_DIRECTORY = os.environ.get("SIGNALDECK_TEST_POSTGRES_DIR")
+LOCAL_POSTGRES_DATA = Path(_POSTGRES_DIRECTORY).resolve() if _POSTGRES_DIRECTORY else None
+LOCAL_POSTGRES_VOLUME = "signaldeck-target-test-postgres-data"
+# A separate identity leaves existing bind-mounted databases and active tests untouched.
+LOCAL_POSTGRES_CONTAINER = (
+    "signaldeck-target-test-postgres"
+    if LOCAL_POSTGRES_DATA is not None
+    else "signaldeck-target-test-postgres-volume"
+)
 POSTGRES_PASSWORD = os.environ.get("POSTGRES_PASSWORD", "signaldeck")
 
 
@@ -127,7 +129,9 @@ def _ensure_start_local_database() -> URL:
         postgres_publish_port = (
             f"127.0.0.1:{LOCAL_POSTGRES_PORT}:5432" if LOCAL_POSTGRES_PORT else "127.0.0.1::5432"
         )
-        LOCAL_POSTGRES_DATA.mkdir(parents=True, exist_ok=True)
+        if LOCAL_POSTGRES_DATA is not None:
+            LOCAL_POSTGRES_DATA.mkdir(parents=True, exist_ok=True)
+        storage = str(LOCAL_POSTGRES_DATA) if LOCAL_POSTGRES_DATA else LOCAL_POSTGRES_VOLUME
         _run_docker(
             [
                 "run",
@@ -149,7 +153,7 @@ def _ensure_start_local_database() -> URL:
                 "-p",
                 postgres_publish_port,
                 "-v",
-                f"{LOCAL_POSTGRES_DATA}:/var/lib/postgresql/data",
+                f"{storage}:/var/lib/postgresql/data",
                 LOCAL_POSTGRES_IMAGE,
             ],
             check=True,
