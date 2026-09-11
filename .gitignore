@@ -75,5 +75,5 @@ docs/pending-design/*
 # SD-TARGET-001 local host persistence
 /.signaldeck-target/
 
-# Local browser acceptance evidence
-/output/playwright/
+# Local generated output and acceptance evidence
+/output/
