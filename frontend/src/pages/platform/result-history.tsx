@@ -1,3 +1,4 @@
+import { ChoiceField } from "@/components/shared/form-field";
 import { HistoryResultMarks } from "./result-metadata";
 import { Link, useSearchParams } from "react-router";
 import { Button } from "@/components/ui/button";
@@ -23,9 +24,7 @@ import { availableTasks } from "./task-catalog";
 import { usePackages } from "@/hooks/use-workflow-platform";
 import { localDateBoundary, localDateValue } from "./result-history-query";
 import { RequestError } from "./feedback";
-import { originLabels, resultStatusLabels } from "./result-labels";
-const selectClass =
-  "h-8 min-w-0 rounded border border-input bg-background px-2 text-sm";
+import { originLabels, resultStatusLabels, resultStatusTone } from "./result-labels";
 export function ResultHistoryPage() {
   const packages = usePackages();
   const tasks = availableTasks(packages.data?.items ?? []);
@@ -94,33 +93,14 @@ export function ResultHistoryPage() {
         }}
         filters={
           <>
-            <select aria-label="收藏筛选" className={selectClass} value={search.get("isFavorite") ?? ""} onChange={(e) => change("isFavorite", e.target.value)}>
-              <option value="">全部收藏状态</option><option value="true">已收藏</option><option value="false">未收藏</option>
-            </select>
-            <select aria-label="阅读筛选" className={selectClass} value={search.get("isRead") ?? ""} onChange={(e) => change("isRead", e.target.value)}>
-              <option value="">全部阅读状态</option><option value="false">未读</option><option value="true">已读</option>
-            </select>
-            <select
-              aria-label="执行状态"
-              className={selectClass}
-              value={search.get("status") ?? ""}
-              onChange={(e) => change("status", e.target.value)}
-            >
-              <option value="">所有状态</option>
-              {["queued", "running", "succeeded", "failed", "cancelled"].map(
-                (s) => (
-                  <option key={s} value={s}>
-                    {resultStatusLabels[s]}
-                  </option>
-                ),
-              )}
-            </select>
-            <select
-              aria-label="任务类型"
-              className={selectClass}
+            <ChoiceField label="收藏筛选" value={search.get("isFavorite") ?? "all"} onChange={(value) => change("isFavorite", value === "all" ? "" : value)} options={[{ value: "all", label: "全部收藏状态" }, { value: "true", label: "已收藏" }, { value: "false", label: "未收藏" }]} />
+            <ChoiceField label="阅读筛选" value={search.get("isRead") ?? "all"} onChange={(value) => change("isRead", value === "all" ? "" : value)} options={[{ value: "all", label: "全部阅读状态" }, { value: "false", label: "未读" }, { value: "true", label: "已读" }]} />
+            <ChoiceField label="执行状态" value={search.get("status") ?? "all"} onChange={(value) => change("status", value === "all" ? "" : value)} options={[{ value: "all", label: "所有状态" }, ...["queued", "running", "succeeded", "failed", "cancelled"].map((value) => ({ value, label: resultStatusLabels[value] }))]} />
+            <ChoiceField
+              label="任务类型"
               value={`${search.get("packageKey") ?? ""}/${search.get("workflowKey") ?? ""}`}
-              onChange={(e) => {
-                const [pkg, workflow] = e.target.value.split("/");
+              onChange={(value) => {
+                const [pkg, workflow] = value.split("/");
                 const next = new URLSearchParams(search);
                 next.delete("offset");
                 next.delete("snapshotAt");
@@ -130,30 +110,9 @@ export function ResultHistoryPage() {
                 else next.delete("workflowKey");
                 setSearch(next);
               }}
-            >
-              <option value="/">所有任务</option>
-              {tasks.map((t) => (
-                <option
-                  key={`${t.packageKey}/${t.workflowKey}`}
-                  value={`${t.packageKey}/${t.workflowKey}`}
-                >
-                  {t.title}
-                </option>
-              ))}
-            </select>
-            <select
-              aria-label="执行来源"
-              className={selectClass}
-              value={search.get("origin") ?? ""}
-              onChange={(e) => change("origin", e.target.value)}
-            >
-              <option value="">所有来源</option>
-              {Object.entries(originLabels).map(([key, label]) => (
-                <option key={key} value={key}>
-                  {label}
-                </option>
-              ))}
-            </select>
+              options={[{ value: "/", label: "所有任务" }, ...tasks.map((task) => ({ value: `${task.packageKey}/${task.workflowKey}`, label: task.title }))]}
+            />
+            <ChoiceField label="执行来源" value={search.get("origin") ?? "all"} onChange={(value) => change("origin", value === "all" ? "" : value)} options={[{ value: "all", label: "所有来源" }, ...Object.entries(originLabels).map(([value, label]) => ({ value, label }))]} />
             <label className="flex items-center gap-1 text-xs">
               起始日期
               <Input
@@ -176,17 +135,7 @@ export function ResultHistoryPage() {
                 }
               />
             </label>
-            <select
-              aria-label="排序"
-              className={selectClass}
-              value={search.get("sort") ?? "created_desc"}
-              onChange={(e) => change("sort", e.target.value)}
-            >
-              <option value="created_desc">最新在前</option>
-              <option value="created_asc">最早在前</option>
-              <option value="title_asc">标题升序</option>
-              <option value="title_desc">标题降序</option>
-            </select>
+            <ChoiceField label="排序" value={search.get("sort") ?? "created_desc"} onChange={(value) => change("sort", value)} options={[{ value: "created_desc", label: "最新在前" }, { value: "created_asc", label: "最早在前" }, { value: "title_asc", label: "标题升序" }, { value: "title_desc", label: "标题降序" }]} />
           </>
         }
         resultSummary={
@@ -228,11 +177,12 @@ export function ResultHistoryPage() {
                   </TableCell>
                   <TableCell>
                     <ResourceStatusBadge
-                      label={resultStatusLabels[run.status] ?? run.status}
+                      label={resultStatusLabels[run.status] ?? "状态待确认"}
+                      tone={resultStatusTone(run.status)}
                     />
-                    {run.hasUnknownResults && <ResourceStatusBadge label="读取结果未确认" />}
+                    {run.hasUnknownResults && <ResourceStatusBadge tone={resultStatusTone("unknown")} label="读取结果未确认" />}
                     {run.hasUnknownEffects && (
-                      <ResourceStatusBadge label="保存状态待核实" />
+                      <ResourceStatusBadge tone={resultStatusTone("unknown")} label="保存状态待核实" />
                     )}
                     {run.cancelRequestedAt &&
                       ["queued", "running"].includes(run.status) && (

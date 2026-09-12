@@ -18,6 +18,7 @@ SignalDeck 帮助用户完成任务、阅读结果、复用常用配置、安排
 - `src/components/ui` 包含 shadcn/Radix primitive，保持 presentational，不放 route 或 API logic。
 - `src/components/shared` 包含可复用 SignalDeck UI：page shell、toolbar、state panel、status chrome、table frame、dialog 和 management-list helper。
 - feature folder 与 page 拥有 domain copy、route params、hooks、mutation、toast、navigation 和 validation behavior。
+- 独立插件通过 `src/plugin-ui` 构建入口复用上述主题、侧栏、Markdown、确认框和外观控件；静态产物随插件交付，业务页面仍由插件拥有。插件原生业务表单使用同一组 semantic token，不另建主题。跨来源导航只传递外观和专家显示偏好，平台返回地址作为当前标签页的导航上下文保留；不传递业务输入。
 
 ## Token
 

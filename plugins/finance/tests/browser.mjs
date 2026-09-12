@@ -45,6 +45,14 @@ async function assertRefreshKeepsWork(selector, value) {
 await mkdir(artifactDir, { recursive: true });
 try {
   await page.goto(base);
+  await page.getByRole('button', {name:'切换外观'}).click();
+  await page.getByRole('menuitem', {name:'深色',exact:true}).click();
+  await page.reload();
+  assert.equal(await page.locator('html').evaluate(el=>el.classList.contains('dark')),true);
+  await page.screenshot({path:path.join(artifactDir,'dark-workspace.png'),fullPage:true});
+  await page.getByRole('button', {name:'切换外观'}).click();
+  await page.getByRole('menuitem', {name:'浅色',exact:true}).click();
+  await page.waitForFunction(()=>!document.documentElement.classList.contains('dark'));
   await page.getByRole('button', { name: /任务生成结果/ }).click();
   assert.equal(await page.getByRole('heading', { name: '任务生成结果', exact: true }).count(), 1);
   assert.doesNotMatch(await page.locator('body').innerText(), /browser-private|createdBy|来源与技术证据/);
@@ -61,13 +69,13 @@ try {
   await page.waitForFunction(() => !document.getElementById('generate').disabled);
   assert.match(await page.locator('#preview').innerText(), /Example Company/);
   assert.doesNotMatch(await page.locator('#preview').innerText(), /Missing input/);
-  await page.getByRole('button', { name: '开启专家模式' }).click();
+  await page.getByRole('switch', { name: '专家模式' }).click();
   assert.doesNotMatch(await page.getByRole('textbox', { name: '报告正文', exact: true }).inputValue(), /inputs\.|<!--/);
   assert.ok((await page.locator('#author').boundingBox()).y < (await page.locator('#using').boundingBox()).y);
   await page.getByRole('textbox', { name: '报告正文', exact: true }).fill('# ⟦公司名称⟧\n草稿 ⟦补充说明⟧');
-  await page.getByRole('button', { name: '切换普通模式' }).click();
+  await page.getByRole('switch', { name: '专家模式' }).click();
   assert.equal(await page.getByLabel('公司名称（必填）').inputValue(), 'Example Company');
-  await page.getByRole('button', { name: '开启专家模式' }).click();
+  await page.getByRole('switch', { name: '专家模式' }).click();
   assert.match(await page.getByRole('textbox', { name: '报告正文', exact: true }).inputValue(), /草稿/);
   const draftContent = await page.getByRole('textbox', { name: '报告正文', exact: true }).inputValue();
   await page.getByRole('textbox', { name: '报告正文', exact: true }).fill(draftContent + '\n{{unknown.field}}');
@@ -79,6 +87,7 @@ try {
   for (const width of [375, 768, 1024, 1440]) {
     await page.setViewportSize({ width, height: 1000 });
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+    await page.locator('main').evaluate(el=>el.parentElement.scrollTo(0,0));
     await page.screenshot({ path: path.join(artifactDir, `author-${width}.png`), fullPage: true });
   }
   const pendingSave = await holdMutation('PATCH', '**/api/templates/*');
@@ -116,7 +125,7 @@ try {
     assert.equal(await page.locator('#mode').isDisabled(), false);
     assert.equal(await page.locator('#content').inputValue(), expectedDraft);
   } finally { await page.unroute('**/api/templates/*', failSave); }
-  await page.getByRole('button', { name: '切换普通模式' }).click();
+  await page.getByRole('switch', { name: '专家模式' }).click();
   await page.getByRole('button', { name: '预览报告', exact: true }).click();
   await page.waitForFunction(() => !document.getElementById('generate').disabled);
   const expected = await page.locator('#preview').innerText();
@@ -142,6 +151,7 @@ try {
   assert.equal(await page.locator('#report-body').innerText(), expected);
   await page.reload();
   await page.locator("#reading").waitFor({state:"visible"});
+  assert.equal(await page.getByRole('switch', {name:'专家模式'}).isChecked(),false, 'ordinary preference must survive reload');
   assert.equal(await page.locator('#report-body').innerText(), expected);
   for (const width of [375, 768, 1024, 1440]) {
     await page.setViewportSize({ width, height: 1000 });
@@ -154,25 +164,42 @@ try {
   await page.getByRole('button', { name: '下一页', exact: true }).click();
   await page.getByText('第 2 页', { exact: true }).waitFor();
   assert.equal(await page.locator('#list .entry').count(), 4);
-  await page.getByRole('button', { name: '开启专家模式' }).click();
+  await page.locator('#mode').click();
   const pendingUpload = await holdMutation('POST', '**/api/reports/upload');
   try {
-    await page.locator('#file').setInputFiles({ name: 'pending-upload.md', mimeType: 'text/markdown', buffer: Buffer.from('# Uploaded after waiting') });
+    await page.locator('#file').setInputFiles({ name: 'pending-upload.md', mimeType: 'text/markdown', buffer: Buffer.from('# Uploaded after waiting\n\n- First item\n- **Bold item**\n\n| Name | Value |\n| --- | --- |\n| Example | 42 |\n\n```js\nconst result = 42;\n```') });
     await pendingUpload.started;
     await assertMutationLocked();
     pendingUpload.release();
     await page.getByText('报告已上传。', { exact: true }).waitFor();
     assert.match(await page.locator('#report-body').innerText(), /Uploaded after waiting/);
   } finally { pendingUpload.release(); await pendingUpload.dispose(); }
+  await page.locator('#report-body ul li').first().waitFor();
+  assert.equal(await page.locator('#report-body ul li').count(), 2);
+  assert.equal(await page.locator('#report-body strong').innerText(), 'Bold item');
+  assert.equal(await page.locator('#report-body table tbody td').last().innerText(), '42');
+  assert.match(await page.locator('#report-body pre code').innerText(), /const result = 42;/);
+  let deleteRequests=0;
+  const countDelete=request=>{if(request.method()==='DELETE')deleteRequests++};
+  page.on('request',countDelete);
+  await page.getByRole('button', { name: '删除报告', exact: true }).click();
+  await page.getByRole('alertdialog').waitFor();
+  assert.equal(await page.locator('#workspace').isDisabled(), false, 'confirmation must precede mutation locking');
+  await page.getByRole('alertdialog').getByRole('button',{name:'取消',exact:true}).click();
+  await page.getByRole('alertdialog').waitFor({state:'hidden'});
+  assert.equal(deleteRequests,0,'cancelling confirmation must not write');
+  assert.equal(await page.locator('#reading').isVisible(),true);
   const pendingDelete = await holdMutation('DELETE', '**/api/reports/*');
   try {
-    page.once('dialog', dialog => dialog.accept());
     await page.getByRole('button', { name: '删除报告', exact: true }).click();
+    await page.getByRole('alertdialog').getByRole('button', { name: '删除', exact: true }).click();
     await pendingDelete.started;
     await assertMutationLocked();
     pendingDelete.release();
     await page.getByText('已删除。', { exact: true }).waitFor();
   } finally { pendingDelete.release(); await pendingDelete.dispose(); }
+  assert.equal(deleteRequests,1,'confirmed deletion must send exactly one request');
+  page.off('request',countDelete);
   assert.equal(await page.locator('#mode').isDisabled(), false);
   // Make a reusable format using only the visible business controls.
   await page.getByRole('button', { name: '使用已有格式', exact: true }).click();
@@ -194,8 +221,8 @@ try {
   await page.locator('.field-control').nth(1).getByRole('button', { name: '移除填写项', exact: true }).click();
   assert.doesNotMatch(await page.locator('#content').inputValue(), /临时填写项/);
   await page.getByLabel('本周完成的工作（必填）').fill('完成体验走查');
-  await page.getByRole('button', { name: '切换普通模式' }).click();
-  await page.getByRole('button', { name: '开启专家模式' }).click();
+  await page.getByRole('switch', { name: '专家模式' }).click();
+  await page.getByRole('switch', { name: '专家模式' }).click();
   assert.equal(await page.getByLabel('本周完成的工作（必填）').inputValue(), '完成体验走查');
   await page.getByRole('button', { name: '保存', exact: true }).click();
   await page.getByText('已保存。', { exact: true }).waitFor();
@@ -209,5 +236,5 @@ try {
   await page.locator('#message.error').waitFor();
   assert.equal(await page.locator('#reading').isVisible(), false);
   assert.deepEqual(errors, []);
-  console.log(JSON.stringify({ status: 'passed', deepLink, screenshots: artifactDir, checks: ['ordinary form', 'optional field', 'preview/generation', 'draft roundtrip', 'deep link reload', 'download', 'history page 2', '404', 'four viewport widths', 'delayed save/generate/upload/delete', 'save failure unlock'] }));
+  console.log(JSON.stringify({ status: 'passed', deepLink, screenshots: artifactDir, checks: ['ordinary form', 'optional field', 'preview/generation', 'draft roundtrip', 'deep link reload', 'download', 'history page 2', '404', 'four viewport widths', 'delayed save/generate/upload/delete', 'save failure unlock', 'shared Markdown lists/tables/bold/code', 'delete cancel/confirm', 'theme preference reload'] }));
 } finally { await browser.close(); }

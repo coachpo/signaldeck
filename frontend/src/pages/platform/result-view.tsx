@@ -18,7 +18,7 @@ import {
 import { useTaskReuse } from "@/hooks/use-task-experience";
 import type { RunResult } from "@/lib/types/result";
 import { RequestError } from "./feedback";
-import { resultStatusLabels, originLabels } from "./result-labels";
+import { resultStatusLabels, resultStatusTone, originLabels } from "./result-labels";
 import { findArtifacts } from "./artifact-references";
 import { runSearch } from "./result-navigation";
 import { DeclaredResultSections } from "./result-sections";
@@ -60,7 +60,8 @@ function ResultContent({ result }: { result: RunResult }) {
         description: `${originLabels[result.origin.kind] ?? "任务开始"} · ${new Date(result.createdAt).toLocaleString()}`,
         status: (
           <ResourceStatusBadge
-            label={resultStatusLabels[result.status] ?? result.status}
+            label={resultStatusLabels[result.status] ?? "状态待确认"}
+            tone={resultStatusTone(result.status)}
           />
         ),
         actions: (

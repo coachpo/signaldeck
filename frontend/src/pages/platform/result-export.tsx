@@ -1,3 +1,4 @@
+import { Checkbox } from "@/components/ui/checkbox";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useResultArtifactSelection } from "@/hooks/use-result-delivery";
@@ -40,8 +41,8 @@ export function ResultExport({ result, run, pendingRun = false }: { result: RunR
       <div className="flex flex-col gap-3 py-3">
         {options.map((item) => <div key={item.id} className="flex flex-col gap-2">
           <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={isSelected(item)} disabled={!readableContent(item) || (!!item.artifact && pendingRun)} onChange={(event) => {
-              const checked = event.target.checked;
+            <Checkbox checked={isSelected(item)} disabled={!readableContent(item) || (!!item.artifact && pendingRun)} onCheckedChange={(value) => {
+              const checked = value === true;
               setChoices((choices) => ({ ...choices, ...Object.fromEntries((item.aliases ?? [item.id]).map((id) => [id, checked])) }));
               setStatus("");
               if (checked && item.artifact && artifacts.loaded[item.id] === undefined) void artifacts.read(item);

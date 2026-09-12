@@ -1,3 +1,4 @@
+import { Checkbox } from "@/components/ui/checkbox";
 import { useState } from "react";
 import { Link } from "react-router";
 import { Button } from "@/components/ui/button";
@@ -90,7 +91,7 @@ function ConnectionEditor({ requirement, presets, resources, plugins, presetsPen
       {showForm && <>
         <ConnectionConfigFields kind={kind} value={draft.config} plugins={plugins} onValidityChange={setValid} onChange={(config) => { draft.update({ config, credentials: draft.credentials }); setConfirmed(false); setSaved(false); }} />
         <ConnectionCredentials kind={kind} values={draft.credentials} fields={fields} hasCredentials={requirement.hasCredentials} onChange={(credentials) => { draft.update({ config: draft.config, credentials }); setSaved(false); }} />
-        <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} />确认使用以上服务、账户、业务范围及保存位置</label>
+        <label className="flex items-center gap-2 text-sm"><Checkbox checked={confirmed} onCheckedChange={(checked) => setConfirmed(checked === true)} />确认使用以上服务、账户、业务范围及保存位置</label>
         <Button variant="outline" onClick={() => void save()} disabled={saveResource.isPending || !confirmed || !valid || fields.some((field) => field.required && !draft.credentials[field.key] && !requirement.hasCredentials)}>{saveResource.isPending ? "正在保存…" : "保存连接"}</Button>
         {saved && <p role="status">已保存。任务准备已重新检查；服务是否可用仍需实际执行确认。</p>}
         {draft.dirty && <p className="text-sm text-muted-foreground">请在刷新或关闭页面前保存连接。密钥不会写入浏览器存储。</p>}

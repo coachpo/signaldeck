@@ -347,7 +347,7 @@ describe("ordinary results", () => {
       await screen.findByRole("link", { name: "打开报告" }),
     ).toHaveAttribute(
       "href",
-      "https://finance.example/reports?report=report-seven",
+      expect.stringContaining("https://finance.example/reports?report=report-seven"),
     );
   });
   it("recognizes the projected artifact reference and offers a download", async () => {

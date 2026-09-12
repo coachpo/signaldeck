@@ -2,7 +2,7 @@ import { Link } from "react-router";
 import { MarkdownContent } from "@/components/shared/markdown-content";
 import type { ResultSection } from "@/lib/types/result";
 import { ResultValue } from "./result-content";
-import { safePluginPageUrl } from "./plugin-links";
+import { usePluginNavigationUrl } from "./plugin-links";
 import { runSearch } from "./result-navigation";
 import { sectionSchema } from "./result-context";
 import type { RunDetail } from "@/lib/types/workflow-platform";
@@ -13,8 +13,9 @@ export function DeclaredResultSections({ sections, search, run }: {
   search: URLSearchParams;
   run?: RunDetail;
 }) {
+  const pluginNavigationUrl = usePluginNavigationUrl();
   return groupResultSections(sections, run).map(({ section, index, sources }) => {
-    const href = safePluginPageUrl(section.href);
+    const href = pluginNavigationUrl(section.href);
     return (
       <section key={index} className="rounded border border-border bg-card p-4" aria-label={section.label}>
         {section.kind === "receipt" ? (
@@ -24,7 +25,7 @@ export function DeclaredResultSections({ sections, search, run }: {
         {section.kind === "markdown" && typeof section.value === "string" ? (
           <MarkdownContent>{section.value}</MarkdownContent>
         ) : section.kind === "link" && href ? (
-          <a href={href} target="_blank" rel="noreferrer" className="mr-3 underline">{section.label}</a>
+          <a href={href} rel="noreferrer" className="mr-3 underline">{section.label}</a>
         ) : section.kind === "link" ? <p>保存位置暂时无法打开，请查看执行过程。</p> : <ResultValue value={section.value} schema={sectionSchema(run, section)} />}
         </>}
         {section.severity && (

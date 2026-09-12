@@ -1,3 +1,4 @@
+import { resultStatusTone } from "./result-labels";
 import { useRef, useState } from "react";
 import { ChoiceField } from "@/components/shared/form-field";
 import { Button } from "@/components/ui/button";
@@ -240,7 +241,7 @@ export function DependencyGraph({
                       label={
                         node ? statusLabels[node.status] : evidence ? "尚未开始" : "已安排"
                       }
-                      tone={node?.status === "failed" ? "danger" : "neutral"}
+                      tone={resultStatusTone(node?.status)}
                     />
 
                   </div>

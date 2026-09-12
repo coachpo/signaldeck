@@ -77,3 +77,6 @@ docs/pending-design/*
 
 # Local generated output and acceptance evidence
 /output/
+
+# Shared UI packaged by independent plugin builds
+/plugins/runtime/plugin_runtime/web/

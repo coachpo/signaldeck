@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { ThemeContext, type Theme } from "@/components/theme";
 
-const STORAGE_KEY = "signaldeck-theme";
+import { DISPLAY_CHANGE_EVENT, THEME_STORAGE_KEY, getStoredTheme, storeTheme } from "@/lib/display-preferences";
 
 function getSystemTheme(): "light" | "dark" {
   if (typeof window === "undefined" || !window.matchMedia) {
@@ -10,23 +10,6 @@ function getSystemTheme(): "light" | "dark" {
   }
 
   return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-}
-
-function getThemeStorage(): Storage | null {
-  try {
-    return globalThis.localStorage ?? null;
-  } catch {
-    return null;
-  }
-}
-
-function getStoredTheme(): Theme {
-  const stored = getThemeStorage()?.getItem(STORAGE_KEY);
-  return (stored === "light" || stored === "dark" || stored === "system") ? stored : "system";
-}
-
-function storeTheme(theme: Theme) {
-  getThemeStorage()?.setItem(STORAGE_KEY, theme);
 }
 
 function applyTheme(theme: Theme) {
@@ -45,6 +28,19 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     setThemeState(next);
     storeTheme(next);
     applyTheme(next);
+  }, []);
+
+  useEffect(() => {
+    const sync = () => setThemeState(getStoredTheme());
+    const storage = (event: StorageEvent) => {
+      if (event.key === THEME_STORAGE_KEY || event.key === null) sync();
+    };
+    window.addEventListener("storage", storage);
+    window.addEventListener(DISPLAY_CHANGE_EVENT, sync);
+    return () => {
+      window.removeEventListener("storage", storage);
+      window.removeEventListener(DISPLAY_CHANGE_EVENT, sync);
+    };
   }, []);
 
   useEffect(() => {

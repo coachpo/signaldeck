@@ -1,3 +1,4 @@
+import { Checkbox } from "@/components/ui/checkbox";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +12,7 @@ import { useUnsavedWork } from "@/hooks/use-unsaved-work";
 import type { PluginRelease } from "@/lib/types/workflow-platform";
 import { PluginHealth } from "./plugin-health";
 import { RequestError } from "./feedback";
-import { safePluginPageUrl } from "./plugin-links";
+import { safePluginPageUrl, usePluginNavigationUrl } from "./plugin-links";
 import { capabilityName, pluginName } from "./connection-model";
 
 let installationDraft: { release: PluginRelease; fileName: string } | null = null;
@@ -31,6 +32,7 @@ function Capabilities({ release }: { release: PluginRelease }) {
   </section>;
 }
 export function PluginsPage() {
+  const pluginNavigationUrl = usePluginNavigationUrl();
   const query = usePlugins();
   const mutations = usePlatformMutations();
   const [draft, setDraft] = useState(installationDraft);
@@ -63,7 +65,7 @@ export function PluginsPage() {
       {query.isPending && <InventoryStatePanel title="正在读取扩展服务…" />}
       {query.data?.items.length === 0 && <InventoryStatePanel title="还没有扩展服务" description="使用服务提供方给你的安装文件添加服务，再选择启用。" />}
       {query.data?.items.map((plugin, index) => {
-        const pageUrl = safePluginPageUrl(plugin.release.pageUrl);
+        const pageUrl = pluginNavigationUrl(plugin.release.pageUrl);
         const name = pluginName(plugin.release);
         return <Card key={plugin.pluginId}>
           <CardHeader><CardTitle>{name}{name === "扩展服务" ? ` ${index + 1}` : ""}</CardTitle><CardDescription>{plugin.enabled ? "后续任务可以使用此服务。" : "尚未启用，任务暂时无法使用此服务。"}</CardDescription></CardHeader>
@@ -71,7 +73,7 @@ export function PluginsPage() {
             <div className="flex flex-wrap gap-2">
               <ResourceStatusBadge label={plugin.enabled ? "已启用" : "已停用"} />
               <Button variant="outline" disabled={mutations.enablePlugin.isPending} onClick={() => mutations.enablePlugin.mutate({ id: plugin.pluginId, enabled: !plugin.enabled })}>{plugin.enabled ? "停用" : "启用"} {name}</Button>
-              {plugin.enabled && pageUrl && <Button asChild variant="outline"><a href={pageUrl} target="_blank" rel="noopener noreferrer">打开服务</a></Button>}
+              {plugin.enabled && pageUrl && <Button asChild variant="outline"><a href={pageUrl} rel="noopener noreferrer">打开服务</a></Button>}
             </div>
             <Capabilities release={plugin.release} />
             <PluginHealth health={plugin.health} />
@@ -89,7 +91,7 @@ export function PluginsPage() {
             <p className="break-all text-sm">服务所在地址：{new URL(draft.release.endpoint).origin}</p>
             <Capabilities release={draft.release} />
             {existing && <p className="text-sm">这会更新已有服务，并暂时停用它。已有任务保留原有设置；确认服务可用后可再次启用。</p>}
-            <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} />我已核对服务来源和上述读取、保存能力</label>
+            <label className="flex items-center gap-2 text-sm"><Checkbox checked={confirmed} onCheckedChange={(checked) => setConfirmed(checked === true)} />我已核对服务来源和上述读取、保存能力</label>
             <div className="flex flex-wrap gap-2"><Button disabled={!confirmed || mutations.savePlugin.isPending} onClick={() => void register()}>{mutations.savePlugin.isPending ? "正在添加…" : existing ? "更新服务" : "添加服务"}</Button><Button variant="ghost" onClick={() => { installationDraft = null; setDraft(null); setConfirmed(false); }}>放弃本次选择</Button></div>
           </section>}
           {saved && <p role="status">已添加。确认服务可以使用后，点击上方“启用”。</p>}

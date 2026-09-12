@@ -18,7 +18,7 @@ The `example/notes/create` descriptor declares `signaldeck.resultLink/1`, key `n
 
 ## Validation
 
-From `backend`, run `uv run pytest tests/test_notes_workspace.py tests/test_notes_browser.py tests/test_independent_plugins.py tests/test_result_declarations.py -q`. Tests use isolated PostgreSQL and real MCP transport, covering literal search, collection isolation, pagination, 200-character identity limits, read-only behavior and frozen projections. Browser evidence and the joint acceptance boundary are recorded in [PU-S6 verification](../../docs/planning/personal-use-s6-verification.md).
+From `backend`, run `uv run pytest tests/test_notes_workspace.py tests/test_notes_browser.py tests/test_independent_plugins.py tests/test_result_declarations.py -q`. The browser test requires the installed frontend dependencies and Playwright Chromium, and builds the shared plugin UI before starting Notes. Tests use isolated PostgreSQL and real MCP transport, covering literal search, collection isolation, pagination, 200-character identity limits, read-only behavior and frozen projections. Browser evidence and the joint acceptance boundary are recorded in [PU-S6 verification](../../docs/planning/personal-use-s6-verification.md).
 
 ## Provenance and retrieval
 

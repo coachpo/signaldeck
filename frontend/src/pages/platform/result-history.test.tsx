@@ -19,7 +19,10 @@ it("loads package choices and preserves history context through a personal mark"
   }));
   const router = createMemoryRouter([{ path: "/runs", element: <ResultHistoryPage /> }], { initialEntries: ["/runs?q=资料&offset=25&isRead=false&snapshotAt=2026-09-10T09%3A00%3A00Z"] });
   render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><RouterProvider router={router} /></QueryClientProvider>);
+  await screen.findByRole("button", { name: "收藏 已存结果" });
+  fireEvent.keyDown(screen.getByRole("combobox", { name: "任务类型" }), { key: "ArrowDown" });
   expect(await screen.findByRole("option", { name: packageFixture.definition.workflows.main.name })).toBeInTheDocument();
+  fireEvent.keyDown(screen.getByRole("listbox"), { key: "Escape" });
   fireEvent.click(await screen.findByRole("button", { name: "收藏 已存结果" }));
   await waitFor(() => expect(screen.getByRole("button", { name: "取消收藏 已存结果" })).toBeEnabled());
   expect(patches).toEqual([{ expectedRevision: 0, isFavorite: true }]);
@@ -28,7 +31,12 @@ it("loads package choices and preserves history context through a personal mark"
   expect(current.get("q")).toBe("资料");
   expect(current.get("isRead")).toBe("false");
   expect(queries.length).toBeGreaterThanOrEqual(2);
-  fireEvent.change(screen.getByRole("combobox", { name: "收藏筛选" }), { target: { value: "true" } });
+  fireEvent.keyDown(screen.getByRole("combobox", { name: "收藏筛选" }), { key: "ArrowDown" });
+  fireEvent.click(await screen.findByRole("option", { name: "已收藏" }));
   await waitFor(() => expect(new URLSearchParams(router.state.location.search).get("isFavorite")).toBe("true"));
   expect(new URLSearchParams(router.state.location.search).has("offset")).toBe(false);
+  expect(new URLSearchParams(router.state.location.search).has("snapshotAt")).toBe(false);
+  fireEvent.keyDown(screen.getByRole("combobox", { name: "收藏筛选" }), { key: "ArrowDown" });
+  fireEvent.click(await screen.findByRole("option", { name: "全部收藏状态" }));
+  await waitFor(() => expect(new URLSearchParams(router.state.location.search).has("isFavorite")).toBe(false));
 });

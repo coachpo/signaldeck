@@ -242,6 +242,13 @@ async function waitForPort(port, child) {
 }
 
 async function main() {
+  const pluginUi = spawnSync("pnpm", ["build:plugin-ui"], {
+    cwd: resolve(__dirname, ".."),
+    env: process.env,
+    stdio: "inherit",
+  });
+  if (pluginUi.error) throw pluginUi.error;
+  if (pluginUi.status !== 0) throw new Error("Plugin UI build failed");
   const e2eDatabaseUrl = createE2eDatabase();
   const interpreter = spawnSync(
     "uv",

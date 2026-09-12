@@ -88,6 +88,24 @@ jobs:
         working-directory: backend
         run: uv sync --frozen
 
+      - name: Set up pnpm for plugin browser regression
+        uses: pnpm/action-setup@v6.0.10
+        with:
+          package_json_file: frontend/package.json
+
+      - name: Set up Node.js for plugin browser regression
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install plugin browser regression dependencies
+        working-directory: frontend
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm exec playwright install --with-deps chromium
+
       - name: Run backend quality checks
         working-directory: backend
         run: |

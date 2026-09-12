@@ -1,3 +1,4 @@
+import { Checkbox } from "@/components/ui/checkbox";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { Button } from "@/components/ui/button";
@@ -88,10 +89,9 @@ export function ResultRepeat({
           {!!result.readUnknownEvidenceIds?.length && <p>上次读取结果未确认，可重新读取；无需核实该读取是否保存。</p>}
           {result.contentStatus === "unknown" && (
             <label className="flex items-start gap-2 text-sm">
-              <input
-                type="checkbox"
+              <Checkbox
                 checked={unknownChecked}
-                onChange={(e) => setUnknownChecked(e.target.checked)}
+                onCheckedChange={(checked) => setUnknownChecked(checked === true)}
               />
               我已核实目标位置与执行过程，确认需要再次执行
             </label>

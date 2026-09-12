@@ -55,7 +55,10 @@ test("UX03: complete history preserves filters, respects local dates and refresh
       { timeout: 120_000 },
     )
     .toBe(27);
-  await page.goto(`/runs?q=${prefix}&sort=title_asc`);
+  await page.goto(`/runs?q=${prefix}`);
+  await page.getByRole("combobox", { name: "排序", exact: true }).click();
+  await page.getByRole("option", { name: "标题升序", exact: true }).click();
+  await expect(page).toHaveURL(new RegExp(`q=${prefix}&sort=title_asc$`));
   await expect(page.getByText("共 27 条记录", { exact: true })).toBeVisible();
   await expect(
     page.getByRole("link", { name: `${prefix} 00`, exact: true }),

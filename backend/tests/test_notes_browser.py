@@ -14,6 +14,12 @@ from tests.test_independent_plugins import invocation, notes_app
 
 
 def test_notes_sources_in_browser(database_url):
+    subprocess.run(
+        ["pnpm", "build:plugin-ui"],
+        cwd=Path(__file__).resolve().parents[2] / "frontend",
+        check=True,
+        timeout=120,
+    )
     app = notes_app(database_url)
     create = "example/notes/create"
     with TestClient(app):

@@ -1,4 +1,5 @@
 'use strict';
+window.SignalDeckUI.mountShell({title: '资料'});
 class NotesReadError extends Error {}
 const $ = id => document.getElementById(id);
 const sourceLabel = kind => ({original: '原始资料', derived: '整理结果', unclassified: '来源未分类'})[kind] || '来源未分类';
@@ -70,7 +71,7 @@ async function render() {
     if (revision !== generation) return;
     nextCursor = result.nextCursor;
     $('notes').replaceChildren(...result.notes.map(note => {
-      const link = document.createElement('a'); link.className = 'note';
+      const link = document.createElement('a'); link.className = 'note entry';
       const target = new URLSearchParams(params); target.set('noteId', note.id); link.href = url(target);
       const title = document.createElement('h2'); title.textContent = `${note.title} · ${sourceLabel(note.sourceKind)}`;
       const preview = document.createElement('p'); preview.textContent = note.text.slice(0, 220) + (note.text.length > 220 ? '…' : '');

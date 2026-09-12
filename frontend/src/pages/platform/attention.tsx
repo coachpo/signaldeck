@@ -4,7 +4,7 @@ import { InventoryPageShell } from "@/components/shared/inventory-page-shell";
 import { InventoryStatePanel } from "@/components/shared/inventory-state-panel";
 import { ResourceStatusBadge } from "@/components/shared/resource-status-strip";
 import { useAttention, useMarkAttention } from "@/hooks/use-result-metadata";
-import { resultStatusLabels } from "./result-labels";
+import { resultStatusLabels, resultStatusTone } from "./result-labels";
 import { ExecutionDiagnostic } from "./execution-diagnostic";
 import { RequestError } from "./feedback";
 
@@ -34,7 +34,7 @@ export function AttentionPage() {
     {records.data?.items.map((item) => <article key={item.id} className="flex min-w-0 flex-col gap-3 rounded border border-border bg-card p-4">
       <div className="flex flex-wrap items-center gap-2">
         <h2 className="font-medium">{item.title}</h2>
-        <ResourceStatusBadge label={item.kind === "fire" ? "未能启动" : resultStatusLabels[item.status] ?? item.status} />
+        <ResourceStatusBadge label={item.kind === "fire" ? "未能启动" : resultStatusLabels[item.status] ?? "状态待确认"} tone={item.kind === "fire" ? "danger" : resultStatusTone(item.status)} />
         <span className="text-sm">{item.isRead ? "更新已查看" : "新更新"}</span>
       </div>
       <time className="text-sm text-muted-foreground" dateTime={item.occurredAt}>{new Date(item.occurredAt).toLocaleString()}</time>

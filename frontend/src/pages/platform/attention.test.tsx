@@ -18,6 +18,8 @@ it("keeps viewed unknown operations actionable and provides no-Run fire navigati
   expect(await screen.findByRole("link", { name: "核实执行过程" })).toHaveAttribute("href", "/runs/r1?tab=evidence");
   expect(screen.getByRole("link", { name: "查看安排与失败原因" })).toHaveAttribute("href", "/scheduled-tasks/s1");
   expect(screen.getByText(/找不到任务定义/)).toBeVisible();
+  expect(screen.getByText("执行失败")).toHaveAttribute("data-tone", "danger");
+  expect(screen.getByText("未能启动")).toHaveAttribute("data-tone", "danger");
   expect(patches).toEqual([]);
   fireEvent.click(screen.getAllByRole("button", { name: "已查看本次更新" })[0]);
   await waitFor(() => expect(screen.getByText("更新已查看")).toBeVisible());

@@ -13,7 +13,8 @@
     "lint": "eslint .",
     "typecheck": "tsc -b",
     "test:run": "vitest run",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "build:plugin-ui": "vite build --config vite.plugin-ui.config.ts"
   },
   "knip": {
     "ignore": [

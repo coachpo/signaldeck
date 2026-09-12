@@ -127,8 +127,8 @@ services:
     restart: unless-stopped
     profiles: ["finance"]
     build:
-      context: ./plugins
-      dockerfile: finance/Dockerfile
+      context: .
+      dockerfile: plugins/finance/Dockerfile
     image: ${SIGNALDECK_LOCAL_IMAGE_PREFIX:-signaldeck-target}-finance:local
     depends_on:
       db:
@@ -156,8 +156,8 @@ services:
     restart: unless-stopped
     profiles: ["notes"]
     build:
-      context: ./plugins
-      dockerfile: notes/Dockerfile
+      context: .
+      dockerfile: plugins/notes/Dockerfile
     image: ${SIGNALDECK_LOCAL_IMAGE_PREFIX:-signaldeck-target}-notes:local
     depends_on:
       db:

@@ -1,27 +1,17 @@
 import { useSyncExternalStore } from "react";
 
-const key = "signaldeck-display";
+import { DISPLAY_CHANGE_EVENT, DISPLAY_STORAGE_KEY, getStoredDisplay, storeDisplay } from "@/lib/display-preferences";
+
 type Preferences = { expert: boolean; timeZone: string };
 const defaults: Preferences = {
   expert: false,
   timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
 };
-let preferences: Preferences = defaults;
-try {
-  const stored = JSON.parse(
-    localStorage.getItem(key) || "null",
-  ) as Partial<Preferences> | null;
-  if (stored)
-    preferences = {
-      expert: stored.expert === true,
-      timeZone:
-        typeof stored.timeZone === "string"
-          ? stored.timeZone
-          : defaults.timeZone,
-    };
-} catch {
-  /* Display preferences remain usable when storage is unavailable. */
+function readPreferences(): Preferences {
+  const stored = getStoredDisplay();
+  return { expert: stored.expert === true, timeZone: stored.timeZone ?? defaults.timeZone };
 }
+let preferences = readPreferences();
 const listeners = new Set<() => void>();
 function subscribe(listener: () => void) {
   listeners.add(listener);
@@ -29,15 +19,17 @@ function subscribe(listener: () => void) {
     listeners.delete(listener);
   };
 }
-function update(value: Partial<Preferences>) {
-  preferences = { ...preferences, ...value };
-  try {
-    localStorage.setItem(key, JSON.stringify(preferences));
-  } catch {
-    /* In-memory preference still applies. */
-  }
+function synchronize() {
+  const next = readPreferences();
+  if (next.expert === preferences.expert && next.timeZone === preferences.timeZone) return;
+  preferences = next;
   listeners.forEach((listener) => listener());
 }
+window.addEventListener(DISPLAY_CHANGE_EVENT, synchronize);
+window.addEventListener("storage", (event) => {
+  if (event.key === DISPLAY_STORAGE_KEY || event.key === null) synchronize();
+});
+function update(value: Partial<Preferences>) { storeDisplay(value); }
 export function useDisplayMode() {
   const value = useSyncExternalStore(
     subscribe,

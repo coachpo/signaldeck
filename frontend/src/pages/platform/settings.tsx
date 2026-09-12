@@ -19,9 +19,10 @@ import { useDisplayMode } from "@/hooks/use-display-mode";
 import { usePlugins, useResources } from "@/hooks/use-workflow-platform";
 import { RequestError } from "./feedback";
 import { TaskConnections } from "./task-connections";
-import { safePluginPageUrl } from "./plugin-links";
+import { usePluginNavigationUrl } from "./plugin-links";
 
 export function SettingsPage() {
+  const pluginNavigationUrl = usePluginNavigationUrl();
   const { expert, setExpert, timeZone, setTimeZone } = useDisplayMode();
   const [zone, setZone] = useState(timeZone);
   const [zoneError, setZoneError] = useState("");
@@ -101,7 +102,7 @@ export function SettingsPage() {
               }}
             />
             {plugins.data?.items.map((plugin) => {
-              const url = safePluginPageUrl(plugin.release.pageUrl);
+              const url = pluginNavigationUrl(plugin.release.pageUrl);
               return (
                 <div
                   key={plugin.pluginId}
@@ -116,7 +117,7 @@ export function SettingsPage() {
                   </div>
                   {plugin.enabled && url && (
                     <Button asChild variant="outline">
-                      <a href={url} target="_blank" rel="noopener noreferrer">
+                      <a href={url} rel="noopener noreferrer">
                         打开服务
                       </a>
                     </Button>

@@ -30,6 +30,6 @@ PYTHONPATH=plugins/finance:plugins/runtime backend/.venv/bin/python -m pytest pl
 (cd backend && uv run pytest tests/test_finance_api.py tests/test_independent_plugins.py -q)
 ```
 
-该验证创建 UUID 命名的独立 PostgreSQL 库，用真实 Finance HTTP 与浏览器验证业务表单、可选值、预览冲突、模式往返、深链接刷新、下载、第二页历史和失效报告；还覆盖延迟保存、生成、上传和删除期间的操作锁定，以及保存失败后的解锁与草稿保留。浏览器检查 375/768/1024/1440px 并输出 `output/playwright/finance-ux/` 截图。`TEST_DATABASE_URL` 可指定有建库权限的测试服务器；未指定时只复用文档规定的 `signaldeck-target-test-postgres` 测试容器端口。测试结束只删除自己创建的数据库。专项浏览器还验证中文字段制作、制作/试用顺序、安全错误和来源投影。此验证不调用付费供应商，也不替代实际参与者无讲解观察。
+浏览器测试在启动 Finance 前自动构建共享 UI（需 frontend 已锁依赖）；API-only 测试不要求浏览器产物。该验证创建 UUID 命名的独立 PostgreSQL 库，用真实 Finance HTTP 与浏览器验证业务表单、可选值、预览冲突、模式往返、深链接刷新、下载、第二页历史和失效报告；还覆盖延迟保存、生成、上传和删除期间的操作锁定，以及保存失败后的解锁与草稿保留。浏览器检查 375/768/1024/1440px 并输出 `output/playwright/finance-ux/` 截图。`TEST_DATABASE_URL` 可指定有建库权限的测试服务器；未指定时只复用文档规定的 `signaldeck-target-test-postgres` 测试容器端口。测试结束只删除自己创建的数据库。专项浏览器还验证中文字段制作、制作/试用顺序、安全错误和来源投影。此验证不调用付费供应商，也不替代实际参与者无讲解观察。
 
 Finance 的 `reports_create` 工具发布声明 `resultLinks`，`report` 链接使用 `tool.output.id` 绑定页面的 `reportId` 查询参数。Core 仅按冻结声明与已确认工具输出生成链接，不识别报告字段或路由。历史发布不补写此字段；新发布的工具合同摘要随声明更新。

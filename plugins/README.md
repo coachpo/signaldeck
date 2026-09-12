@@ -12,17 +12,25 @@ Finance provider implementations and template/report compiler were extracted fro
 
 ## Build and run
 
-Build context is this `plugins` directory, not the individual project directory:
+Run builds from the repository root. Finance and Notes use the root context to compile the shared UI from the locked frontend dependencies; Oracle keeps the `plugins` context:
 
 ```sh
-docker build -f finance/Dockerfile -t signaldeck-finance:1.0.0 .
-docker build -f digital_oracle/Dockerfile -t signaldeck-digital-oracle:1.0.0 .
-docker build -f notes/Dockerfile -t signaldeck-notes:1.2.0 .
+docker build -f plugins/finance/Dockerfile -t signaldeck-finance:1.0.0 .
+docker build -f plugins/digital_oracle/Dockerfile -t signaldeck-digital-oracle:1.0.0 plugins
+docker build -f plugins/notes/Dockerfile -t signaldeck-notes:1.2.0 .
 ```
 
 Each image pins Python 3.14.0 and uv 0.9.8 by image digest and contains an independently frozen `uv.lock`. Direct application dependencies include MCP 1.26.0, FastAPI 0.136.3, Pydantic 2.12.5, SQLAlchemy 2.0.51, psycopg 3.3.4 and JSON Schema 4.26.0. MCP protocol is **2025-11-25**.
 
 Finance and Notes require `PLUGIN_DATABASE_URL`, pointing to a separately owned PostgreSQL database/role. Neither falls back to Core's `DATABASE_URL`. Startup creates only that plugin's business tables and operation journal. Finance owns `reports`, `text_templates` and `market_quotes`; Notes owns `notes` and `note_provenance`; each owns its own `plugin_operations`. Oracle has no business persistence requirement. Existing Core business data is **not** migrated, reset or read by these services.
+
+Finance and Notes images build `frontend/src/plugin-ui` using the same React, shadcn primitives and theme sources as the platform. Their Python runtime serves the packaged JS/CSS at `/ui`; it requires neither a running Core/frontend service nor Node. Generated assets live under `runtime/plugin_runtime/web/`, are excluded from Git, and are included in the plugin artifact digest.
+
+Before starting Finance or Notes as a local Python process, build the shared assets from the repository root:
+
+```sh
+(cd frontend && pnpm install --frozen-lockfile && pnpm build:plugin-ui)
+```
 
 For a local Python process, run `uv sync --frozen` in the chosen project. Set `PYTHONPATH` to that project directory plus `plugins/runtime`, then use one of:
 

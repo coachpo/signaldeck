@@ -1,0 +1,54 @@
+@import '../styles/index.css';
+
+/* Native plugin forms consume the same tokens as the React primitives. */
+@layer components {
+  [hidden] { display: none !important; }
+  .plugin-content {
+    @apply flex min-w-0 flex-col gap-4;
+    padding: var(--ui-layout-page-padding);
+    width: 100%;
+  }
+  .plugin-content :where(h1) { @apply text-xl font-semibold; }
+  .plugin-content :where(h2) { @apply mb-3 text-lg font-semibold; }
+  .plugin-content :where(h3) { @apply my-3 text-base font-semibold; }
+  .plugin-content :where(button, input, select, textarea) {
+    @apply rounded-md border border-border bg-ui-surface-elevated px-3 py-1.5 text-sm text-foreground outline-none;
+    min-height: var(--ui-size-control-md);
+    max-width: 100%;
+  }
+  .plugin-content :where(button) { @apply cursor-pointer font-medium shadow-ui-xs; }
+  .plugin-content :where(button:hover) { @apply bg-accent text-accent-foreground; }
+  .plugin-content :where(button:disabled, input:disabled, select:disabled, textarea:disabled) { @apply cursor-not-allowed opacity-50; }
+  .plugin-content :where(button.primary) { @apply border-primary bg-primary text-primary-foreground; }
+  .plugin-content :where(button.primary:hover) { @apply bg-primary/90; }
+  .plugin-content :where(button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visible, summary:focus-visible) {
+    @apply border-ring outline-2 outline-offset-2 outline-ring;
+    box-shadow: var(--ui-focus-shadow);
+  }
+  .plugin-content :where(input, textarea) { @apply w-full bg-ui-surface-inset; }
+  .plugin-content :where(input[type=checkbox]) { @apply w-auto accent-primary; min-height: auto; }
+  .plugin-content :where(textarea) { @apply resize-y; min-height: 8rem; }
+  .plugin-content :where(label) { @apply my-2 block text-sm font-medium; }
+  .plugin-content :where(a) { @apply text-primary underline underline-offset-2; }
+  .plugin-content :where(nav, .actions, .filters) { @apply flex flex-wrap items-center gap-2; }
+  .plugin-content :where(nav button[aria-pressed=true]) { @apply border-primary bg-ui-accent-soft text-primary; }
+  .plugin-content :where(.panel) { @apply min-w-0 rounded-lg border border-border bg-card p-4; }
+  .plugin-content :where(.entry) { @apply block w-full rounded-none border-0 border-b border-border p-3 text-left no-underline shadow-none; }
+  .plugin-content :where(.entry.active) { @apply bg-ui-accent-soft; }
+  .plugin-content :where(.entry strong) { @apply block; overflow-wrap: anywhere; }
+  .plugin-content :where(.muted, .meta, small) { @apply text-muted-foreground; }
+  .plugin-content :where(.meta, small) { @apply text-xs; overflow-wrap: anywhere; }
+  .plugin-content :where(.message:not(:empty), .warning, .empty) { @apply rounded-lg border border-border bg-ui-surface-grouped p-3 text-sm; overflow-wrap: anywhere; }
+  .plugin-content :where(.message:empty) { display: none; }
+  .plugin-content :where(.filters > input) {
+    flex: 1 1 calc(var(--ui-size-control-lg) * 4);
+    width: auto;
+    min-width: 0;
+  }
+  .plugin-content :where(.filters > input[type=search]) { flex-basis: calc(var(--ui-size-control-lg) * 6); }
+  .plugin-content :where(.error) { @apply text-destructive; }
+  .plugin-content :where(.pager) { @apply mt-3 flex items-center justify-between gap-2; }
+  .plugin-content :where(dt) { @apply font-medium; }
+  .plugin-content :where(dd) { @apply mb-2; }
+  .plugin-content :where(article) { @apply min-w-0; }
+}

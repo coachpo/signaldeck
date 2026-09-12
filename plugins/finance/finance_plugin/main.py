@@ -12,6 +12,7 @@ from plugin_runtime.errors import ApiError
 from plugin_runtime.operations import Journal, OperationBase
 from plugin_runtime.serialization import input_contract, model_wire_schema, project
 from plugin_runtime.server import application, obj, release, tool
+from plugin_runtime.web import mount_shared_ui
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -216,6 +217,7 @@ def create_app(database_url=None, quote_provider=None, *, settings: FinanceSetti
         },
     )
     app = application(binding, execute, journal.query, startup=startup)
+    mount_shared_ui(app)
     app.state.sessions = sessions
     app.state.engine = engine
     app.state.execute = execute

@@ -6,6 +6,7 @@ from pathlib import Path
 from notes_plugin.web import install_workspace, literal_match, project, source_filter
 from plugin_runtime.operations import Journal, OperationBase
 from plugin_runtime.server import application, obj, release, tool
+from plugin_runtime.web import mount_shared_ui
 from sqlalchemy import JSON, ForeignKey, String, Text, create_engine, select
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
 
@@ -223,6 +224,7 @@ def create_app(database_url=None):
         },
     )
     app = application(binding, execute, journal.query, startup=startup)
+    mount_shared_ui(app)
     install_workspace(app, sessions, Note, NoteProvenance)
     app.state.engine, app.state.execute, app.state.journal = engine, execute, journal
     return app

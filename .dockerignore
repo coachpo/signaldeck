@@ -17,5 +17,6 @@
 backend/.data
 backend/.cache
 backend/experiments
-plugins
 .signaldeck-target
+
+plugins/runtime/plugin_runtime/web/

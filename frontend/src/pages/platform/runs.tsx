@@ -18,7 +18,7 @@ import { ExecutionDiagnostic } from "./execution-diagnostic";
 import { ModelBudgetSummary } from "./model-usage-panel";
 import { ResultFreshness } from "./result-freshness";
 import { evidenceName, frozenTool, objectValue, recordedTime, runSources, runWorkflow, stepName, toolName } from "./result-context";
-import { resultStatusLabels } from "./result-labels";
+import { resultStatusLabels, resultStatusTone } from "./result-labels";
 import { ConnectionSummary } from "./task-preparation";
 import { artifactPresentation } from "./result-artifact-presentation";
 import { findArtifacts } from "./artifact-references";
@@ -52,7 +52,7 @@ function RunInspector({ run }: { run: RunDetail }) {
   return <WorkspacePageShell contextBar={<PageContextBar
     title={workflow?.name || run.spec.definition.metadata.name || "任务执行过程"}
     description={`执行过程 · ${recordedTime(run.createdAt)}`}
-    status={<ResourceStatusBadge label={resultStatusLabels[run.status] ?? "状态待确认"} />}
+    status={<ResourceStatusBadge tone={resultStatusTone(run.status)} label={resultStatusLabels[run.status] ?? "状态待确认"} />}
     actions={<div className="flex flex-wrap gap-2">
       <Button asChild variant="outline"><Link to={{ pathname: `/runs/${encodeURIComponent(run.id)}`, search: runSearch(search, {}).toString() }}>返回结果</Link></Button>
       {isRunActive(run) && <Button variant="outline" disabled={!!run.cancelRequestedAt || mutations.cancel.isPending} onClick={() => void mutations.cancel.mutateAsync(run.id).catch(() => {})}>取消本次运行</Button>}
@@ -106,7 +106,7 @@ function ExecutionSteps({ run, onSelect }: { run: RunDetail; onSelect: (node: st
       const latest = attempts[0];
       const dependencies = run.spec.plan.dependencies[nodeId] ?? [];
       return <li key={nodeId} className="flex flex-col gap-2 rounded border border-border bg-card p-4">
-        <div className="flex flex-wrap items-center gap-2"><span className="text-sm text-muted-foreground">{index + 1}</span><Button variant="outline" onClick={() => onSelect(nodeId, latest?.id)}>{stepName(run, nodeId)}</Button><ResourceStatusBadge label={latest ? latest.status === "unknown" ? "结果未确认" : resultStatusLabels[latest.status] ?? "等待开始" : "尚未开始"} /></div>
+        <div className="flex flex-wrap items-center gap-2"><span className="text-sm text-muted-foreground">{index + 1}</span><Button variant="outline" onClick={() => onSelect(nodeId, latest?.id)}>{stepName(run, nodeId)}</Button><ResourceStatusBadge tone={resultStatusTone(latest?.status)} label={latest ? latest.status === "unknown" ? "结果未确认" : resultStatusLabels[latest.status] ?? "等待开始" : "尚未开始"} /></div>
         <p className="text-sm text-muted-foreground">{dependencies.length ? `前置步骤：${dependencies.map((id) => stepName(run, id)).join("、")}` : "无需等待其他步骤"}</p>
         {latest && <p className="text-sm">开始：{recordedTime(latest.startedAt)} · 完成：{recordedTime(latest.finishedAt)} · 已尝试 {latest.attempt} 次</p>}
       </li>;

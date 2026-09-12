@@ -1,0 +1,18 @@
+#workspace { margin: 0; padding: 0; border: 0; min-width: 0; }
+.workspace { display: grid; grid-template-columns: var(--ui-layout-sidebar-width-mobile) minmax(0, 1fr); gap: var(--ui-space-md); align-items: start; }
+.list { max-height: 64vh; overflow: auto; }
+.author-layout { display: grid; grid-template-columns: minmax(0, 1fr) var(--ui-layout-sidebar-width); gap: var(--ui-space-md); }
+#author { margin-top: var(--ui-space-lg); }
+#content { min-height: calc(var(--ui-size-control-lg) * 7); font-family: var(--font-mono); }
+.business-input { min-height: calc(var(--ui-size-control-lg) * 2); }
+.field-control { border-bottom: 1px solid var(--ui-separator); padding-bottom: var(--ui-space-sm); margin-bottom: var(--ui-space-sm); }
+input[type=checkbox] { width: auto; }
+aside select { width: 100%; }
+dt { font-weight: 600; }
+dd { margin: 0 0 var(--ui-space-xs); }
+@media (max-width: 1024px) { .author-layout { grid-template-columns: 1fr; } }
+@media (max-width: 767px) {
+  .workspace { grid-template-columns: 1fr; }
+  .list { max-height: calc(var(--ui-size-table-row) * 6); }
+  .workspace > section:last-child { grid-row: 1; }
+}

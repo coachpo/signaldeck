@@ -334,7 +334,8 @@ describe("resources and independent plugins", () => {
     renderPage(<PluginsPage />);
     expect(
       await screen.findByRole("link", { name: "打开服务" }),
-    ).toHaveAttribute("href", "https://weather.example/workspace");
+    ).toHaveAttribute("href", expect.stringContaining("https://weather.example/workspace?sdTheme="));
+    expect(screen.getByRole("link", { name: "打开服务" })).not.toHaveAttribute("target");
     expect(screen.getByText("天气服务")).toBeVisible();
     expect(document.body.textContent).not.toContain("external/weather");
     expect(safePluginPageUrl("javascript:alert(1)")).toBeNull();

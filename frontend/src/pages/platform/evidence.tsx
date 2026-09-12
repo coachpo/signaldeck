@@ -5,7 +5,7 @@ import type { ExecutionEvidence, Json, JsonObject, RunDetail } from "@/lib/types
 import { ResultValue } from "./result-content";
 import { evidenceName } from "./result-context";
 import { runSearch } from "./result-navigation";
-import { resultStatusLabels } from "./result-labels";
+import { resultStatusLabels, resultStatusTone } from "./result-labels";
 
 /** This component accepts business values; execution metadata is never passed here. */
 export function ArtifactValue({ value, label, schema }: { value: Json; label: string; schema?: JsonObject }) {
@@ -39,7 +39,7 @@ export function EvidenceTree({ evidence, selected, run }: {
                 {evidenceName(item, run)} · 第 {item.attempt} 次
               </Link>
             </Button>
-            <ResourceStatusBadge label={item.status === "unknown" ? "结果未确认" : resultStatusLabels[item.status] ?? "等待开始"} tone={item.status === "failed" ? "danger" : "neutral"} />
+            <ResourceStatusBadge label={item.status === "unknown" ? "结果未确认" : resultStatusLabels[item.status] ?? "等待开始"} tone={resultStatusTone(item.status)} />
           </div>
           {children.length > 0 && <div className="ml-4 border-l border-ui-separator pl-3">{rows(children, new Set([...ancestors, item.id]))}</div>}
         </li>;

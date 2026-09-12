@@ -96,3 +96,22 @@ it("uses the projected known failure in the execution header while leaving the m
   expect(screen.queryByText(/具体原因未知/)).not.toBeInTheDocument();
   expect(screen.queryByText("unconfirmed raw reply")).not.toBeInTheDocument();
 });
+
+it.each([
+  ["failed", "执行失败", "danger"],
+  ["timed_out", "执行超时", "danger"],
+  ["unknown", "结果未确认", "warning"],
+  ["succeeded", "已完成", "success"],
+] as const)("keeps %s step and operation status tones consistent", async (status, label, tone) => {
+  const run = structuredClone(runFixture);
+  run.evidence[0].status = status;
+  run.evidence[1].status = status;
+  mountRun(run, [], "tab=graph");
+  const steps = await screen.findByRole("list", { name: "任务步骤" });
+  expect(within(steps).getByText(label)).toHaveAttribute("data-tone", tone);
+  fireEvent.mouseDown(screen.getByRole("tab", { name: "执行过程" }), { button: 0, ctrlKey: false });
+  const evidence = screen.getByLabelText("步骤与服务操作");
+  for (const badge of within(evidence).getAllByText(label)) {
+    expect(badge).toHaveAttribute("data-tone", tone);
+  }
+});

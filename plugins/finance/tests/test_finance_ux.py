@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import subprocess
+from pathlib import Path
 from uuid import uuid4
 
 import pytest
@@ -14,7 +15,14 @@ from sqlalchemy.engine import make_url
 
 
 @pytest.fixture
-def finance_client():
+def finance_client(request):
+    if request.node.name == "test_actual_browser_flow":
+        subprocess.run(
+            ["pnpm", "build:plugin-ui"],
+            cwd=Path(__file__).resolve().parents[3] / "frontend",
+            check=True,
+            timeout=120,
+        )
     raw = os.environ.get("TEST_DATABASE_URL")
     if not raw:
         port = (

@@ -27,7 +27,10 @@ try {
   };
   await page.route('**/api/collections', holdCollections);
   try {
-    await page.goto(process.env.NOTES_TEST_URL);
+    const entry = new URL(process.env.NOTES_TEST_URL);
+    entry.searchParams.set('sdTheme', 'dark');
+    entry.searchParams.set('sdPlatform', 'http://localhost:8080');
+    await page.goto(entry.href);
     await initialRead;
     await expect(page.getByRole('status')).toHaveText('正在读取笔记…');
     await expect(page.getByLabel('检索范围')).toBeDisabled();
@@ -40,6 +43,18 @@ try {
     await page.unroute('**/api/collections', holdCollections);
   }
   await expect(page.locator('#summary')).toHaveText('本页 1 条笔记');
+  await expect(page.locator('html')).toHaveClass(/dark/);
+  await expect(page.getByRole('link', { name: '任务', exact: true })).toHaveAttribute('href', /localhost:8080/);
+  await page.getByRole('button', { name: '切换外观', exact: true }).click();
+  await page.getByRole('menuitem', { name: '浅色', exact: true }).click();
+  await expect(page.locator('html')).not.toHaveClass(/dark/);
+  assert.equal(new URL(await page.getByRole('link', { name: '任务', exact: true }).getAttribute('href')).searchParams.get('sdTheme'), 'light');
+  await expect(page.getByRole('heading', { name: '资料', exact: true })).toBeVisible();
+  for (const width of [375, 768, 1024, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true, `Notes overflows at ${width}px`);
+    await page.screenshot({ path: path.join(screenshots, `list-${width}.png`), fullPage: true });
+  }
   await expect(page.getByLabel('检索范围')).toBeEnabled();
   await page.getByLabel('检索范围').selectOption({ label: '包含整理结果' });
   await page.getByRole('button', { name: '搜索', exact: true }).click();
@@ -50,10 +65,15 @@ try {
   await page.screenshot({ path: path.join(screenshots, 'source-title.png'), fullPage: true });
   await page.getByRole('link', { name: '访谈原始记录', exact: true }).click();
   await expect(page.locator('#noteText')).toHaveText('用户原文 inputs.my_code 保持原样。');
+  await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.getByRole('button', { name: '复制正文', exact: true }).click();
+  await expect(page.getByRole('status')).toHaveText('正文已复制。');
+  assert.equal(await page.evaluate(() => navigator.clipboard.readText()), '用户原文 inputs.my_code 保持原样。');
   await page.goBack();
   await page.getByRole('link', { name: '访谈原始记录', exact: true }).waitFor();
   await page.reload();
   await page.getByRole('link', { name: '访谈原始记录', exact: true }).waitFor();
+  await expect(page.getByRole('link', { name: '任务', exact: true })).toHaveAttribute('href', /localhost:8080/);
   // Controlled read failure proves that the summary stays readable and uncertainty is explicit.
   const failSource = route => route.fulfill({ status: 503, contentType: 'application/json', body: '{"message":"internal stack /storage/notes"}' });
   await page.route('**/api/note?id=browser-original-internal-identity', failSource);
@@ -78,5 +98,5 @@ try {
   await expect(page.locator('#summary')).toHaveText('本页 2 条笔记');
   await expect(page.getByLabel('检索范围')).toHaveValue('true');
   assert.deepEqual(errors, []);
-  console.log(JSON.stringify({ status: 'passed', screenshots, checks: ['initial loading controls', 'source title', 'body preservation', 'back and refresh', 'source failure and recovery'] }));
+  console.log(JSON.stringify({ status: 'passed', screenshots, checks: ['initial loading controls', 'shared theme and platform navigation', 'compact responsive layout', 'source title', 'body preservation and copy', 'back and refresh', 'source failure and recovery'] }));
 } finally { await browser.close(); }
