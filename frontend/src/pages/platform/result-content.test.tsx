@@ -25,3 +25,14 @@ it("renders text attachments with shared Markdown", () => {
   expect(screen.getByRole("heading", { name: "附件标题" })).toBeVisible();
   expect(container.querySelector(".markdown-preview ol li")).toHaveTextContent("清单项目");
 });
+
+
+it("uses declared field titles without changing arbitrary business values or source text", () => {
+  render(<ResultValue value={{ identifier: "customer supplied id", payload: { flag: false, source: "const schema = { id: 42 };", absent: null } }} schema={{ type: "object", properties: { identifier: { type: "string", title: "客户编号" }, payload: { type: "object", title: "提交内容", properties: { flag: { type: "boolean", title: "包含附件" } } } } }} />);
+  expect(screen.getByText("客户编号")).toBeVisible();
+  expect(screen.getByText("customer supplied id")).toBeVisible();
+  expect(screen.getByText("包含附件")).toBeVisible();
+  expect(screen.getByText("false")).toBeVisible();
+  expect(screen.getByText("null")).toBeVisible();
+  expect(screen.getByText("const schema = { id: 42 };")).toBeVisible();
+});

@@ -2,25 +2,28 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useResultArtifactSelection } from "@/hooks/use-result-delivery";
 import type { RunResult } from "@/lib/types/result";
-import { confirmedContents, downloadMarkdown, exportMarkdown, readableContent } from "./result-delivery";
+import type { RunDetail } from "@/lib/types/workflow-platform";
+import { confirmedContents, downloadMarkdown, exportMarkdown, readableContent, type ConfirmedContent } from "./result-delivery";
 
-export function ResultExport({ result }: { result: RunResult }) {
-  const options = confirmedContents(result);
+export function ResultExport({ result, run, pendingRun = false }: { result: RunResult; run?: RunDetail; pendingRun?: boolean }) {
+  const options = confirmedContents(result, run);
   const [choices, setChoices] = useState<Record<string, boolean>>({});
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
   const artifacts = useResultArtifactSelection();
-  const selected = options.filter((item) => choices[item.id] ?? !item.artifact);
+  const isSelected = (item: ConfirmedContent) => (item.aliases ?? [item.id]).some((id) => choices[id] ?? !item.artifact);
+  const selected = options.filter(isSelected);
   async function deliver(copy: boolean) {
     setStatus("");
     setBusy(true);
     try {
-      const text = exportMarkdown(result, selected, artifacts.loaded);
+      const resultUrl = new URL(`/runs/${encodeURIComponent(result.runId)}`, window.location.origin).href;
+      const text = exportMarkdown(result, selected, artifacts.loaded, resultUrl);
       if (copy) {
         await navigator.clipboard.writeText(text);
         setStatus("所选确认内容已复制。");
       } else {
-        downloadMarkdown(result.runId, text);
+        downloadMarkdown(result.title, text);
         setStatus("已请求下载所选确认内容。");
       }
     } catch {
@@ -29,16 +32,17 @@ export function ResultExport({ result }: { result: RunResult }) {
       setBusy(false);
     }
   }
-  const unread = selected.some((item) => item.artifact && artifacts.loaded[item.id] === undefined);
+  const unread = selected.some((item) => item.artifact && (pendingRun || artifacts.loaded[item.id] === undefined));
+  const awaitingSections = pendingRun && !!result.sections?.length;
   return <section className="flex min-w-0 flex-col gap-3" aria-label="复制与导出">
     <details>
       <summary className="cursor-pointer">选择复制与导出的内容（已选 {selected.length} / {options.length} 项）</summary>
       <div className="flex flex-col gap-3 py-3">
         {options.map((item) => <div key={item.id} className="flex flex-col gap-2">
           <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={choices[item.id] ?? !item.artifact} disabled={!readableContent(item)} onChange={(event) => {
+            <input type="checkbox" checked={isSelected(item)} disabled={!readableContent(item) || (!!item.artifact && pendingRun)} onChange={(event) => {
               const checked = event.target.checked;
-              setChoices((choices) => ({ ...choices, [item.id]: checked }));
+              setChoices((choices) => ({ ...choices, ...Object.fromEntries((item.aliases ?? [item.id]).map((id) => [id, checked])) }));
               setStatus("");
               if (checked && item.artifact && artifacts.loaded[item.id] === undefined) void artifacts.read(item);
             }} />
@@ -52,12 +56,12 @@ export function ResultExport({ result }: { result: RunResult }) {
       </div>
     </details>
     {options.some((item) => item.artifact) && <p className="text-sm text-muted-foreground">附件需显式读取选入；未选内容会在导出文件中列明，不会自动读取全部附件。</p>}
-    {result.deferredSections?.length ? <p className="text-sm">部分声明保存在大产物中。请在内容选择中读取所需附件；附件保留原文，不自动推测声明字段。</p> : null}
-    {options.length > 0 && !options.some((item) => item.format === "markdown") && <p className="text-sm">本次没有 Markdown 正文；可导出已确认的结构化内容，原值完整保留。</p>}
-    {!options.length && <p role="status">尚无可复制或导出的确认正文，请查看执行证据。</p>}
+    {result.deferredSections?.length ? <p className="text-sm">部分内容保存在附件中。请在内容选择中读取所需附件；附件会按原文保留。</p> : null}
+    {!options.length && <p role="status">尚无可复制或导出的确认正文，请查看执行过程。</p>}
+    {awaitingSections && <p role="status">正在准备正文与来源，完成后即可复制或导出。</p>}
     <div className="flex flex-wrap gap-2">
-      <Button variant="outline" disabled={busy || unread || !selected.length} onClick={() => void deliver(true)}>复制所选正文</Button>
-      <Button variant="outline" disabled={busy || unread || !selected.length} onClick={() => void deliver(false)}>导出 Markdown</Button>
+      <Button variant="outline" disabled={busy || unread || awaitingSections || !selected.length} onClick={() => void deliver(true)}>复制所选正文</Button>
+      <Button variant="outline" disabled={busy || unread || awaitingSections || !selected.length} onClick={() => void deliver(false)}>导出 Markdown</Button>
     </div>
     {status && <p role="status">{status}</p>}
   </section>;

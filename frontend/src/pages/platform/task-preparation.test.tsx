@@ -1,16 +1,16 @@
-import { fireEvent, render, screen } from "@testing-library/react";
-import { expect, it } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { expect, it, vi } from "vitest";
 import { MemoryRouter } from "react-router";
 import { TaskPreparation, SafeSettings } from "./task-preparation";
 import { connectionName } from "./task-labels";
-
-it("keeps arbitrary scope keys and values literal, even when named like former business aliases", () => {
+vi.mock("@/hooks/use-workflow-platform", () => ({ usePlugins: () => ({ data: { items: [] } }) }));
+it("preserves arbitrary business values and avoids falling back to internal connection identifiers", () => {
   render(<SafeSettings value={{ collection: "model", accountId: "name", scope: { includeRisk: false, reportId: "resources" } }} />);
   for (const text of ["collection", "model", "accountId", "name", "scope", "includeRisk", "reportId", "resources"]) expect(screen.getByText(text)).toBeVisible();
-  expect(connectionName("", "example/notes")).toBe("example/notes");
+  expect(connectionName("", "example/notes")).toBe("服务连接");
+  expect(connectionName("example/notes", "example/notes")).toBe("服务连接");
   expect(connectionName("Operator name", "example/notes")).toBe("Operator name");
 });
-
 it("shows current model observation without changing configuration readiness", () => {
   render(<MemoryRouter><TaskPreparation preparation={{
     packageKey: "p", workflowKey: "w", packageHash: "h", ready: true, bindingToken: "b",
@@ -23,21 +23,19 @@ it("shows current model observation without changing configuration readiness", (
   }} /></MemoryRouter>);
   expect(screen.getByText(/配置已就绪/)).toBeVisible();
   expect(screen.getByText(/模型服务额度不足/)).toBeVisible();
-  expect(screen.getByRole("link", { name: "查看最近调用证据" })).toHaveAttribute("href", "/runs/run-1?tab=evidence&target=model-1");
 });
-
-it("shows arbitrary business scope and changed bindings before technical disclosure", () => {
+it("shows business scope and previous settings without exposing platform bindings or issues", () => {
   render(<MemoryRouter><TaskPreparation preparation={{
     packageKey: "p", workflowKey: "w", packageHash: "h", ready: true, bindingToken: "b",
-    issues: [], changedBindings: ["tool-x"], previousBindings: {}, effectiveSettings: {},
+    issues: ["binding_invalid"], changedBindings: ["resources"],
+    previousBindings: { resources: { "internal-resource": { name: "先前连接", pluginId: "private/plugin", credentialRevision: "hidden-revision", scope: { region: "previous-place" } } } },
+    effectiveSettings: { deadlineSeconds: 120, maxParallelNodes: 2, failurePolicy: "continue_independent" },
     requirements: [{ id: "tool-x", kind: "tool", name: "配置名称", configured: true, hasCredentials: false,
       config: { pluginId: "remote/tool", scope: { arbitraryZone: "place-x", reportId: "literal-id" }, maxConcurrentCalls: 4 }, observation: "not_observed" }],
   }} /></MemoryRouter>);
   expect(screen.getByText(/与上次相比/)).toBeVisible();
-  expect(screen.getAllByText("arbitraryZone").filter((node) => !node.closest("details"))[0]).toBeVisible();
-  expect(screen.getAllByText("literal-id").filter((node) => !node.closest("details"))[0]).toBeVisible();
-  const technical = screen.getByText("连接技术配置（完整原值）").closest("details");
-  expect(technical).not.toHaveAttribute("open");
-  fireEvent.click(screen.getByText("连接技术配置（完整原值）"));
-  expect(screen.getByText("remote/tool")).toBeVisible();
+  expect(screen.getByText("literal-id")).toBeVisible();
+  expect(screen.getByText(/最多同时处理 4 项/)).toBeVisible();
+  expect(screen.getByText(/先前连接/)).toBeInTheDocument();
+  expect(document.body.textContent).not.toMatch(/tool-x|remote\/tool|private\/plugin|hidden-revision|binding_invalid|credentialRevision|技术详情|完整原值/);
 });

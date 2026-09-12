@@ -1,4 +1,7 @@
 import { useState } from "react";
+import { useUnsavedWork } from "@/hooks/use-unsaved-work";
+import { scheduleTriggerDrafts } from "./schedule-drafts";
+import { ApiRequestError } from "@/lib/api-client";
 import { Link } from "react-router";
 import { Button } from "@/components/ui/button";
 import { InventoryPageShell } from "@/components/shared/inventory-page-shell";
@@ -34,7 +37,9 @@ function ScheduleRow({
   const latest = fires.data?.items
     .slice()
     .sort((a, b) => b.scheduledAt.localeCompare(a.scheduledAt))[0];
-  const [triggerId, setTriggerId] = useState(() => crypto.randomUUID());
+  const [triggerId, setTriggerId] = useState(() => scheduleTriggerDrafts.get(s.id) ?? crypto.randomUUID());
+  const [triggerUncertain, setTriggerUncertain] = useState(scheduleTriggerDrafts.has(s.id));
+  useUnsavedWork(triggerUncertain);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState<unknown>(null);
   return (
@@ -42,7 +47,7 @@ function ScheduleRow({
       <CardHeader>
         <CardTitle>{s.name}</CardTitle>
         <CardDescription>
-          {taskName} · {s.paused ? "已暂停" : "已启用自动执行"} ·{" "}
+          {taskName} · {s.syncStatus === "synced" ? s.paused ? "已暂停" : "已启用自动执行" : s.paused ? "暂停尚未确认" : "启用尚未确认"} ·{" "}
           {s.syncStatus === "synced"
             ? "已生效"
             : s.syncStatus === "failed"
@@ -57,11 +62,10 @@ function ScheduleRow({
         </p>
         {s.syncErrorCode && (
           <p className="text-sm text-destructive">
-            {s.syncErrorCode}
-            。请打开安排修正设置或再次保存，待生效修改会自动重试。
+            修改未能生效，之前的安排可能仍在执行。请打开安排核对设置后再次保存，系统也会继续尝试。
           </p>
         )}
-        <AppliedSchedulePreview id={s.id} revision={s.revision} />
+        <AppliedSchedulePreview id={s.id} revision={s.revision} syncStatus={s.syncStatus} />
         <p className="text-sm">
           最近执行：{" "}
           {latest ? (
@@ -83,6 +87,7 @@ function ScheduleRow({
           )}
         </p>
         <RequestError error={error} />
+        {triggerUncertain && <p role="alert" className="text-sm">执行请求尚未确认，任务可能已经开始。请点击“确认执行请求”核对，避免重复执行。</p>}
         {notice && (
           <p role="status" className="text-sm">
             {notice}
@@ -96,16 +101,16 @@ function ScheduleRow({
           </Button>
           <Button
             variant="outline"
-            disabled={s.desiredDeleted || mutations.saveSchedule.isPending}
+            disabled={s.desiredDeleted || triggerUncertain || mutations.saveSchedule.isPending}
             onClick={() => {
               mutations.saveSchedule
                 .mutateAsync({ ...s, paused: !s.paused })
-                .then(() => {
+                .then((saved) => {
                   setError(null);
                   setNotice(
-                    s.paused
-                      ? "已恢复未来自动执行。"
-                      : "已暂停未来自动执行，当前任务继续运行。",
+                    saved.syncStatus !== "synced" ? "修改已保存，正在确认是否生效。请查看上方状态。" : saved.paused
+                      ? "已暂停未来自动执行，当前任务继续运行。"
+                      : "已恢复未来自动执行。",
                   );
                 })
                 .catch(setError);
@@ -117,6 +122,8 @@ function ScheduleRow({
             variant="outline"
             disabled={s.desiredDeleted || mutations.triggerSchedule.isPending}
             onClick={() => {
+              scheduleTriggerDrafts.set(s.id, triggerId);
+              setTriggerUncertain(true);
               mutations.triggerSchedule
                 .mutateAsync({ id: s.id, triggerId })
                 .then((receipt) => {
@@ -124,12 +131,20 @@ function ScheduleRow({
                     throw new Error("请求尚未确认，请使用同一请求重试。");
                   setError(null);
                   setNotice("已请求执行，打开安排可跟进结果。");
+                  setTriggerUncertain(false);
+                  scheduleTriggerDrafts.delete(s.id);
                   setTriggerId(crypto.randomUUID());
                 })
-                .catch(setError);
+                .catch(error => {
+                  if (error instanceof ApiRequestError && [400, 404, 422].includes(error.status)) {
+                    setTriggerUncertain(false);
+                    scheduleTriggerDrafts.delete(s.id);
+                  }
+                  setError(error);
+                });
             }}
           >
-            立即执行
+            {triggerUncertain ? "确认执行请求" : "立即执行"}
           </Button>
         </div>
       </CardContent>

@@ -1,6 +1,7 @@
 import { useTaskDraftMutations } from "@/hooks/use-task-drafts";
 import type { TaskDraft, TaskDraftWrite } from "@/lib/types/task-drafts";
 import { useRef, useState } from "react";
+import { useUnsavedWork } from "@/hooks/use-unsaved-work";
 import { ApiRequestError } from "@/lib/api-client";
 import { useNavigate } from "react-router";
 import {
@@ -17,7 +18,7 @@ import { TaskConnections } from "./task-connections";
 import { TaskPreparation } from "./task-preparation";
 import { LaunchInputs } from "./launch-inputs";
 import {
-  taskConstraintErrors,
+  inputFieldLabel,
 } from "./task-catalog";
 import type { Json, JsonObject, WorkflowDefinition } from "@/lib/types/workflow-platform";
 import type {
@@ -25,7 +26,7 @@ import type {
   ReuseInput,
   TaskPreset,
 } from "@/lib/types/task-experience";
-import { validateLaunchValueForSchema } from "@/lib/platform-authoring/schema/launch-input-state";
+import { inputValueIssues } from "@/lib/platform-authoring/schema/input-values";
 
 const drafts = new Map<
   string,
@@ -38,9 +39,12 @@ const drafts = new Map<
     jsonText?: string | null;
     serverId?: string;
     serverRevision?: number;
+    name?: string;
+    changed?: boolean;
   }
 >();
 export function TaskForm({
+  formKey,
   packageKey,
   workflowKey,
   packageHash,
@@ -52,6 +56,7 @@ export function TaskForm({
   restored,
   initialLaunchId,
 }: {
+  formKey: string;
   packageKey: string;
   workflowKey: string;
   packageHash: string;
@@ -83,19 +88,21 @@ export function TaskForm({
       },
   );
   const [dirty, setDirty] = useState(draft.jsonText !== null && draft.jsonText !== undefined);
-  const [draftChanged, setDraftChanged] = useState(false);
+  const [draftChanged, setDraftChanged] = useState(draft.changed ?? false);
   const [draftNotice, setDraftNotice] = useState("");
   const [error, setError] = useState<unknown>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [name, setName] = useState(restored?.name ?? preset?.name ?? "");
+  const [name, setName] = useState(draft.name ?? restored?.name ?? preset?.name ?? "");
   const [saved, setSaved] = useState(false);
   const [uncertain, setUncertain] = useState(draft.uncertain ?? false);
   const [initialRevision] = useState(packageHash);
   const launchInFlight = useRef(false);
   const [launchBusy, setLaunchBusy] = useState(false);
+  const formBusy = uncertain || launchBusy || draftMutations.save.isPending || mutations.savePreset.isPending;
+  useUnsavedWork(draftChanged && !uncertain && !launchBusy);
   const parameters = draft.parameters;
   function change(value: Json) {
-    const next = { ...draft, parameters: value, hasParameters: true, jsonText: null, uncertain: false, prepared: null };
+    const next = { ...draft, parameters: value, hasParameters: true, jsonText: null, uncertain: false, prepared: null, changed: true };
     setDraftChanged(true);
     setDraft(next);
     drafts.set(draftKey, next);
@@ -109,12 +116,20 @@ export function TaskForm({
     revisionHash: uncertain && draft.prepared ? draft.prepared.packageHash : packageHash,
     ...((restored?.sourceRunId ?? historical?.sourceRunId) ? { sourceRunId: restored?.sourceRunId ?? historical?.sourceRunId } : {}),
   };
+  function changeName(value: string) {
+    setName(value);
+    setDraftChanged(true);
+    setDraft((current) => {
+      const next = { ...current, name: value, changed: true };
+      drafts.set(draftKey, next);
+      return next;
+    });
+  }
   function validationErrors() {
-    const issues = validateLaunchValueForSchema(schema, parameters);
-    if (draft.hasParameters === false) return { parameters: "草稿尚未应用输入，请填写或应用 JSON。" };
+    const issues = inputValueIssues(schema, parameters, "任务信息");
+    if (draft.hasParameters === false) return { parameters: "请填写任务信息，或恢复之前保留的输入。" };
     return {
-      ...Object.fromEntries(issues.map((i) => [i.field, i.issue])),
-      ...taskConstraintErrors(schema, parameters),
+      ...Object.fromEntries(issues.map((i) => [["parameters", ...i.path].join("."), i.message])),
     };
   }
   const preparation = useTaskPreparation(body, !dirty && !uncertain && Object.keys(validationErrors()).length === 0);
@@ -143,14 +158,14 @@ export function TaskForm({
       bindingToken: pending ? token : null,
     };
   }
-  async function persistDraft() {
+  async function persistDraft(asCopy = false) {
     try {
       setError(null);
-      const savedDraft = await draftMutations.save.mutateAsync(draftPayload());
-      const next = { ...draft, serverId: savedDraft.id, serverRevision: savedDraft.revision };
+      const savedDraft = await draftMutations.save.mutateAsync({ ...draftPayload(), ...(asCopy ? { id: crypto.randomUUID(), revision: 0 } : {}) });
+      const next = { ...draft, serverId: savedDraft.id, serverRevision: savedDraft.revision, name, changed: false };
       setDraft(next); drafts.set(draftKey, next);
-      setDraftChanged(false); setDraftNotice(`草稿已保存 · 修订 ${savedDraft.revision}`);
-      navigate(`/tasks/new?draftId=${encodeURIComponent(savedDraft.id)}`, { replace: true });
+      setDraftChanged(false); setDraftNotice("草稿已保存，可以关闭页面后继续填写。");
+      navigate(`/tasks/new?draftId=${encodeURIComponent(savedDraft.id)}`, { replace: true, state: { taskFormKey: formKey, taskFormContext: `${packageKey}/${workflowKey}` } });
     } catch (e) { setError(e); }
   }
   async function deleteDraft() {
@@ -183,15 +198,17 @@ export function TaskForm({
         const submitted = { ...draft, uncertain: true, prepared: checked, serverId: receipt.id, serverRevision: receipt.revision };
         setDraft(submitted);
         drafts.set(draftKey, submitted);
-        navigate(`/tasks/new?draftId=${encodeURIComponent(receipt.id)}`, { replace: true });
+        // A cached draft can predate this page instance. Keep the editor mounted
+        // while changing its recovery URL so an in-flight command stays locked.
+        navigate(`/tasks/new?draftId=${encodeURIComponent(receipt.id)}`, { replace: true, state: { taskFormKey: formKey, taskFormContext: `${packageKey}/${workflowKey}` } });
         const run = await mutations.launch.mutateAsync({
           ...body,
           launchId: draft.launchId,
           bindingToken: checked.bindingToken,
         });
-        await draftMutations.remove.mutateAsync({ id: receipt.id, revision: receipt.revision }).catch(() => undefined);
         drafts.delete(draftKey);
         navigate(`/runs/${encodeURIComponent(run.id)}`);
+        void draftMutations.remove.mutateAsync({ id: receipt.id, revision: receipt.revision }).catch(() => undefined);
       } catch (e) {
         if (e instanceof ApiRequestError && e.status >= 400 && e.status < 500) {
           const rejected = { ...draft, uncertain: false, prepared: null, serverRevision: receipt?.revision ?? draft.serverRevision };
@@ -247,29 +264,29 @@ export function TaskForm({
     >
       <div className="flex max-w-3xl flex-col gap-5">
         <RequestError error={error || preparation.error} />
-      {(restored?.needsRevalidation || initialRevision !== packageHash) && <p role="alert">任务当前定义已更新；草稿保留原定义修订及所有输入，不补默认值。启动仍核对原修订的输入与连接。</p>}
+      {(restored?.needsRevalidation || initialRevision !== packageHash) && <p role="alert">此任务有新版本。草稿保留原任务版本和所有输入，请核对后继续。</p>}
         {Object.keys(errors).length > 0 && (
           <p role="alert" className="text-sm text-destructive">
             请检查以下字段：
             {Object.entries(errors)
               .map(
                 ([field, message]) =>
-                  `${field.replace("parameters.", "")}：${message}`,
+                  `${inputFieldLabel(schema, field)}：${message.startsWith("Expected ") || message.includes("runtime input") ? "请检查此项的内容和类型。" : message}`,
               )
               .join("；")}
           </p>
         )}
         {historical && (
           <p className="text-sm text-muted-foreground">
-            使用原结果的定义修订：{packageHash.slice(0, 12)}。新数据会重新获取。
+            沿用原结果的任务版本。可以调整输入，新数据会重新获取。
           </p>
         )}
         {preset?.needsRevalidation && (
           <p role="alert">
-            该配置来自旧定义。已保留所有输入，请按当前字段重新核对；不支持的字段需要专家处理。
+            该配置来自较早的任务版本。所有输入已保留，请检查本次信息后再开始。
           </p>
         )}
-        <fieldset disabled={uncertain} className="min-w-0">
+        <fieldset disabled={formBusy} className="min-w-0">
           <div>
             <LaunchInputs
               technical={expert}
@@ -280,12 +297,13 @@ export function TaskForm({
               onDirtyChange={setDirty}
               initialJsonText={draft.jsonText ?? null}
               onJsonTextChange={(jsonText) => {
-                setDraft(current => { const next = { ...current, jsonText }; drafts.set(draftKey, next); return next; });
+                setDraft(current => { const next = { ...current, jsonText, changed: true }; drafts.set(draftKey, next); return next; });
                 setDraftChanged(true);
               }}
             />
           </div>
         </fieldset>
+        {draft.hasParameters === false && <Button variant="outline" disabled={formBusy || dirty} onClick={() => change(parameters)}>使用上述输入</Button>}
         {preparation.isFetching && !uncertain && <p role="status">正在自动核对连接与本次设置…</p>}
         {prepared && (
           <>
@@ -326,7 +344,7 @@ export function TaskForm({
           )}
           <Button
             variant="outline"
-            disabled={uncertain || dirty}
+            disabled={formBusy || dirty}
             onClick={() =>
               navigate("/scheduled-tasks/new", {
                 state: {
@@ -345,18 +363,21 @@ export function TaskForm({
         </div>
         {uncertain && (
           <p role="status" className="text-sm">
-            请求可能已经受理。重试使用同一请求身份，避免重复执行；核实前请勿修改输入。
+            任务可能已经开始。请使用上方重试按钮确认进度；不会重复创建任务，确认前已锁定输入。
           </p>
         )}
         <section className="flex flex-col gap-3" aria-label="任务草稿">
-          <TextField label="草稿名称" disabled={uncertain} value={name} onChange={(value) => { setName(value); setDraftChanged(true); }} />
+          <TextField label="草稿名称" disabled={formBusy} value={name} onChange={changeName} />
           <div className="flex flex-wrap gap-2">
-            <Button variant="outline" disabled={uncertain || launchBusy || draftMutations.save.isPending} onClick={() => void persistDraft()}>保存草稿</Button>
+            <Button variant="outline" disabled={formBusy} onClick={() => void persistDraft()}>{draftMutations.save.isPending && !launchBusy ? "正在保存草稿…" : "保存草稿"}</Button>
             {!!draft.serverRevision && <Button variant="ghost" disabled={uncertain || draftMutations.remove.isPending} onClick={() => void deleteDraft()}>删除草稿</Button>}
-            {error instanceof ApiRequestError && error.status === 409 && <Button variant="outline" onClick={() => window.location.reload()}>恢复服务器草稿（舍弃本页修改）</Button>}
+            {error instanceof ApiRequestError && error.code === "draft_conflict" && <>
+              <Button variant="outline" disabled={formBusy} onClick={() => void persistDraft(true)}>另存为新草稿</Button>
+              <Button variant="outline" onClick={() => window.location.reload()}>恢复已保存草稿（舍弃本页修改）</Button>
+            </>}
           </div>
-          <p className="text-sm text-muted-foreground">草稿保留未完成或未应用的 JSON；保存不会启动任务，也不会创建常用配置。请勿填写资源凭据。</p>
-          {draftChanged && <p role="status">有尚未保存的草稿修改。</p>}
+          <p className="text-sm text-muted-foreground">保存草稿后，可在任务首页继续填写。保存不会启动任务；服务密钥请填写在连接设置中。</p>
+          {draftChanged && <p role="status">有尚未保存的修改。刷新或关闭页面前，请先保存草稿。</p>}
           {draftNotice && <p role="status">{draftNotice}</p>}
         </section>
         <details>
@@ -364,7 +385,7 @@ export function TaskForm({
             保存常用输入或收藏任务（可选）
           </summary>
           <div className="flex flex-col gap-3 pt-3">
-            <TextField label="配置名称" disabled={uncertain} value={name} onChange={setName} />
+            <TextField label="配置名称" disabled={formBusy} value={name} onChange={changeName} />
             <div className="flex flex-wrap gap-2">
               <Button
                 variant="outline"

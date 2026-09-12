@@ -54,7 +54,7 @@ it("downloads a Markdown file containing provenance and confirmation status", as
   Object.defineProperty(URL, "createObjectURL", { configurable: true, value: create });
   Object.defineProperty(URL, "revokeObjectURL", { configurable: true, value: revoke });
   const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function(this: HTMLAnchorElement) {
-    expect(this.download).toBe("result-one.md");
+    expect(this.download).toBe("正文.md");
   });
   mount();
   fireEvent.click(screen.getByRole("button", { name: "导出 Markdown" }));

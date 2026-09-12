@@ -1,283 +1,51 @@
-import {
-  Field,
-  FieldGroup,
-  TextField,
-  ChoiceField,
-} from "@/components/shared/form-field";
-import { JsonObjectEditor } from "@/components/shared/json-object-editor";
-import { Textarea } from "@/components/ui/textarea";
+import { Field, FieldGroup, TextField, ChoiceField } from "@/components/shared/form-field";
+import { JsonSchemaEditor } from "@/components/platform-authoring/schema-composer/json-schema-editor";
 import { Button } from "@/components/ui/button";
-import type {
-  AgentDefinition,
-  WorkflowDefinition,
-  NodeDefinition,
-} from "@/lib/types/workflow-platform";
+import type { NodeDefinition, PackageDefinition, WorkflowDefinition } from "@/lib/types/workflow-platform";
+import { agentLabel, stepLabels, workflowSources } from "@/lib/platform-authoring/package-authoring";
+import { MappingEditor, ConditionEditor } from "./package-mapping";
+import { PresentationEditor } from "./package-presentation";
+import { MultipleChoice, NumberProperty, SavedChoice, type AuthoringCatalog, type PropertyEdit } from "./package-controls";
 
-type Edit = (path: string[], value: unknown) => void;
-type Props = { edit: Edit; draft: (id: string, dirty: boolean) => void };
+type Context = { edit: PropertyEdit; definition: PackageDefinition; workflowKey: string; catalog: AuthoringCatalog };
 
-function ObjectProperty({
-  name,
-  value,
-  edit,
-  draft,
-}: Props & { name: string; value: unknown }) {
-  return (
-    <JsonObjectEditor
-      label={name}
-      value={value ?? {}}
-      onApply={(v) => edit([name], v)}
-      onDraftChange={(dirty) => draft(name, dirty)}
-    />
-  );
-}
-function NumberProperty({
-  name,
-  value,
-  edit,
-}: {
-  name: string;
-  value: number | undefined;
-  edit: Edit;
-}) {
-  return (
-    <TextField
-      label={name}
-      type="number"
-      value={value === undefined ? "" : String(value)}
-      onChange={(v) => edit([name], v === "" ? undefined : Number(v))}
-    />
-  );
-}
-function ListProperty({
-  name,
-  value,
-  edit,
-}: {
-  name: string;
-  value: string[] | undefined;
-  edit: Edit;
-}) {
-  const items = Array.isArray(value) ? value : [];
-  return (
-    <Field label={name}>
-      {items.map((item, index) => (
-        <div key={index} className="flex items-end gap-2">
-          <TextField
-            label={`${name} ${index + 1}`}
-            value={item}
-            onChange={(v) =>
-              edit(
-                [name],
-                items.map((old, i) => (i === index ? v : old)),
-              )
-            }
-          />
-          <Button
-            variant="outline"
-            aria-label={`移除 ${name} ${index + 1}`}
-            onClick={() =>
-              edit(
-                [name],
-                items.filter((_, i) => i !== index),
-              )
-            }
-          >
-            移除
-          </Button>
-        </div>
-      ))}
-      <Button variant="outline" onClick={() => edit([name], [...items, ""])}>
-        添加 {name}
-      </Button>
+export function WorkflowProperties({ workflow, edit, definition, workflowKey, catalog }: Context & { workflow: WorkflowDefinition }) {
+  const sources = workflowSources(definition, workflowKey);
+  const tools = catalog.tools.map((tool) => ({ ...tool, sourceValues: Object.entries(workflow.nodes).filter(([, node]) => (definition.agents[node.uses]?.tools ?? []).includes(tool.value)).map(([key]) => `nodes.${key}.output`) }));
+  return <FieldGroup>
+    <TextField label="任务流程名称" value={workflow.name ?? ""} onChange={(v) => edit(["name"], v)} />
+    <TextField label="任务用途" value={workflow.description ?? ""} onChange={(v) => edit(["description"], v || undefined)} />
+    <JsonSchemaEditor label="开始任务时填写的信息" schema={workflow.inputSchema} onChange={(v) => edit(["inputSchema"], v)} />
+    <MappingEditor label="最终结果" value={workflow.outputMapping} sources={sources} targetSchema={workflow.outputSchema} onChange={(v) => edit(["outputMapping"], v)} />
+    <JsonSchemaEditor label="最终结果的内容规则" schema={workflow.outputSchema} onChange={(v) => edit(["outputSchema"], v)} />
+    <PresentationEditor value={workflow.presentation} onChange={(v) => edit(["presentation"], v)} inputSources={sources.slice(0, 1)} outputSources={[{ value: "workflow.output", label: "最终结果", schema: workflow.outputSchema }, ...sources.slice(1)]} tools={tools} />
+    <Field label="执行与恢复">
+      <ChoiceField label="某一步失败时" value={workflow.failurePolicy ?? "continue_independent"} onChange={(v) => edit(["failurePolicy"], v)} options={[{ value: "continue_independent", label: "继续完成不受影响的步骤" }, { value: "fail_fast", label: "停止启动其他步骤" }]} />
+      <NumberProperty label="同时进行的步骤" value={workflow.maxParallelNodes} max={128} onChange={(v) => edit(["maxParallelNodes"], v)} />
+      <NumberProperty label="整个任务最长等待（秒）" value={workflow.deadlineSeconds} max={604800} onChange={(v) => edit(["deadlineSeconds"], v)} />
     </Field>
-  );
+  </FieldGroup>;
 }
-export function AgentProperties({
-  agent,
-  edit,
-  draft,
-}: Props & { agent: AgentDefinition }) {
-  const strategy = agent.strategy;
-  return (
-    <FieldGroup>
-      <TextField
-        label="Agent name"
-        value={agent.name ?? ""}
-        onChange={(v) => edit(["name"], v)}
-      />
-      <Field
-        label="Strategy"
-        description="切换策略类型请使用下方完整定义；显式修改并校验后保存。"
-      >
-        <p>{strategy?.kind ?? "未定义"}</p>
-        {strategy?.kind === "model" && (
-          <>
-            <TextField
-              label="Model resource"
-              value={strategy.modelRef}
-              onChange={(v) => edit(["strategy", "modelRef"], v)}
-            />
-            <Textarea
-              aria-label="Prompt"
-              value={strategy.prompt}
-              onChange={(e) => edit(["strategy", "prompt"], e.target.value)}
-              className="min-h-40"
-            />
-          </>
-        )}
-        {strategy?.kind === "deterministic" && (
-          <>
-            <TextField
-              label="Deterministic tool"
-              value={strategy.toolId}
-              onChange={(v) => edit(["strategy", "toolId"], v)}
-            />
-            {["inputMapping", "outputMapping"].map((name) => (
-              <ObjectProperty
-                key={name}
-                name={name}
-                value={strategy[name as "inputMapping" | "outputMapping"]}
-                edit={(path, value) => edit(["strategy", ...path], value)}
-                draft={(id, dirty) => draft(`strategy.${id}`, dirty)}
-              />
-            ))}
-          </>
-        )}
-      </Field>
-      <ListProperty name="tools" value={agent.tools} edit={edit} />
-      <ListProperty name="resources" value={agent.resources} edit={edit} />
-      <Field
-        label="预算"
-        description="maxOutputTokens 是单次模型输出上限，留空沿用剩余总 token 预算；其他字段留空继承合同默认值。"
-      >
-        <div className="grid gap-3 sm:grid-cols-2">
-          {(
-            [
-              "maxModelRequests",
-              "maxToolCalls",
-              "maxTokens",
-              "maxOutputTokens",
-              "deadlineSeconds",
-              "maxParallelTools",
-            ] as const
-          ).map((name) => (
-            <NumberProperty
-              key={name}
-              name={name}
-              value={agent.budget?.[name]}
-              edit={(path, value) => edit(["budget", ...path], value)}
-            />
-          ))}
-        </div>
-      </Field>
-      {(["inputSchema", "outputSchema", "toolCache"] as const).map((name) => (
-        <ObjectProperty
-          key={name}
-          name={name}
-          value={agent[name]}
-          edit={edit}
-          draft={draft}
-        />
-      ))}
-    </FieldGroup>
-  );
-}
-export function WorkflowProperties({
-  workflow,
-  edit,
-  draft,
-}: Props & { workflow: WorkflowDefinition }) {
-  return (
-    <FieldGroup>
-      <TextField
-        label="Workflow name"
-        value={workflow.name ?? ""}
-        onChange={(v) => edit(["name"], v)}
-      />
-      <ChoiceField
-        label="failurePolicy"
-        value={workflow.failurePolicy ?? "continue_independent"}
-        onChange={(v) => edit(["failurePolicy"], v)}
-        options={[
-          { value: "continue_independent", label: "独立分支继续" },
-          { value: "fail_fast", label: "失败即停止" },
-        ]}
-      />
-      <NumberProperty
-        name="maxParallelNodes"
-        value={workflow.maxParallelNodes}
-        edit={edit}
-      />
-      <NumberProperty
-        name="deadlineSeconds"
-        value={workflow.deadlineSeconds}
-        edit={edit}
-      />
-      <ObjectProperty key={workflow.presentation === undefined ? "absent-presentation" : "present-presentation"} name="presentation" value={workflow.presentation} edit={edit} draft={draft} />
-      {workflow.presentation !== undefined && (
-        <Button variant="outline" onClick={() => { edit(["presentation"], undefined); draft("presentation", false); }}>
-          移除 presentation
-        </Button>
-      )}
-      {(["inputSchema", "outputSchema", "outputMapping"] as const).map(
-        (name) => (
-          <ObjectProperty
-            key={name}
-            name={name}
-            value={workflow[name]}
-            edit={edit}
-            draft={draft}
-          />
-        ),
-      )}
-    </FieldGroup>
-  );
-}
-export function NodeProperties({
-  node,
-  edit,
-  draft,
-}: Props & { node: NodeDefinition }) {
-  return (
-    <FieldGroup>
-      <TextField
-        label="Agent reference (uses)"
-        value={node.uses ?? ""}
-        onChange={(v) => edit(["uses"], v)}
-      />
-      <ObjectProperty
-        name="inputMapping"
-        value={node.inputMapping}
-        edit={edit}
-        draft={draft}
-      />
-      <Field
-        label="额外控制依赖"
-        description="输入引用与条件引用自动推导依赖；这里只需补充执行顺序。"
-      >
-        <ListProperty name="dependsOn" value={node.dependsOn} edit={edit} />
-      </Field>
-      <ObjectProperty
-        name="condition"
-        value={node.condition}
-        edit={edit}
-        draft={draft}
-      />
-      {node.condition && (
-        <Button
-          variant="outline"
-          onClick={() => edit(["condition"], undefined)}
-        >
-          移除条件
-        </Button>
-      )}
-      <ListProperty
-        name="acceptUpstreamStates"
-        value={node.acceptUpstreamStates}
-        edit={edit}
-      />
-      <NumberProperty name="maxAttempts" value={node.maxAttempts} edit={edit} />
-    </FieldGroup>
-  );
+
+const states = [
+  { value: "succeeded", label: "已完成" }, { value: "failed", label: "失败" }, { value: "skipped", label: "因条件不满足而跳过" },
+  { value: "blocked", label: "因前置步骤未完成而停止" }, { value: "cancelled", label: "已取消" }, { value: "timed_out", label: "等待超时" },
+];
+
+export function NodeProperties({ node, edit, definition, workflowKey, nodeKey }: Context & { node: NodeDefinition; nodeKey: string }) {
+  const labels = stepLabels(definition, workflowKey);
+  return <FieldGroup>
+    <h2 className="font-semibold">{labels[nodeKey]}</h2>
+    <SavedChoice label="由谁完成" value={node.uses ?? ""} options={Object.keys(definition.agents).map((key) => ({ value: key, label: agentLabel(definition, key) }))} onChange={(v) => edit(["uses"], v)} missing="原助手已不可用，请重新选择" />
+    <MappingEditor label="交给助手的信息" value={node.inputMapping} sources={workflowSources(definition, workflowKey, nodeKey)} targetSchema={definition.agents[node.uses]?.inputSchema} onChange={(v) => edit(["inputMapping"], v)} />
+    <Field label="执行顺序" description="使用其他步骤的结果时，会自动等它完成。这里可以另外指定需要先完成的步骤。">
+      <MultipleChoice label="还需要先完成" value={node.dependsOn} options={Object.entries(labels).filter(([key]) => key !== nodeKey).map(([value, label]) => ({ value, label }))} onChange={(v) => edit(["dependsOn"], v)} emptyText="当前没有其他步骤。" />
+    </Field>
+    {node.condition ? <><ConditionEditor label="执行条件" value={node.condition} sources={workflowSources(definition, workflowKey, nodeKey)} onChange={(v) => edit(["condition"], v)} /><Button variant="outline" onClick={() => edit(["condition"], undefined)}>移除执行条件</Button></> : <Button variant="outline" onClick={() => edit(["condition"], { op: "exists", args: [{ ref: "workflow.input" }] })}>设置执行条件</Button>}
+    <Field label="遇到问题时" description="允许前置步骤失败后继续时，请为可能缺失的信息设置替代内容。">
+      <MultipleChoice label="前置步骤出现哪些情况时仍可继续" value={node.acceptUpstreamStates ?? ["succeeded"]} options={states} onChange={(v) => edit(["acceptUpstreamStates"], v)} />
+      {node.acceptUpstreamStates?.length === 0 && <p role="alert" className="text-sm text-destructive">请至少选择一种可以继续的情况。</p>}
+      <NumberProperty label="最多尝试次数（含首次）" value={node.maxAttempts} max={10} onChange={(v) => edit(["maxAttempts"], v)} />
+    </Field>
+  </FieldGroup>;
 }

@@ -113,6 +113,21 @@ def create_app(database_url=None):
         ),
     ]
 
+    definitions[0]["inputSchema"]["title"] = "保存笔记"
+    definitions[1]["inputSchema"]["title"] = "查找笔记"
+    field_titles = {
+        "title": "笔记标题",
+        "text": "笔记正文",
+        "sourceKind": "资料类型",
+        "sourceNoteIds": "引用的原始笔记",
+        "query": "查找文字",
+        "limit": "最多返回条数",
+        "includeDerived": "包含整理结果",
+    }
+    for definition in definitions:
+        for name, schema in definition["inputSchema"]["properties"].items():
+            schema["title"] = field_titles[name]
+
     def execute(name, arguments, context):
         binding = context.get("resourceBindings", {}).get("notes-workspace", {})
         collection = binding.get("collection")
@@ -142,9 +157,7 @@ def create_app(database_url=None):
                     raise ValueError("notes_invalid_sources")
                 confirmed = set(
                     session.scalars(
-                        select(Note.id).where(
-                            Note.collection == collection, Note.id.in_(sources)
-                        )
+                        select(Note.id).where(Note.collection == collection, Note.id.in_(sources))
                     )
                 )
                 if confirmed != set(sources):
@@ -152,9 +165,7 @@ def create_app(database_url=None):
                 session.add(Note(**result))
                 session.flush()
                 session.add(
-                    NoteProvenance(
-                        note_id=result["id"], source_kind=kind, source_ids=sources
-                    )
+                    NoteProvenance(note_id=result["id"], source_kind=kind, source_ids=sources)
                 )
                 session.flush()
                 return {**result, "sourceKind": kind, "sourceNoteIds": sources}
@@ -173,9 +184,7 @@ def create_app(database_url=None):
                     .where(Note.collection == collection)
                     .where(literal_match(Note, arguments.get("query", "")))
                     .where(
-                        source_filter(
-                            Note, NoteProvenance, arguments.get("includeDerived", True)
-                        )
+                        source_filter(Note, NoteProvenance, arguments.get("includeDerived", True))
                     )
                     .order_by(Note.id)
                     .limit(arguments.get("limit", 20))
@@ -198,10 +207,20 @@ def create_app(database_url=None):
         definitions,
         [root, root.parent / "runtime"],
         page_url=os.environ.get("PLUGIN_PAGE_URL", "http://localhost:8093/"),
-        config_schema=obj(
-            {"collection": {"type": "string", "minLength": 1, "maxLength": 200}},
-            ("collection",),
-        ),
+        config_schema={
+            "title": "笔记服务",
+            **obj(
+                {
+                    "collection": {
+                        "title": "笔记集合",
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 200,
+                    }
+                },
+                ("collection",),
+            ),
+        },
     )
     app = application(binding, execute, journal.query, startup=startup)
     install_workspace(app, sessions, Note, NoteProvenance)

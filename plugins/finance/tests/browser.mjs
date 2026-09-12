@@ -32,33 +32,49 @@ async function assertMutationLocked() {
     assert.equal(await page.locator(selector).isDisabled(), true, selector + ' must retain the active operation and draft');
   assert.match(await page.locator('#message').innerText(), /正在处理/);
 }
+async function assertRefreshKeepsWork(selector, value) {
+  const pendingDialog = page.waitForEvent('dialog', { timeout: 5000 });
+  const reload = page.reload({ timeout: 1000 }).catch(error => error);
+  const dialog = await pendingDialog;
+  assert.equal(dialog.type(), 'beforeunload');
+  await dialog.dismiss();
+  await reload;
+  assert.equal(await page.locator(selector).inputValue(), value);
+}
 
 await mkdir(artifactDir, { recursive: true });
 try {
   await page.goto(base);
+  await page.getByRole('button', { name: /任务生成结果/ }).click();
+  assert.equal(await page.getByRole('heading', { name: '任务生成结果', exact: true }).count(), 1);
+  assert.doesNotMatch(await page.locator('body').innerText(), /browser-private|createdBy|来源与技术证据/);
+  await page.screenshot({ path: path.join(artifactDir, 'report-source.png'), fullPage: true });
   await page.getByRole('button', { name: '使用已有格式', exact: true }).click();
   await page.getByRole('button', { name: /研究格式/ }).click();
   await page.getByRole('button', { name: '预览报告', exact: true }).click();
   assert.equal(await page.getByLabel('公司名称（必填）').evaluate(el => el.validity.valueMissing), true);
   assert.equal(await page.locator('#preview').isVisible(), false);
   await page.getByLabel('公司名称（必填）').fill('Example Company');
+  await assertRefreshKeepsWork('#input-company', 'Example Company');
   await page.getByRole('button', { name: '预览报告', exact: true }).click();
   await page.getByRole('button', { name: '生成报告', exact: true }).waitFor({ state: 'visible' });
   await page.waitForFunction(() => !document.getElementById('generate').disabled);
   assert.match(await page.locator('#preview').innerText(), /Example Company/);
   assert.doesNotMatch(await page.locator('#preview').innerText(), /Missing input/);
   await page.getByRole('button', { name: '开启专家模式' }).click();
-  await page.getByLabel('Markdown 内容', { exact: true }).fill('<!-- input: company | 公司名称 | required -->\n<!-- input: notes | 补充说明 | optional -->\n# {{inputs.company}}\n草稿 {{inputs.notes}}');
+  assert.doesNotMatch(await page.getByRole('textbox', { name: '报告正文', exact: true }).inputValue(), /inputs\.|<!--/);
+  assert.ok((await page.locator('#author').boundingBox()).y < (await page.locator('#using').boundingBox()).y);
+  await page.getByRole('textbox', { name: '报告正文', exact: true }).fill('# ⟦公司名称⟧\n草稿 ⟦补充说明⟧');
   await page.getByRole('button', { name: '切换普通模式' }).click();
   assert.equal(await page.getByLabel('公司名称（必填）').inputValue(), 'Example Company');
   await page.getByRole('button', { name: '开启专家模式' }).click();
-  assert.match(await page.getByLabel('Markdown 内容', { exact: true }).inputValue(), /草稿/);
-  const draftContent = await page.getByLabel('Markdown 内容', { exact: true }).inputValue();
-  await page.getByLabel('Markdown 内容', { exact: true }).fill(draftContent + '\n{{unknown.field}}');
-  await page.getByRole('button', { name: '编译并预览草稿', exact: true }).click();
-  await page.getByText('编译问题：', { exact: false }).waitFor();
+  assert.match(await page.getByRole('textbox', { name: '报告正文', exact: true }).inputValue(), /草稿/);
+  const draftContent = await page.getByRole('textbox', { name: '报告正文', exact: true }).inputValue();
+  await page.getByRole('textbox', { name: '报告正文', exact: true }).fill(draftContent + '\n{{unknown.field}}');
+  await page.getByRole('button', { name: '预览草稿', exact: true }).click();
+  await page.getByText('有一处引用无法使用。请从“引用已有内容”重新选择后预览。', { exact: true }).waitFor();
   assert.equal(await page.getByRole('button', { name: '生成报告', exact: true }).isDisabled(), true);
-  await page.getByLabel('Markdown 内容', { exact: true }).fill(draftContent);
+  await page.getByRole('textbox', { name: '报告正文', exact: true }).fill(draftContent);
 
   for (const width of [375, 768, 1024, 1440]) {
     await page.setViewportSize({ width, height: 1000 });
@@ -95,7 +111,8 @@ try {
   await page.route('**/api/templates/*', failSave);
   try {
     await page.getByRole('button', { name: '保存', exact: true }).click();
-    await page.getByText('Controlled temporary failure', { exact: true }).waitFor();
+    await page.getByText('暂时未能确认操作结果。草稿已保留，请先查看列表确认是否已保存，再决定是否重试。', { exact: true }).waitFor();
+    assert.doesNotMatch(await page.locator('body').innerText(), /Controlled temporary failure/);
     assert.equal(await page.locator('#mode').isDisabled(), false);
     assert.equal(await page.locator('#content').inputValue(), expectedDraft);
   } finally { await page.unroute('**/api/templates/*', failSave); }
@@ -157,6 +174,37 @@ try {
     await page.getByText('已删除。', { exact: true }).waitFor();
   } finally { pendingDelete.release(); await pendingDelete.dispose(); }
   assert.equal(await page.locator('#mode').isDisabled(), false);
+  // Make a reusable format using only the visible business controls.
+  await page.getByRole('button', { name: '使用已有格式', exact: true }).click();
+  await page.getByRole('button', { name: '新建格式', exact: true }).click();
+  await page.getByLabel('名称', { exact: true }).fill('每周工作总结');
+  assert.equal(await page.getByLabel('搜索全部报告或格式').inputValue(), '');
+  await page.getByRole('textbox', { name: '报告正文', exact: true }).fill('# 本周进展\n');
+  await assertRefreshKeepsWork('#content', '# 本周进展\n');
+  await page.getByLabel('新填写项的名称', { exact: true }).fill('本周完成的工作');
+  await page.getByRole('button', { name: '添加到正文', exact: true }).click();
+  assert.match(await page.locator('#content').inputValue(), /⟦本周完成的工作⟧/);
+  assert.doesNotMatch(await page.locator('#content').inputValue(), /inputs\.|field_\d|<!--/);
+  await page.getByLabel('选择内容', { exact: true }).selectOption({ label: '指定报告' });
+  await page.getByLabel('选择报告', { exact: true }).selectOption({ label: 'Report 00' });
+  await page.getByRole('button', { name: '加入正文', exact: true }).click();
+  assert.match(await page.locator('#content').inputValue(), /《Report 00》正文/);
+  await page.getByLabel('新填写项的名称', { exact: true }).fill('临时填写项');
+  await page.getByRole('button', { name: '添加到正文', exact: true }).click();
+  await page.locator('.field-control').nth(1).getByRole('button', { name: '移除填写项', exact: true }).click();
+  assert.doesNotMatch(await page.locator('#content').inputValue(), /临时填写项/);
+  await page.getByLabel('本周完成的工作（必填）').fill('完成体验走查');
+  await page.getByRole('button', { name: '切换普通模式' }).click();
+  await page.getByRole('button', { name: '开启专家模式' }).click();
+  assert.equal(await page.getByLabel('本周完成的工作（必填）').inputValue(), '完成体验走查');
+  await page.getByRole('button', { name: '保存', exact: true }).click();
+  await page.getByText('已保存。', { exact: true }).waitFor();
+  await page.getByRole('button', { name: '预览报告', exact: true }).click();
+  await page.waitForFunction(() => !document.getElementById('generate').disabled);
+  assert.match(await page.locator('#preview').innerText(), /完成体验走查/);
+  await page.screenshot({ path: path.join(artifactDir, 'business-format.png'), fullPage: true });
+  await page.getByRole('button', { name: '生成报告', exact: true }).click();
+  await page.getByText('报告已生成并保存。', { exact: true }).waitFor();
   await page.goto(base + '?report=not_found');
   await page.locator('#message.error').waitFor();
   assert.equal(await page.locator('#reading').isVisible(), false);

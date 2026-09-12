@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -91,20 +91,20 @@ function fetcher(overrides: Partial<RunResult> = {}) {
           : response(runFixture),
   );
 }
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => { vi.unstubAllGlobals(); sessionStorage.clear(); });
 describe("ordinary results", () => {
-  it("keeps declared receipt and complete input available behind disclosure", async () => {
+  it("shows a confirmed receipt without exposing its raw service response and retains original input", async () => {
     vi.stubGlobal("fetch", fetcher({ sections: [
       { kind: "markdown", label: "声明正文", value: "# 唯一正文" },
-      { kind: "receipt", label: "保存信息", value: { arbitrary: "receipt-only" } },
+      { kind: "receipt", label: "保存信息", value: { operationId: "receipt-only", contentHash: "opaque-response-hash" } },
     ] }));
     mount();
     expect(await screen.findByRole("heading", { name: "唯一正文" })).toBeVisible();
-    expect(screen.getByText("保存信息（完整原值）").closest("details")).not.toHaveAttribute("open");
-    fireEvent.click(screen.getByText("保存信息（完整原值）"));
-    expect(screen.getByText("receipt-only")).toBeVisible();
-    expect(screen.getByText("本次输入（完整原值）").closest("details")).not.toHaveAttribute("open");
-    fireEvent.click(screen.getByText("本次输入（完整原值）"));
+    expect(screen.getByText("此项保存已确认。")).toBeVisible();
+    expect(screen.queryByText("receipt-only")).not.toBeInTheDocument();
+    expect(screen.queryByText("opaque-response-hash")).not.toBeInTheDocument();
+    expect(screen.getByText("本次输入").closest("details")).not.toHaveAttribute("open");
+    fireEvent.click(screen.getByText("本次输入"));
     expect(await screen.findByText("原始内容")).toBeVisible();
   });
 
@@ -113,7 +113,7 @@ describe("ordinary results", () => {
     mount();
     expect(await screen.findByText(/模型服务额度不足/)).toBeVisible();
     expect(screen.getByRole("link", { name: "保留输入并检查连接" })).toHaveAttribute("href", "/tasks/new?fromRun=run-1");
-    expect(screen.getByRole("link", { name: "技术详情与调用证据" })).toHaveAttribute("href", "/runs/run-1?tab=evidence");
+    expect(screen.getByRole("link", { name: "查看执行过程" })).toHaveAttribute("href", "/runs/run-1?tab=evidence");
   });
   it("shows body, missing information and provenance before technical evidence", async () => {
     vi.stubGlobal("fetch", fetcher());
@@ -124,10 +124,10 @@ describe("ordinary results", () => {
     expect(screen.getByText("未取得最新价格")).toBeVisible();
     expect(screen.getByText("公开资料")).toBeVisible();
     expect(
-      screen.getByRole("link", { name: "技术详情与调用证据" }),
+      screen.getByRole("link", { name: "查看执行过程" }),
     ).toHaveAttribute("href", "/runs/run-1?tab=evidence");
     expect(
-      screen.queryByRole("tab", { name: "Run graph" }),
+      screen.queryByRole("tab", { name: "步骤进度" }),
     ).not.toBeInTheDocument();
   });
   it("preserves history filters through evidence selection, technical tabs and return", async () => {
@@ -135,17 +135,17 @@ describe("ordinary results", () => {
     const history = "q=archive&status=succeeded&offset=25";
     const router = mount(`/runs/run-1?history=${encodeURIComponent(history)}`);
     fireEvent.click(
-      await screen.findByRole("link", { name: "技术详情与调用证据" }),
+      await screen.findByRole("link", { name: "查看执行过程" }),
     );
     const evidenceLink = await screen.findByRole("link", {
-      name: "node · answer · attempt 1",
+      name: "Assistant · 第 1 次",
     });
     fireEvent.click(evidenceLink);
     expect(
       new URLSearchParams(router.state.location.search).get("history"),
     ).toBe(history);
     fireEvent.mouseDown(
-      screen.getByRole("tab", { name: "Immutable snapshot" }),
+      screen.getByRole("tab", { name: "本次设置" }),
       { button: 0, ctrlKey: false },
     );
     await waitFor(() =>
@@ -202,7 +202,7 @@ describe("ordinary results", () => {
     ).toBeVisible();
     expect(requests).toHaveLength(0);
     fireEvent.click(screen.getByRole("button", { name: "确认并开始新运行" }));
-    await screen.findByText("响应未知");
+    await screen.findByText(/上次请求尚未确认/);
     fireEvent.click(screen.getByRole("button", { name: "确认并开始新运行" }));
     await waitFor(() => expect(requests).toHaveLength(2));
     expect(requests[0]).toEqual(requests[1]);
@@ -272,8 +272,8 @@ describe("ordinary results", () => {
     await waitFor(() => expect(screen.getByRole("button", { name: "再运行一次" })).toBeEnabled());
     fireEvent.click(screen.getByRole("button", { name: "再运行一次" }));
     fireEvent.click(await screen.findByRole("button", { name: "确认并开始新运行" }));
-    await screen.findByText("响应未知");
-    fireEvent.click(screen.getByRole("link", { name: "技术详情与调用证据" }));
+    await screen.findByText(/上次请求尚未确认/);
+    fireEvent.click(screen.getByRole("link", { name: "查看执行过程" }));
     fireEvent.click(await screen.findByRole("link", { name: "返回结果" }));
     await waitFor(() => expect(screen.getByRole("button", { name: "再运行一次" })).toBeEnabled());
     fireEvent.click(screen.getByRole("button", { name: "再运行一次" }));
@@ -289,7 +289,7 @@ describe("ordinary results", () => {
     expect(screen.queryByText("保存状态待核实")).not.toBeInTheDocument();
     fireEvent.click(await screen.findByRole("button", { name: "再运行一次" }));
     expect(await screen.findByRole("button", { name: "确认并开始新运行" })).toBeEnabled();
-    expect(screen.queryByRole("checkbox", { name: "我已核实目标位置与执行证据，确认需要再次执行" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("checkbox", { name: "我已核实目标位置与执行过程，确认需要再次执行" })).not.toBeInTheDocument();
   });
   it("requires explicit verification before repeating an unknown write", async () => {
     vi.stubGlobal("fetch", fetcher({ contentStatus: "unknown", body: null }));
@@ -304,7 +304,7 @@ describe("ordinary results", () => {
     expect(start).toBeDisabled();
     fireEvent.click(
       screen.getByRole("checkbox", {
-        name: "我已核实目标位置与执行证据，确认需要再次执行",
+        name: "我已核实目标位置与执行过程，确认需要再次执行",
       }),
     );
     expect(start).toBeEnabled();
@@ -461,4 +461,41 @@ describe("ordinary results", () => {
     expect(query.get("offset")).toBe("25");
     expect(query.get("snapshotAt")).toBe("2026-09-08T01:00:00Z");
   });
+});
+
+
+it("keeps cancelled work distinct from failure and describes input reuse", async () => {
+  vi.stubGlobal("fetch", fetcher({ status: "cancelled", origin: { kind: "reuse" }, cancelRequestedAt: "2026-09-08T01:01:00Z", errorCode: "run_cancelled", contentStatus: "unknown" }));
+  mount();
+  expect(await screen.findByText("本次运行已取消")).toBeVisible();
+  expect(screen.getByText(/调整后开始/)).toBeVisible();
+  expect(screen.getByText("保存状态待核实")).toBeVisible();
+  expect(screen.queryByText(/具体原因未知|undefined|run_cancelled/)).not.toBeInTheDocument();
+});
+
+it("recovers an uncertain rerun after refresh without persisting input or connection settings", async () => {
+  const requests: { launchId: string; bindingToken: string }[] = [];
+  const fallback = fetcher();
+  vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => {
+    if (url.endsWith("/rerun")) {
+      requests.push(JSON.parse(init!.body as string));
+      return requests.length === 1 ? response({ code: "unavailable", message: "unknown", details: [] }, 503) : response({ ...runFixture, id: "accepted-after-refresh" });
+    }
+    return fallback(url);
+  }));
+  mount();
+  await waitFor(() => expect(screen.getByRole("button", { name: "再运行一次" })).toBeEnabled());
+  fireEvent.click(screen.getByRole("button", { name: "再运行一次" }));
+  fireEvent.click(await screen.findByRole("button", { name: "确认并开始新运行" }));
+  await waitFor(() => expect(requests).toHaveLength(1));
+  await screen.findByText(/上次请求尚未确认/);
+  const retained = sessionStorage.getItem("signaldeck:pending-rerun:run-1")!;
+  expect(retained).toContain("binding-1");
+  expect(retained).not.toMatch(/原始内容|旧位置|新位置|effectiveSettings|previousBindings|requirements|parameters/);
+  cleanup();
+  const router = mount();
+  fireEvent.click(await screen.findByRole("button", { name: "确认并开始新运行" }));
+  await waitFor(() => expect(router.state.location.pathname).toBe("/runs/accepted-after-refresh"));
+  expect(requests[1]).toEqual(requests[0]);
+  expect(sessionStorage.getItem("signaldeck:pending-rerun:run-1")).toBeNull();
 });

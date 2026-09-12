@@ -25,7 +25,7 @@ it("keeps absent provider counters unknown while explaining failed-attempt cover
   render(<ModelUsageDetails title="本次模型用量" data={data} />);
   expect(screen.getAllByText("未知")).toHaveLength(2);
   expect(screen.getByText(/2 次缺少完整用量/)).toBeVisible();
-  expect(screen.getByText(/失败尝试未报告的消耗不包含在 token 中/)).toBeVisible();
+  expect(screen.getByText(/失败尝试未报告的消耗不包含在用量中/)).toBeVisible();
   expect(screen.getByText("本次运行耗时：2 秒")).toBeVisible();
 });
 it("shows an explicitly reported zero and allows the model breakdown to be opened", () => {
@@ -34,7 +34,8 @@ it("shows an explicitly reported zero and allows the model breakdown to be opene
   expect(screen.getAllByText("0")[0]).toBeVisible();
   expect(screen.queryByText(/缺少完整用量/)).not.toBeInTheDocument();
   fireEvent.click(screen.getByText("按模型查看用量"));
-  expect(screen.getByText("writer · model-b · responses")).toBeVisible();
+  expect(screen.getByText("模型：model-b")).toBeVisible();
+  expect(screen.queryByText(/writer|responses/)).not.toBeInTheDocument();
 });
 it("offers a read retry after errors and labels today's actual timezone", () => {
   const retry = vi.fn();
@@ -51,8 +52,8 @@ it("shows independent effective output limits without changing omitted settings"
     save: { strategy: { kind: "deterministic" }, budget: { maxTokens: 500 } },
   } };
   render(<ModelBudgetSummary settings={settings} />);
-  expect(screen.getByText(/writer：总 token 900；单次输出 100 token/)).toBeVisible();
-  expect(screen.getByText(/reader：总 token 800；单次输出 沿用剩余总预算/)).toBeVisible();
+  expect(screen.getByText(/内容处理 1：总用量额度 900；单次输出 100 计量单位/)).toBeVisible();
+  expect(screen.getByText(/内容处理 2：总用量额度 800；单次输出 沿用剩余额度/)).toBeVisible();
   expect(screen.queryByText(/save：/)).not.toBeInTheDocument();
   expect(settings.agents.reader.budget).not.toHaveProperty("maxOutputTokens");
 });

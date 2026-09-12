@@ -94,7 +94,7 @@ const children: Definition[] = [
   })),
   route(
     "workflow-packages/new",
-    "New Workflow Package",
+    "新建工作流",
     "Workflow",
     async () => ({
       Component: (await import("./pages/platform/packages")).PackageEditorPage,
@@ -103,7 +103,7 @@ const children: Definition[] = [
   ),
   route(
     "workflow-packages/:packageId",
-    "Workflow Package",
+    "编辑工作流",
     "Workflow",
     async () => ({
       Component: (await import("./pages/platform/packages")).PackageEditorPage,
@@ -112,17 +112,17 @@ const children: Definition[] = [
   ),
   route(
     "workflow-packages/:packageId/run",
-    "Launch Workflow",
+    "开始任务",
     "Workflow",
     async () => ({
       Component: (await import("./pages/platform/launch")).LaunchPage,
     }),
     { parent: packageParent, fullHeight: true },
   ),
-  route("resources", "资源配置", "Database", async () => ({
+  route("resources", "服务连接", "Database", async () => ({
     Component: (await import("./pages/platform/resources")).ResourcesPage,
   })),
-  route("plugins", "插件管理", "Puzzle", async () => ({
+  route("plugins", "扩展服务", "Puzzle", async () => ({
     Component: (await import("./pages/platform/plugins")).PluginsPage,
   })),
   route("scheduled-tasks", "自动执行", "ClipboardList", async () => ({
@@ -130,7 +130,7 @@ const children: Definition[] = [
   })),
   route(
     "scheduled-tasks/new",
-    "New Scheduled Task",
+    "新建重复安排",
     "ClipboardList",
     async () => ({
       Component: (await import("./pages/platform/schedules")).SchedulePage,
@@ -139,7 +139,7 @@ const children: Definition[] = [
   ),
   route(
     "scheduled-tasks/:scheduleId",
-    "Scheduled Task",
+    "重复安排",
     "ClipboardList",
     async () => ({
       Component: (await import("./pages/platform/schedules")).SchedulePage,
@@ -172,7 +172,7 @@ const children: Definition[] = [
   ),
   route(
     "*",
-    "Page not found",
+    "找不到页面",
     "Puzzle",
     async () => ({
       Component: (await import("./pages/not-found")).NotFoundPage,

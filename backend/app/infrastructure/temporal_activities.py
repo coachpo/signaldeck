@@ -163,7 +163,15 @@ class RuntimeActivities:
                 "instructions": agent.strategy.prompt,
                 "input": value,
                 "outputContract": agent.output_schema,
-                "responseInstructions": "Return only JSON matching outputContract.",
+                "responseInstructions": (
+                    "Return exactly one JSON value matching outputContract, without Markdown "
+                    "fences or surrounding text. Preserve the declared root type: for string, "
+                    "return a quoted JSON string; for array, return a JSON array; for object, "
+                    "return a JSON object; for integer or number, return a JSON number; for "
+                    "boolean, return true or false; for null, return null. Schema title and "
+                    "description are labels and documentation, not object property names. "
+                    "Do not invent an object wrapper or property from those labels."
+                ),
             },
             ensure_ascii=False,
         )

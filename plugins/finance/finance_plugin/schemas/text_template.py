@@ -104,6 +104,7 @@ class TextTemplateStoredCompile(TextTemplateCompileInputs):
 
 class PlaceholderReportRead(CamelModel):
     name: str
+    label: str
     created_at: datetime
 
 

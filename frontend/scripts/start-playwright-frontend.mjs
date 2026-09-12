@@ -4,11 +4,13 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const frontendDir = resolve(__dirname, "..");
-const apiBaseUrl = process.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8001/api";
+const apiBaseUrl = process.env.VITE_API_BASE_URL ?? `http://127.0.0.1:${process.env.SIGNALDECK_E2E_BACKEND_PORT ?? "8001"}/api`;
+const frontendPort = process.env.SIGNALDECK_E2E_FRONTEND_PORT ?? "4173";
+const buildDirectory = process.env.SIGNALDECK_E2E_BUILD_DIR ?? "dist";
 
 function runBuild() {
   return new Promise((resolveBuild, rejectBuild) => {
-    const build = spawn("npx", ["vite", "build"], {
+    const build = spawn("npx", ["vite", "build", "--outDir", buildDirectory], {
       cwd: frontendDir,
       env: {
         ...process.env,
@@ -39,8 +41,10 @@ async function main() {
     [
       "vite",
       "preview",
+      "--outDir",
+      buildDirectory,
       "--port",
-      "4173",
+      frontendPort,
       "--strictPort",
       "--host",
       "127.0.0.1",

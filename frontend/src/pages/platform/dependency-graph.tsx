@@ -17,11 +17,18 @@ export function DependencyGraph({
   plan,
   evidence,
   onSelect,
+  name = "步骤关系",
+  nodeLabels = {},
 }: {
   plan: WorkflowPlan;
+  name?: string;
+  nodeLabels?: Record<string, string>;
   evidence?: ExecutionEvidence[];
   onSelect?: (nodeId: string, evidenceId?: string) => void;
 }) {
+  const labelFor = (key: string) => nodeLabels[key] ?? `步骤 ${plan.nodeOrder.indexOf(key) + 1}`;
+  const edgeLabels = { control: "等待完成", input: "使用结果", condition: "根据结果判断" };
+  const statusLabels: Record<string, string> = { pending: "等待开始", running: "进行中", succeeded: "已完成", failed: "未能完成", blocked: "前置步骤未完成", skipped: "条件不满足，已跳过", cancelled: "已取消", unknown: "结果尚未确认", timed_out: "等待超时" };
   const [zoom, setZoom] = useState(1);
   const [located, setLocated] = useState("");
   const viewport = useRef<HTMLDivElement>(null);
@@ -71,9 +78,9 @@ export function DependencyGraph({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Workflow graph</CardTitle>
+        <CardTitle>{name}</CardTitle>
         <CardDescription>
-          {plan.workflowKey} · dependency readiness and edge sources
+          连线说明步骤为什么需要等待；选择步骤可查看或调整。
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
@@ -102,9 +109,9 @@ export function DependencyGraph({
             +
           </Button>
           <ChoiceField
-            label="定位节点"
+            label="定位步骤"
             value={located}
-            options={plan.nodeOrder.map((key) => ({ value: key, label: key }))}
+            options={plan.nodeOrder.map((key) => ({ value: key, label: labelFor(key) }))}
             onChange={(key) => {
               setLocated(key);
               const position = positions.get(key);
@@ -132,7 +139,7 @@ export function DependencyGraph({
         <div
           ref={viewport}
           className="max-h-96 overflow-auto rounded border border-border bg-ui-surface-inset"
-          aria-label="Workflow nodes"
+          aria-label="任务步骤"
           role="region"
           tabIndex={0}
           onPointerDown={(e) => {
@@ -204,7 +211,7 @@ export function DependencyGraph({
                         stroke="currentColor"
                       />
                       <title>
-                        {edge.source} → {edge.target}: {edge.sources.join(", ")}
+                        {labelFor(edge.source)} → {labelFor(edge.target)}: {edge.sources.map((source) => edgeLabels[source]).join("、")}
                       </title>
                     </g>
                   );
@@ -227,19 +234,15 @@ export function DependencyGraph({
                       className="justify-start overflow-hidden"
                       onClick={() => onSelect?.(key, node?.id)}
                     >
-                      {key}
+                      {labelFor(key)}
                     </Button>
                     <ResourceStatusBadge
                       label={
-                        node?.status ?? (evidence ? "no evidence" : "defined")
+                        node ? statusLabels[node.status] : evidence ? "尚未开始" : "已安排"
                       }
                       tone={node?.status === "failed" ? "danger" : "neutral"}
                     />
-                    {node?.errorCode && (
-                      <span className="break-all text-xs text-destructive">
-                        {node.errorCode}
-                      </span>
-                    )}
+
                   </div>
                 );
               })}
@@ -247,7 +250,7 @@ export function DependencyGraph({
           </div>
         </div>
         <ul
-          aria-label="Dependency edges"
+          aria-label="步骤之间的关系"
           className="flex flex-col gap-2 text-sm"
         >
           {plan.edges.map((edge) => (
@@ -256,14 +259,11 @@ export function DependencyGraph({
               className="flex flex-wrap items-center gap-2"
             >
               <span>
-                {edge.source} → {edge.target}
+                {labelFor(edge.source)} → {labelFor(edge.target)}
               </span>
               {edge.sources.map((source) => (
-                <ResourceStatusBadge key={source} label={source} />
+                <ResourceStatusBadge key={source} label={edgeLabels[source]} />
               ))}
-              <span className="break-all text-xs text-muted-foreground">
-                {edge.paths.join(", ")}
-              </span>
             </li>
           ))}
         </ul>

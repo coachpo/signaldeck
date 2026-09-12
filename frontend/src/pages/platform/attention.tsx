@@ -38,16 +38,16 @@ export function AttentionPage() {
         <span className="text-sm">{item.isRead ? "更新已查看" : "新更新"}</span>
       </div>
       <time className="text-sm text-muted-foreground" dateTime={item.occurredAt}>{new Date(item.occurredAt).toLocaleString()}</time>
-      {item.hasUnknownResults && <p className="text-sm">读取结果未确认。可查看执行证据或重新读取，无需核实该读取是否保存。</p>}
-      {item.hasUnknownEffects && <p className="text-sm">保存状态待核实。请核对目标位置和执行证据；标为已查看不会确认操作成功。</p>}
+      {item.hasUnknownResults && <p className="text-sm">读取结果未确认。可查看执行过程或重新读取，无需核实该读取是否保存。</p>}
+      {item.hasUnknownEffects && <p className="text-sm">保存状态待核实。请核对目标位置和执行过程；标为已查看不会确认操作成功。</p>}
       {item.errorCode && <ExecutionDiagnostic code={item.errorCode} category={item.errorCategory} />}
       <div className="flex flex-wrap gap-2">
         {item.runId && <Button asChild variant="outline"><Link to={`/runs/${encodeURIComponent(item.runId)}`}>查看结果</Link></Button>}
-        {item.hasUnknownEffects && item.runId && <Button asChild variant="outline"><Link to={`/runs/${encodeURIComponent(item.runId)}?tab=evidence`}>核实执行证据</Link></Button>}
+        {item.hasUnknownEffects && item.runId && <Button asChild variant="outline"><Link to={`/runs/${encodeURIComponent(item.runId)}?tab=evidence`}>核实执行过程</Link></Button>}
         {item.scheduleId && <Button asChild variant="outline"><Link to={`/scheduled-tasks/${encodeURIComponent(item.scheduleId)}`}>查看安排与失败原因</Link></Button>}
         <Button variant="outline" disabled={mark.isPending} onClick={() => void mark.mutateAsync({ id: item.id, revision: item.revision, isRead: !item.isRead }).catch(() => {})}>{item.isRead ? "将本次更新标为未查看" : "已查看本次更新"}</Button>
       </div>
-      {item.triggerId && <details><summary className="cursor-pointer text-sm">执行来源</summary><code className="break-all">Fire {item.triggerId}</code></details>}
+
     </article>)}
     {records.data && <nav aria-label="执行更新分页" className="flex items-center justify-between gap-2">
       <Button variant="outline" disabled={offset === 0 || records.isFetching} onClick={() => page(Math.max(0, offset - 25))}>上一页</Button>

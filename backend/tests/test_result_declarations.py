@@ -140,7 +140,7 @@ def test_historical_business_looking_keys_are_plain_values_and_optional_skip_is_
     projected = project_result(run)
     assert projected.sections[0].value == run.output
     assert projected.attachments == [] and projected.missing == [] and projected.body is None
-    assert projected.skipped == ["echo"] and projected.content_status == "available"
+    assert projected.skipped == ["步骤 1"] and projected.content_status == "available"
 
 
 def test_old_tool_digest_omits_new_field_and_new_contract_changes_digest():
@@ -317,7 +317,8 @@ def test_terminal_execution_failure_retains_confirmed_declared_content(status):
     result = project_result(run)
     assert result.sections[0].value == "Confirmed before terminal"
     assert result.missing == [] and result.content_status == "partial"
-    assert result.execution_issues == [f"other: {status}"]
+    expected_issue = "未能完成" if status == "failed" else "已取消"
+    assert result.execution_issues == [f"其他步骤：{expected_issue}"]
 
 
 def test_link_query_array_selector_and_explicit_null_rejection():
@@ -505,4 +506,58 @@ def test_confirmed_null_node_remains_readable_when_another_branch_fails():
     assert len(result.sections) == 1
     assert result.sections[0].value is None
     assert result.sections[0].evidence_id == "node"
-    assert result.execution_issues == ["other: failed"]
+    assert result.execution_issues == ["步骤 2：未能完成"]
+
+
+def test_readable_step_names_preserve_business_values_and_frozen_evidence_ownership():
+    run = run_fixture(declared=False)
+    run.spec.definition["agents"]["echo"]["name"] = "整理资料"
+    run.output = {"operationId": "customer supplied content", "schema": "user text"}
+    run.evidence = [evidence("node", run.output)]
+    result = project_result(run)
+    assert result.sections[0].label == "任务结果"
+    assert result.sections[1].label == "整理资料 · 步骤结果"
+    assert result.sections[0].value == run.output
+    assert result.sections[1].evidence_id == "node"
+    run.evidence[0].status = "cancelled"
+    result = project_result(run)
+    assert result.execution_issues == ["整理资料：已取消"]
+
+
+def test_generic_values_project_only_proven_platform_identities_and_keep_user_input_strings():
+    run = run_fixture(declared=False)
+    run.spec.definition["agents"]["echo"]["name"] = "保存资料"
+    run.spec.parameters = {"customerCode": "user-owned-id", "source": "node text in user code"}
+    value = {
+        "id": "write-operation",
+        "record": "node",
+        "run": "run",
+        "nested": ["user-owned-id", "node text in user code", "unrelated-business-id"],
+    }
+    run.output = value
+    run.evidence = [
+        evidence("node", value),
+        evidence("tool", value, operation_id="write-operation"),
+        evidence("tool", None, operation_id="user-owned-id").model_copy(update={"id": "second"}),
+    ]
+    before = run.model_dump(mode="json", by_alias=True)
+    projected = project_result(run)
+    assert projected.sections[0].value == {
+        "id": "保存资料的服务操作",
+        "record": "保存资料的执行记录",
+        "run": "本次任务",
+        "nested": ["user-owned-id", "node text in user code", "unrelated-business-id"],
+    }
+    assert run.model_dump(mode="json", by_alias=True) == before
+
+
+def test_declared_body_and_notice_are_never_identity_rewritten():
+    run = run_fixture()
+    run.spec.definition["workflows"]["main"]["presentation"]["sections"] = [
+        {"kind": "markdown", "label": "正文", "ref": "nodes.echo.output.text"},
+        {"kind": "notice", "label": "说明", "ref": "nodes.echo.output.text", "severity": "info"},
+    ]
+    run.evidence = [evidence("node", {"text": "run"})]
+    result = project_result(run)
+    assert [section.value for section in result.sections] == ["run", "run"]
+    assert result.body == "run"

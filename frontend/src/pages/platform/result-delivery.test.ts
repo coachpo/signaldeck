@@ -19,7 +19,7 @@ describe("confirmed content selection", () => {
     const exported = exportMarkdown(input, options, {});
     expect(exported).toContain("# hello");
     expect(exported).toContain('"text": "# not Markdown"');
-    expect(exported).toContain("确认来源：node-ok");
+    expect(exported).not.toContain("node-ok");
     expect(exported).not.toContain("legacy duplicate");
   });
   it("supports historical body, receipt and generic output without business aliases", () => {
@@ -31,7 +31,7 @@ describe("confirmed content selection", () => {
   it.each(["partial", "unknown"] as const)("preserves %s, cancellation and provenance", (contentStatus) => {
     const input = { ...result, status: "cancelled" as const, contentStatus, body: "confirmed only", cancelRequestedAt: "2026-09-10T10:00:30Z", missing: ["missing data"] };
     const text = exportMarkdown(input, confirmedContents(input), {});
-    expect(text).toContain(contentStatus);
+    expect(text).toContain(contentStatus === "unknown" ? "保存状态待核实" : "部分内容已确认");
     expect(text).toContain("取消请求时间");
     expect(text).toContain("已经确认的外部操作仍会保留");
     expect(text).toContain("missing data");
@@ -42,7 +42,7 @@ describe("confirmed content selection", () => {
     const input = { ...result, body: "confirmed", contentStatus: "partial" as const, readUnknownEvidenceIds: ["read-op"] };
     const text = exportMarkdown(input, confirmedContents(input), {});
     expect(text).toContain("读取结果未确认");
-    expect(text).toContain("read-op");
+    expect(text).not.toContain("read-op");
     expect(text).not.toContain("保存状态待核实");
   });
   it("requires explicit artifact loading and records excluded/deferred content", () => {
@@ -51,8 +51,8 @@ describe("confirmed content selection", () => {
     expect(() => exportMarkdown(input, options, {})).toThrow(/尚未读取/);
     const partial = exportMarkdown(input, [options[0]], {});
     expect(partial).toContain("未纳入本文件的内容");
-    expect(partial).toContain("延后解析的声明");
-    expect(partial).toContain("sha256:");
+    expect(partial).toContain("保存在附件中的内容");
+    expect(partial).not.toContain("sha256:");
     const full = exportMarkdown(input, options, { "artifact:0:0": '"# literal JSON"' });
     expect(full).toContain('```json\n"# literal JSON"\n```');
   });
@@ -65,4 +65,16 @@ describe("confirmed content selection", () => {
     expect(() => exportMarkdown(result, [], {})).toThrow(/请先选择/);
     expect(fenced("```\nexact\n```", "json")).toBe("````json\n```\nexact\n```\n````");
   });
+});
+
+
+it("exports receipt confirmation without a service envelope while keeping declared body unchanged", () => {
+  const input = { ...result, sections: [
+    { kind: "receipt" as const, label: "保存确认", value: { operationId: "internal-operation", contentHash: "sha256:hidden" } },
+    { kind: "markdown" as const, label: "原始正文", value: "User code: schema.operationId = 42;" },
+  ] };
+  const text = exportMarkdown(input, confirmedContents(input), {});
+  expect(text).toContain("此项保存已确认。");
+  expect(text).toContain("User code: schema.operationId = 42;");
+  expect(text).not.toMatch(/internal-operation|sha256:hidden/);
 });

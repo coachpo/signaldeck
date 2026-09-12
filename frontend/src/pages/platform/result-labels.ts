@@ -1,5 +1,6 @@
 export const resultStatusLabels: Record<string, string> = {
   queued: "等待开始",
+  pending: "等待开始",
   running: "正在执行",
   succeeded: "已完成",
   failed: "执行失败",
@@ -12,5 +13,9 @@ export const resultStatusLabels: Record<string, string> = {
 export const originLabels: Record<string, string> = {
   manual: "手动开始",
   rerun: "再运行一次",
+  reuse: "调整后开始",
   schedule: "自动执行",
+};
+export const contentStatusLabels: Record<string, string> = {
+  not_available: "尚无确认内容", available: "内容已确认", partial: "部分内容已确认", unknown: "保存状态待核实",
 };

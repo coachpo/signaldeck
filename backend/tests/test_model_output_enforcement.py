@@ -8,6 +8,7 @@ import pytest
 from fastapi import FastAPI, Request
 from pydantic_ai.messages import ModelRequest, UserPromptPart
 from pydantic_ai.models import ModelRequestParameters
+from temporalio.activity import ActivityCancellationDetails
 from temporalio.exceptions import ApplicationError
 
 from app.infrastructure.artifact_store import ArtifactStore
@@ -261,15 +262,29 @@ def test_gateway_preserves_raw_counter_presence_and_total_reasoning(
     asyncio.run(scenario())
 
 
-@pytest.mark.parametrize("worker_shutdown", [False, True])
+@pytest.mark.parametrize(
+    "cancellation,worker_shutdown,interrupted",
+    [
+        (None, False, False),
+        (ActivityCancellationDetails(cancel_requested=True), False, False),
+        (ActivityCancellationDetails(worker_shutdown=True), True, True),
+        (ActivityCancellationDetails(timed_out=True), False, True),
+        (ActivityCancellationDetails(not_found=True), False, True),
+        (ActivityCancellationDetails(paused=True), False, True),
+        (ActivityCancellationDetails(reset=True), False, True),
+    ],
+)
 def test_gateway_cancellation_before_response_keeps_unreported_usage_unknown(
-    tmp_path, monkeypatch, worker_shutdown
+    tmp_path, monkeypatch, cancellation, worker_shutdown, interrupted
 ):
     monkeypatch.setattr(
         "app.infrastructure.model_runtime.activity.info", lambda: SimpleNamespace(attempt=1)
     )
     monkeypatch.setattr(
         "app.infrastructure.model_runtime.activity.is_worker_shutdown", lambda: worker_shutdown
+    )
+    monkeypatch.setattr(
+        "app.infrastructure.model_runtime.activity.cancellation_details", lambda: cancellation
     )
 
     async def scenario():
@@ -303,9 +318,9 @@ def test_gateway_cancellation_before_response_keeps_unreported_usage_unknown(
                 assert len(calls) == 1
                 for key in ("model", "model:attempt:1"):
                     row = store.rows[key]
-                    assert row.status == ("unknown" if worker_shutdown else "cancelled")
+                    assert row.status == ("unknown" if interrupted else "cancelled")
                     assert row.error_code == (
-                        "worker_interrupted" if worker_shutdown else "model_cancelled"
+                        "worker_interrupted" if interrupted else "model_cancelled"
                     )
                     assert row.output is None and row.finished_at is not None
                     assert "usage" not in row.metadata

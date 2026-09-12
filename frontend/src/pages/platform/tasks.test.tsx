@@ -56,6 +56,8 @@ vi.mock("@/hooks/use-workflow-platform", () => ({
       ],
     },
   }),
+  useResources: () => ({ data: { items: [] } }),
+  usePlugins: () => ({ data: { items: [] } }),
   usePlatformMutations: () => ({ saveResource: { mutateAsync: vi.fn() } }),
 }));
 vi.mock("@/lib/api/task-experience", () => ({
@@ -164,7 +166,7 @@ it.each([
     validationErrors: [],
   };
   render(<Page path={`/tasks/new?presetId=${mocks.preset.id}`} />);
-  expect(screen.getByLabelText("Parameters JSON")).toHaveValue(JSON.stringify(parameters, null, 2));
+  expect(screen.queryByRole("tab", { name: /JSON/ })).not.toBeInTheDocument();
   fireEvent.click(screen.getByText("保存常用输入或收藏任务（可选）"));
   fireEvent.click(screen.getByRole("button", { name: "更新此配置" }));
   await waitFor(() => expect(mocks.save).toHaveBeenCalledTimes(1));
@@ -185,7 +187,7 @@ it("retains an explicit historical null instead of the current schema default", 
     inputSchema: { type: ["string", "null"], "x-signaldeck-schema": "signaldeck.schema/2", default: "authored default" },
   };
   render(<Page />);
-  expect(screen.getByLabelText("Parameters JSON")).toHaveValue("null");
+  expect(screen.queryByLabelText("Parameters JSON")).not.toBeInTheDocument();
   await waitFor(() => expect(mocks.prepare).toHaveBeenCalled());
   expect(mocks.prepare.mock.calls[0][0].parameters).toBeNull();
 });
@@ -227,7 +229,7 @@ it("lets an automatic preparation failure be retried before starting", async () 
   render(<Page />);
   fireEvent.change(screen.getByLabelText("标题"), { target: { value: "保留标题" } });
   fireEvent.change(screen.getByLabelText("原文"), { target: { value: "保留原文" } });
-  expect(await screen.findByText("Preparation unavailable")).toBeVisible();
+  expect(await screen.findByText("暂时未能完成操作")).toBeVisible();
   const recheck = screen.getByRole("button", { name: "核对连接与本次设置" });
   expect(recheck).toBeEnabled();
   mocks.prepare.mockResolvedValue(prepared);
@@ -289,29 +291,22 @@ it("restores an uncertain submission after remount and retries the same identity
   await waitFor(() => expect(mocks.launch).toHaveBeenCalledTimes(2));
   expect(mocks.launch.mock.calls[0][0]).toEqual(mocks.launch.mock.calls[1][0]);
 });
-it("retains an unapplied expert draft through ordinary mode and requires applying it", async () => {
+it("keeps business input and draft name through mode switches and editor return", async () => {
   const view = render(<Page />);
   await prepare();
-  expect(screen.queryByRole("button", { name: "核对连接与本次设置" })).not.toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText("草稿名称"), { target: { value: "周五继续填写" } });
   mocks.expert = true;
   view.rerender(<Page />);
-  fireEvent.mouseDown(screen.getByRole("tab", { name: "Advanced JSON" }), { button: 0, ctrlKey: false });
-  fireEvent.change(screen.getByLabelText("Parameters JSON"), {
-    target: { value: '{"title":"draft"' },
-  });
+  expect(screen.queryByRole("tab", { name: /JSON/ })).not.toBeInTheDocument();
+  expect(screen.getByLabelText("原文")).toHaveValue("原始内容");
+  view.unmount();
   mocks.expert = false;
-  view.rerender(<Page />);
-  expect(screen.getByLabelText("任务输入 JSON")).toHaveValue(
-    '{"title":"draft"',
-  );
-  expect(
-    screen.getByRole("button", { name: "核对连接与本次设置" }),
-  ).toBeDisabled();
-  mocks.expert = true;
-  view.rerender(<Page />);
-  expect(screen.getByLabelText("Parameters JSON")).toHaveValue(
-    '{"title":"draft"',
-  );
+  render(<Page />);
+  expect(screen.getByLabelText("标题")).toHaveValue("不变的标题");
+  expect(screen.getByLabelText("草稿名称")).toHaveValue("周五继续填写");
+  const refresh = new Event("beforeunload", { cancelable: true });
+  window.dispatchEvent(refresh);
+  expect(refresh.defaultPrevented).toBe(true);
 });
 it("lets an explicit binding rejection be repaired and prepared again", async () => {
   mocks.launch.mockRejectedValue(
@@ -398,7 +393,8 @@ it("restores an unfinished draft with its frozen schema and saves invalid text w
     needsRevalidation: true, workflow: { name: "Old definition", inputSchema: { type: "object", properties: { renamed: { type: ["string", "null"] } } } },
   });
   render(<Page path={`/tasks/new?draftId=unfinished-${mocks.hash}`} />);
-  expect(await screen.findByLabelText("任务输入 JSON")).toHaveValue('{"renamed": [');
+  expect(await screen.findByText("发现未完成的输入修改")).toBeVisible();
+  expect(screen.getByRole("button", { name: "下载未完成输入原稿" })).toBeEnabled();
   expect(screen.getByRole("button", { name: "开始任务" })).toBeDisabled();
   fireEvent.click(screen.getByRole("button", { name: "保存草稿" }));
   await waitFor(() => expect(mocks.saveDraft).toHaveBeenCalledTimes(1));
@@ -432,4 +428,21 @@ it("locks submission throughout pending persistence and keeps the lock across th
   expect(screen.queryByRole("button", { name: "使用同一请求重试" })).not.toBeInTheDocument();
   failLaunch(new Error("Response lost"));
   await waitFor(() => expect(screen.getByRole("button", { name: "使用同一请求重试" })).toBeEnabled());
+});
+
+it("keeps a resumed unsaved draft locked while the launch response is still pending", async () => {
+  const first = render(<Page />);
+  await prepare();
+  first.unmount();
+  let complete!: (value: { id: string }) => void;
+  mocks.launch.mockImplementation(() => new Promise(resolve => { complete = resolve; }));
+  render(<Page />);
+  await waitFor(() => expect(screen.getByRole("button", { name: "开始任务" })).toBeEnabled());
+  fireEvent.click(screen.getByRole("button", { name: "开始任务" }));
+  await waitFor(() => expect(mocks.launch).toHaveBeenCalledTimes(1));
+  await waitFor(() => expect(screen.getByLabelText("Current route").textContent).toContain("?draftId="));
+  expect(screen.getByRole("button", { name: "正在提交…" })).toBeDisabled();
+  expect(screen.queryByRole("button", { name: "使用同一请求重试" })).not.toBeInTheDocument();
+  complete({ id: "resumed-result" });
+  await waitFor(() => expect(screen.getByLabelText("Current route").textContent).toBe("/runs/resumed-result"));
 });

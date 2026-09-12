@@ -51,7 +51,7 @@ test("actual independent write remains unknown after cancellation and history su
     await page.getByRole("button",{name:"取消本次运行",exact:true}).click();
     await expect.poll(async () => (await (await request.get(`${apiBase}/runs/${runId}`)).json()).status,{timeout:30000}).toBe("cancelled");
     await expect(page.getByText("保存状态待核实",{exact:true})).toBeVisible();
-    await expect(page.getByText("服务尚未确认是否保存成功。请先检查执行证据或目标位置，避免重复保存。",{exact:true})).toBeVisible();
+    await expect(page.getByText("服务尚未确认是否保存成功。请先检查执行过程或目标位置，避免重复保存。",{exact:true})).toBeVisible();
     const before = await (await request.get(`${apiBase}/runs/${runId}`)).json();
     const unknown = before.evidence.find((item:{kind:string;status:string}) => item.kind === "tool" && item.status === "unknown");
     expect(unknown).toBeTruthy();
@@ -60,7 +60,7 @@ test("actual independent write remains unknown after cancellation and history su
     expect(existsSync(join(plugin.directory,"effect.json"))).toBe(false);
     await page.getByRole("button",{name:"再运行一次",exact:true}).click();
     await expect(page.getByRole("button",{name:"确认并开始新运行",exact:true})).toBeDisabled();
-    await expect(page.getByLabel("我已核实目标位置与执行证据，确认需要再次执行")).not.toBeChecked();
+    await expect(page.getByLabel("我已核实目标位置与执行过程，确认需要再次执行")).not.toBeChecked();
     await page.screenshot({path:join(directory,"unknown-repeat-guard.png"),fullPage:true});
     writeFileSync(join(plugin.directory,"release"), "");
     await expect.poll(() => existsSync(join(plugin.directory,"effect.json")),{timeout:10000}).toBe(true);
@@ -79,7 +79,7 @@ test("actual independent write remains unknown after cancellation and history su
     const confirmedResult = await (await request.get(`${apiBase}/runs/${confirmedId}/result`)).json();
     expect(confirmedRun.output).toEqual({ value: 12, delay: 0, tag: "Confirmed offline output" });
     expect(confirmedResult.sections).toEqual(expect.arrayContaining([
-      expect.objectContaining({ kind: "value", label: "工作流输出", value: confirmedRun.output }),
+      expect.objectContaining({ kind: "value", label: "任务结果", value: confirmedRun.output }),
       expect.objectContaining({ kind: "value", nodeId: "after", pluginId: plugin.binding.pluginId, operationId: expect.any(String), value: confirmedRun.output }),
     ]));
     const largeText = "large-confirmed-content-".repeat(4000);
@@ -126,7 +126,7 @@ test("actual independent write remains unknown after cancellation and history su
     await expect(page.getByText("保存状态待核实", { exact: true })).toHaveCount(0);
     await page.getByRole("button", { name: "再运行一次", exact: true }).click();
     await expect(page.getByRole("button", { name: "确认并开始新运行", exact: true })).toBeEnabled();
-    await expect(page.getByLabel("我已核实目标位置与执行证据，确认需要再次执行")).toHaveCount(0);
+    await expect(page.getByLabel("我已核实目标位置与执行过程，确认需要再次执行")).toHaveCount(0);
     await page.goto(`/runs/${runId}`);
     await plugin.stop();
     expect(await request.get(`${plugin.baseUrl}/health`,{timeout:500}).catch(() => null)).toBeNull();
@@ -134,10 +134,10 @@ test("actual independent write remains unknown after cancellation and history su
     await expect(page.getByText("保存状态待核实",{exact:true})).toBeVisible();
     expect(await (await request.get(`${apiBase}/runs/${runId}`)).json()).toEqual(before);
     await page.getByRole("link",{name:"核实未确认的操作",exact:true}).click();
-    await expect(page.getByLabel("Call ownership tree")).toBeVisible();
+    await expect(page.getByLabel("步骤与服务操作")).toBeVisible();
     await page.screenshot({path:join(directory,"plugin-offline-call-evidence.png"),fullPage:true});
     await page.goto(`/runs/${confirmedId}`);
-    await expect(page.getByRole("region", { name: "工作流输出", exact: true })).toContainText("Confirmed offline output");
+    await expect(page.getByRole("region", { name: "任务结果", exact: true })).toContainText("Confirmed offline output");
     expect(await (await request.get(`${apiBase}/runs/${confirmedId}`)).json()).toEqual(confirmedRun);
     expect(await (await request.get(`${apiBase}/runs/${confirmedId}/result`)).json()).toEqual(confirmedResult);
     const requests = readFileSync(join(plugin.directory,"requests.jsonl"),"utf8").trim().split("\n").map(line => JSON.parse(line));
@@ -162,10 +162,10 @@ test("actual independent write remains unknown after cancellation and history su
       expect(await (await request.get(`${apiBase}/runs/${runId}`)).json()).toEqual(before);
       expect((await (await request.get(`${apiBase}/runs`,{params:{packageKey:key}})).json()).total).toBe(1);
       await page.getByRole("link",{name:"核实未确认的操作",exact:true}).click();
-      await expect(page.getByLabel("Call ownership tree")).toBeVisible();
+      await expect(page.getByLabel("步骤与服务操作")).toBeVisible();
       await page.screenshot({path:join(directory,"engine-and-plugin-offline-history.png"),fullPage:true});
       await page.goto(`/runs/${confirmedId}`);
-      await expect(page.getByRole("region", { name: "工作流输出", exact: true })).toContainText("Confirmed offline output");
+      await expect(page.getByRole("region", { name: "任务结果", exact: true })).toContainText("Confirmed offline output");
       expect(await (await request.get(`${apiBase}/runs/${confirmedId}`)).json()).toEqual(confirmedRun);
       expect(await (await request.get(`${apiBase}/runs/${confirmedId}/result`)).json()).toEqual(confirmedResult);
     }
@@ -195,7 +195,9 @@ test("actual independent write remains unknown after cancellation and history su
     const exportedPath = join(directory, "offline-confirmed.md");
     await markdown.saveAs(exportedPath);
     expect(readFileSync(exportedPath, "utf8")).toContain("Confirmed offline output");
-    expect(readFileSync(exportedPath, "utf8")).toContain(confirmedId);
+    expect(readFileSync(exportedPath, "utf8")).toContain(`# ${confirmedResult.title}`);
+    expect(readFileSync(exportedPath, "utf8")).not.toContain(confirmedId);
+    expect(readFileSync(exportedPath, "utf8")).toContain(confirmedResult.createdAt);
     await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
     await page.getByRole("button", { name: "复制所选正文", exact: true }).click();
     await expect(page.getByText("所选确认内容已复制。", { exact: true })).toBeVisible();
@@ -225,7 +227,7 @@ test("actual independent write remains unknown after cancellation and history su
     await expect(page.getByRole("region", { name: "复制与导出", exact: true })).toBeVisible();
     expect(artifactRequests).toHaveLength(0);
     await page.getByText(/^选择复制与导出的内容/).click();
-    await page.getByRole("checkbox", { name: /^读取并选入附件：/ }).first().check();
+    await page.getByRole("checkbox", { name: /^读取并选入附件：/ }).and(page.locator("input:enabled")).first().check();
     await expect(page.getByRole("button", { name: "导出 Markdown", exact: true })).toBeEnabled();
     expect(artifactRequests.length).toBeGreaterThan(0);
     const largeDownloadPromise = page.waitForEvent("download");
@@ -235,8 +237,10 @@ test("actual independent write remains unknown after cancellation and history su
     await largeDownload.saveAs(largePath);
     expect(readFileSync(largePath, "utf8")).toContain(largeText);
     expect(readFileSync(largePath, "utf8")).toContain("未纳入本文件的内容");
-    expect(readFileSync(largePath, "utf8")).toContain("延后解析的声明");
-    await page.goto(`/runs/compare?left=${largeId}&right=${confirmedId}&leftSection=artifact:0:0&rightSection=section:0`);
+    expect(readFileSync(largePath, "utf8")).toContain("保存在附件中的内容");
+    await page.goto(`/runs/compare?left=${largeId}&right=${confirmedId}&rightSection=section:0`);
+    await page.getByRole("combobox", { name: "左侧确认内容", exact: true }).click();
+    await page.getByRole("option", { name: /附件/ }).first().click();
     await expect(page.getByRole("button", { name: "读取左侧所选附件", exact: true })).toBeVisible();
     await page.getByRole("button", { name: "读取左侧所选附件", exact: true }).click();
     await expect(page.getByRole("region", { name: "左侧结果", exact: true })).toContainText("large-confirmed-content-");

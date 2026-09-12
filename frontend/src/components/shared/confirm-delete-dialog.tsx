@@ -20,7 +20,7 @@ export type ConfirmDeleteDialogProps = {
 };
 
 export function ConfirmDeleteDialog({
-  confirmLabel = "Delete",
+  confirmLabel = "删除",
   description,
   isPending = false,
   open,
@@ -36,7 +36,7 @@ export function ConfirmDeleteDialog({
           <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
+          <AlertDialogCancel disabled={isPending}>取消</AlertDialogCancel>
           <AlertDialogAction
             disabled={isPending}
             onClick={() => void onConfirm()}

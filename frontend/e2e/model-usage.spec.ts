@@ -18,9 +18,9 @@ test("PU-S3: optional output budget survives editing and model usage is readable
   };
   const oldRunId = await launch(`${key}-old`);
   await page.goto(`/workflow-packages/${key}`);
-  await page.getByRole("tab", { name: "Structure", exact: true }).click();
-  await page.getByRole("button", { name: "Agent · analyst", exact: true }).click();
-  const outputLimit = page.getByLabel("maxOutputTokens", { exact: true });
+  await page.getByRole("tab", { name: "制作内容", exact: true }).click();
+  await page.getByRole("button", { name: "Reusable analyst", exact: true }).click();
+  const outputLimit = page.getByLabel("单次回答上限（模型计量单位）", { exact: true });
   await expect(outputLimit).toHaveValue("");
   await outputLimit.fill("128");
   const mode = page.getByRole("switch", { name: "专家模式", exact: true });
@@ -35,7 +35,7 @@ test("PU-S3: optional output budget survives editing and model usage is readable
         response.request().method() === "PATCH",
       { timeout: 15_000 },
     ),
-    page.getByRole("button", { name: "Save package", exact: true }).click(),
+    page.getByRole("button", { name: "保存工作流", exact: true }).click(),
   ]);
   expect(saved.status(), await saved.text()).toBe(200);
   expect((await saved.json()).definition.agents.analyst.budget.maxOutputTokens).toBe(128);
@@ -55,8 +55,8 @@ test("PU-S3: optional output budget survives editing and model usage is readable
   await page.goto(`/runs/${runId}`);
   const section = page.getByRole("region", { name: "本次模型用量", exact: true });
   await expect(section).toBeVisible();
-  await expect(section.locator("dl").first().getByText("输入 token", { exact: true }).locator("..").locator("dd")).toHaveText(String(usage.summary.inputTokens));
-  await expect(section.locator("dl").first().getByText("输出 token", { exact: true }).locator("..").locator("dd")).toHaveText(String(usage.summary.outputTokens));
+  await expect(section.locator("dl").first().getByText("输入用量", { exact: true }).locator("..").locator("dd")).toHaveText(String(usage.summary.inputTokens));
+  await expect(section.locator("dl").first().getByText("输出用量", { exact: true }).locator("..").locator("dd")).toHaveText(String(usage.summary.outputTokens));
   const breakdown = section.getByText("按模型查看用量", { exact: true });
   await breakdown.focus();
   await breakdown.press("Enter");

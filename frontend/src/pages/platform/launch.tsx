@@ -1,105 +1,36 @@
-import { useState } from "react";
-import { useNavigate, useParams } from "react-router";
+import { Link, useParams } from "react-router";
 import { Button } from "@/components/ui/button";
-import { Field, FieldGroup, ChoiceField } from "@/components/shared/form-field";
 import { WorkspacePageShell } from "@/components/shared/workspace-page-shell";
 import { PageContextBar } from "@/components/shared/page-context-bar";
 import { InventoryStatePanel } from "@/components/shared/inventory-state-panel";
-import {
-  usePackage,
-  usePlatformMutations,
-} from "@/hooks/use-workflow-platform";
-import type { Json, WorkflowPackage } from "@/lib/types/workflow-platform";
-import { ExactJsonPreview } from "@/components/platform-authoring/inspectors/exact-json-preview";
+import { usePackage } from "@/hooks/use-workflow-platform";
 import { RequestError } from "./feedback";
-import { initialParameters } from "@/lib/platform-authoring/parameter-values";
-import { LaunchInputs } from "./launch-inputs";
+
 export function LaunchPage() {
   const { packageId } = useParams();
   const query = usePackage(packageId);
-  if (query.isPending)
-    return <InventoryStatePanel title="Loading saved package…" />;
-  if (!query.data)
-    return (
-      <RequestError error={query.error} retry={() => void query.refetch()} />
-    );
-  return <LaunchForm key={query.data.packageHash} pkg={query.data} />;
-}
-function LaunchForm({ pkg }: { pkg: WorkflowPackage }) {
-  const [workflowKey, setWorkflowKey] = useState("");
-  const [dirty, setDirty] = useState(false);
-  const [parameters, setParameters] = useState<Json>(null);
-  const [error, setError] = useState<unknown>(null);
-  const [launchId] = useState(() => crypto.randomUUID());
-  const { launch } = usePlatformMutations();
-  const navigate = useNavigate();
-  const workflow = pkg.definition.workflows[workflowKey];
-  async function submit() {
-    try {
-      const run = await launch.mutateAsync({
-        key: pkg.key,
-        workflowKey,
-        parameters,
-        launchId,
-      });
-      navigate(`/runs/${encodeURIComponent(run.id)}`);
-    } catch (e) {
-      setError(e);
-    }
-  }
+  if (query.isPending) return <InventoryStatePanel title="正在读取工作流…" />;
+  if (query.error) return <RequestError error={query.error} retry={() => void query.refetch()} />;
+  if (!query.data) return <InventoryStatePanel title="工作流暂不可用" />;
+  const pkg = query.data;
   return (
-    <WorkspacePageShell
-      contextBar={
-        <PageContextBar
-          title={`Launch ${pkg.name}`}
-          description="Runs use the saved definition and immutable resource bindings."
-          actions={
-            <Button
-              disabled={!workflow || dirty || launch.isPending}
-              onClick={() => void submit()}
-            >
-              Start run
+    <WorkspacePageShell contextBar={<PageContextBar title="选择要执行的任务" description={pkg.name} />}>
+      <div className="flex max-w-3xl flex-col gap-4">
+        <p className="text-sm text-muted-foreground">选择任务后填写信息、核对服务，再开始执行。</p>
+        {Object.entries(pkg.definition.workflows).map(([key, workflow]) => (
+          <section key={key} className="flex flex-wrap items-center justify-between gap-3 border-b border-ui-separator pb-4">
+            <div className="flex min-w-0 flex-col gap-1">
+              <h2 className="font-medium">{workflow.name || "未命名任务"}</h2>
+              {workflow.description && <p className="text-sm text-muted-foreground">{workflow.description}</p>}
+            </div>
+            <Button asChild>
+              <Link to={`/tasks/new?packageKey=${encodeURIComponent(pkg.key)}&workflowKey=${encodeURIComponent(key)}`}>
+                填写{workflow.name || "任务"}
+              </Link>
             </Button>
-          }
-        />
-      }
-    >
-      <FieldGroup>
-        <RequestError error={error} />
-        <ChoiceField
-          label="Workflow"
-          value={workflowKey}
-          options={Object.entries(pkg.definition.workflows).map(
-            ([value, w]) => ({ value, label: w.name || value }),
-          )}
-          onChange={(key) => {
-            setWorkflowKey(key);
-            setParameters(
-              initialParameters(pkg.definition.workflows[key].inputSchema),
-            );
-            setDirty(false);
-            setError(null);
-          }}
-        />
-        {workflow && (
-          <>
-            <Field label="Input schema">
-              <ExactJsonPreview
-                ariaLabel="Workflow input schema"
-                value={JSON.stringify(workflow.inputSchema, null, 2)}
-              />
-            </Field>
-            <LaunchInputs
-              key={workflowKey}
-              schema={workflow.inputSchema}
-              inputHints={workflow.presentation?.inputHints}
-              value={parameters}
-              onChange={setParameters}
-              onDirtyChange={setDirty}
-            />
-          </>
-        )}
-      </FieldGroup>
+          </section>
+        ))}
+      </div>
     </WorkspacePageShell>
   );
 }

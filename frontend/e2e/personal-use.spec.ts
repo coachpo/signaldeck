@@ -1,8 +1,11 @@
 import { expect, test } from "@playwright/test";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import ReactMarkdown from "react-markdown";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { parse, stringify } from "yaml";
-import { apiBase } from "./platform-fixtures";
+import { apiBase, seed } from "./platform-fixtures";
 import { connectTaskServices } from "./task-fixtures";
 import { captureResponsiveEvidence } from "./responsive-evidence";
 
@@ -43,18 +46,18 @@ test("personal workflow retains drafts and launch identity, delivers results, an
   await page.goto(`/tasks/new?packageKey=${key}&workflowKey=retain`);
   await page.getByLabel("资料标题", { exact: true }).fill(firstInput.caption);
   await page.getByLabel("资料正文", { exact: true }).fill(firstInput.passage);
-  await page.getByRole("tab", { name: "JSON 输入", exact: true }).click();
-  await page.getByLabel("任务输入 JSON", { exact: true }).fill('{"caption":');
+  await page.getByLabel("资料标题", { exact: true }).fill("");
   await page.getByLabel("草稿名称", { exact: true }).fill(`${key} unfinished`);
   await page.getByRole("button", { name: "保存草稿", exact: true }).click();
   await expect(page).toHaveURL(/draftId=/);
   const draftId = new URL(page.url()).searchParams.get("draftId")!;
   await page.reload();
-  await expect(page.getByLabel("任务输入 JSON", { exact: true })).toHaveValue('{"caption":');
+  await expect(page.getByLabel("资料标题", { exact: true })).toHaveValue("");
+  await expect(page.getByLabel("资料正文", { exact: true })).toHaveValue(firstInput.passage);
   await expect(page.getByRole("button", { name: "开始任务", exact: true })).toBeDisabled();
   const stored = await (await request.get(`${apiBase}/task-drafts/${draftId}`)).json();
-  expect(stored.parameters).toEqual(firstInput);
-  expect(stored.jsonText).toBe('{"caption":');
+  expect(stored.parameters).toEqual({ ...firstInput, caption: "" });
+  expect(stored.jsonText).toBeNull();
   expect(stored.packageHash).toBe(originalHash);
 
   workflow.inputSchema.properties = { ...workflow.inputSchema.properties, futureField: { type: "string" } };
@@ -63,10 +66,10 @@ test("personal workflow retains drafts and launch identity, delivers results, an
   expect(changed.ok(), await changed.text()).toBe(true);
   expect((await changed.json()).packageHash).not.toBe(originalHash);
   await page.reload();
-  await expect(page.getByText(/任务当前定义已更新/)).toBeVisible();
-  await expect(page.getByLabel("任务输入 JSON", { exact: true })).toHaveValue('{"caption":');
-  await page.getByLabel("任务输入 JSON", { exact: true }).fill(JSON.stringify(firstInput));
-  await page.getByRole("button", { name: "应用 JSON 输入", exact: true }).click();
+  await expect(page.getByText(/此任务有新版本/)).toBeVisible();
+  await expect(page.getByLabel("资料标题", { exact: true })).toHaveValue("");
+  await expect(page.getByLabel("资料正文", { exact: true })).toHaveValue(firstInput.passage);
+  await page.getByLabel("资料标题", { exact: true }).fill(firstInput.caption);
   await expect(page.getByRole("button", { name: "开始任务", exact: true })).toBeEnabled();
 
   const submissions: string[] = [];
@@ -104,8 +107,16 @@ test("personal workflow retains drafts and launch identity, delivers results, an
   expect(await download.failure()).toBeNull();
   const file = resolve(directory, "confirmed-result.md");
   await download.saveAs(file);
-  expect(readFileSync(file, "utf8")).toContain(firstInput.passage);
-  expect(readFileSync(file, "utf8")).toContain(firstId);
+  const exported = readFileSync(file, "utf8");
+  expect(exported).toContain(firstInput.passage);
+  expect(exported).toContain(`# ${firstInput.caption}`);
+  // Inspect rendered text: destinations remain usable, while headings and code stay checked.
+  const displayedExport = renderToStaticMarkup(createElement(ReactMarkdown, { children: exported })).replace(/<[^>]*>/g, "");
+  expect(displayedExport).not.toContain(firstId);
+  await expect(page.locator("main")).not.toContainText(firstId);
+  const noteUrl = await page.getByRole("link", { name: "打开笔记", exact: true }).getAttribute("href");
+  expect(exported).toContain(`[打开笔记](${noteUrl})`);
+  expect(exported).toContain(firstRun.createdAt);
   await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
   await page.getByRole("button", { name: "复制所选正文", exact: true }).click();
   await expect(page.getByText("所选确认内容已复制。", { exact: true })).toBeVisible();
@@ -147,10 +158,10 @@ test("personal workflow retains drafts and launch identity, delivers results, an
   await expect(page.getByRole("region", { name: "左侧结果", exact: true })).toContainText("Confirmed original");
   await expect(page.getByRole("region", { name: "右侧结果", exact: true })).toContainText("Confirmed revision");
   await expect(page.getByRole("region", { name: "文本差异", exact: true })).toContainText("右侧新增");
-  const visuals = await captureResponsiveEvidence(page, directory, "fixed-comparison", page.getByRole("region", { name: "文本差异", exact: true }), [{ name: "固定两次结果", locator: page.getByRole("button", { name: "固定两次结果", exact: true }) }]);
+  const visuals = await captureResponsiveEvidence(page, directory, "fixed-comparison", page.getByRole("region", { name: "文本差异", exact: true }), [{ name: "比较所选结果", locator: page.getByRole("button", { name: "比较所选结果", exact: true }) }]);
   await page.reload();
-  await expect(page.getByRole("region", { name: "左侧结果", exact: true })).toContainText(firstId);
-  await expect(page.getByRole("region", { name: "右侧结果", exact: true })).toContainText(secondId);
+  await expect(page.getByRole("region", { name: "左侧结果", exact: true }).getByRole("link", { name: firstInput.caption, exact: true })).toHaveAttribute("href", `/runs/${firstId}`);
+  await expect(page.getByRole("region", { name: "右侧结果", exact: true }).getByRole("link", { name: secondInput.caption, exact: true })).toHaveAttribute("href", `/runs/${secondId}`);
 
   await page.goto(`/runs?q=${encodeURIComponent(key)}&isFavorite=true&isRead=true`);
   const historyRow = page.getByRole("row").filter({ hasText: firstInput.caption });
@@ -170,4 +181,47 @@ test("personal workflow retains drafts and launch identity, delivers results, an
   const evidence = { key, originalHash, firstId, secondId, draftId, submissions, firstRun, finalMetadata, visuals };
   writeFileSync(resolve(directory, "cross-sprint.json"), JSON.stringify(evidence, null, 2));
   await testInfo.attach("cross-sprint.json", { body: JSON.stringify(evidence), contentType: "application/json" });
+});
+
+
+test("legacy unfinished input remains downloadable and recovers through the form", async ({ page, request }, testInfo) => {
+  const { key, pkg } = await seed(request);
+  const draftId = crypto.randomUUID();
+  const original = '{"summary":';
+  const parameters = { summary: "Last confirmed information" };
+  const saved = await request.put(`${apiBase}/task-drafts/${draftId}`, { data: {
+    revision: 0, name: "恢复未完成资料", packageKey: key, workflowKey: "main", packageHash: pkg.packageHash,
+    sourceRunId: null, hasParameters: true, parameters, jsonText: original,
+    launchId: crypto.randomUUID(), pending: false, bindingToken: null,
+  } });
+  expect(saved.ok(), await saved.text()).toBe(true);
+  await page.goto(`/tasks/new?draftId=${draftId}`);
+  await expect(page.getByText("发现未完成的输入修改", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "开始任务", exact: true })).toBeDisabled();
+  await expect(page.getByRole("tab", { name: "JSON 输入", exact: true })).toHaveCount(0);
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "下载未完成输入原稿", exact: true }).click();
+  const download = await downloadPromise;
+  expect(await download.failure()).toBeNull();
+  const originalPath = testInfo.outputPath("unfinished-original.txt");
+  await download.saveAs(originalPath);
+  expect(readFileSync(originalPath, "utf8")).toBe(original);
+  await page.reload();
+  await expect(page.getByText("发现未完成的输入修改", { exact: true })).toBeVisible();
+  const retained = await (await request.get(`${apiBase}/task-drafts/${draftId}`)).json();
+  expect(retained.parameters).toEqual(parameters);
+  expect(retained.jsonText).toBe(original);
+  expect(retained.packageHash).toBe(pkg.packageHash);
+  await page.getByRole("button", { name: "保留已确认内容，放弃未完成修改", exact: true }).click();
+  await expect(page.getByRole("button", { name: "开始任务", exact: true })).toBeEnabled();
+  await page.getByRole("button", { name: "保存草稿", exact: true }).click();
+  await expect(page.getByText("草稿已保存，可以关闭页面后继续填写。", { exact: true })).toBeVisible();
+  await page.reload();
+  await expect(page.getByText("发现未完成的输入修改", { exact: true })).toHaveCount(0);
+  const restored = await (await request.get(`${apiBase}/task-drafts/${draftId}`)).json();
+  expect(restored.parameters).toEqual(parameters);
+  expect(restored.jsonText).toBeNull();
+  expect(restored.launchId).toBe(retained.launchId);
+  expect(restored.packageHash).toBe(pkg.packageHash);
+  expect((await (await request.get(`${apiBase}/runs?packageKey=${key}`)).json()).total).toBe(0);
 });

@@ -53,93 +53,68 @@ function response(data: unknown) {
 }
 afterEach(() => vi.unstubAllGlobals());
 describe("frozen definition editing", () => {
-  it("edits the same YAML document without erasing nodes, comments or constraints", () => {
+  it("edits the same document without erasing nodes, comments or constraints", () => {
     const source = "# operator note\n" + initialPackageSource;
     const onChange = vi.fn();
     render(<PackageStructure source={source} onChange={onChange} />);
-    fireEvent.change(screen.getByLabelText("Package name"), {
-      target: { value: "Changed" },
-    });
+    fireEvent.change(screen.getByLabelText("工作流集名称"), { target: { value: "Changed" } });
     const next = onChange.mock.calls[0][0] as string;
     expect(next).toContain("# operator note");
     expect(parseDefinition(next).metadata.name).toBe("Changed");
-    expect(parseDefinition(next).workflows).toEqual(
-      parseDefinition(source).workflows,
-    );
+    expect(parseDefinition(next).workflows).toEqual(parseDefinition(source).workflows);
   });
-  it("blocks structure editing for broken YAML and does not silently repair it", () => {
+  it("keeps unreadable imports without silently repairing or exposing source errors", () => {
     render(<PackageStructure source="agents: [" onChange={vi.fn()} />);
-    expect(screen.getByText("Repair YAML to edit structure")).toBeVisible();
-    expect(screen.queryByLabelText("Package name")).not.toBeInTheDocument();
+    expect(screen.getByText("无法读取这份工作流")).toBeVisible();
+    expect(screen.queryByLabelText("工作流集名称")).not.toBeInTheDocument();
+    expect(screen.queryByText(/YAML|line|agents/)).not.toBeInTheDocument();
   });
-  it("requires explicit application of JSON structural edits and preserves other sections", () => {
+  it("adds a workflow through controls without replacing the other sections", () => {
     const onChange = vi.fn();
-    render(
-      <PackageStructure source={initialPackageSource} onChange={onChange} />,
-    );
-    const agents = {
-      ...packageFixture.definition.agents,
-      second: packageFixture.definition.agents.assistant,
-    };
-    fireEvent.change(screen.getByLabelText("Agent definitions"), {
-      target: { value: JSON.stringify(agents) },
-    });
-    expect(onChange).not.toHaveBeenCalled();
-    fireEvent.click(
-      screen.getByRole("button", { name: "Apply Agent definitions" }),
-    );
+    render(<PackageStructure source={initialPackageSource} onChange={onChange} />);
+    fireEvent.click(screen.getByRole("button", { name: "添加任务流程" }));
     const result = parseDefinition(onChange.mock.calls[0][0]);
-    expect(result.agents.second).toBeDefined();
-    expect(result.workflows).toEqual(packageFixture.definition.workflows);
+    expect(Object.keys(result.workflows)).toHaveLength(2);
+    expect(result.agents).toEqual(parseDefinition(initialPackageSource).agents);
+    expect(result.workflows.main).toEqual(parseDefinition(initialPackageSource).workflows.main);
   });
-  it("blocks save while a structural draft is unapplied and permits explicit discard", async () => {
-    renderPage(<PackageEditorPage />);
-    fireEvent.mouseDown(screen.getByRole("tab", { name: "Structure" }), {
-      button: 0,
-    });
-    fireEvent.change(screen.getByLabelText("Agent definitions"), {
-      target: { value: '{"pending":' },
-    });
-    expect(screen.getByRole("button", { name: "Save package" })).toBeDisabled();
-    expect(screen.getByRole("tab", { name: "YAML" })).toBeDisabled();
-    fireEvent.click(
-      screen.getByRole("button", { name: "Discard Agent definitions draft" }),
-    );
-    expect(screen.getByRole("button", { name: "Save package" })).toBeEnabled();
-  });
-  it("never hydrates the editor from summary metadata", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi
-        .fn()
-        .mockResolvedValue(
-          response({ ...packageFixture, name: "Summary is stale" }),
-        ),
-    );
+  it("uses the saved document rather than stale summary metadata", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(response({ ...packageFixture, name: "Summary is stale" })));
     renderPage(<PackageEditorPage />, "/workflow-packages/example");
-    expect(await screen.findByLabelText("Workflow Package YAML")).toHaveValue(
-      packageFixture.source,
-    );
+    expect(await screen.findByLabelText("工作流集名称")).toHaveValue(parseDefinition(packageFixture.source).metadata.name);
+    expect(screen.queryByLabelText("Workflow Package YAML")).not.toBeInTheDocument();
   });
-  it("does not allow structural editing when a persisted manifest read fails", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue(
-        new Response(
-          JSON.stringify({
-            code: "unavailable",
-            message: "Read unavailable",
-            details: [],
-          }),
-          { status: 503, headers: { "content-type": "application/json" } },
-        ),
-      ),
-    );
+  it("names authoring services from declared titles and safe effect labels without protocol descriptions", async () => {
+    const description = "includeDerived and sourceNoteIds are required in the tool protocol.";
+    const tools = [
+      { toolId: "example/services/search", effect: "read", description, inputSchema: { type: "object", title: "搜索我的资料" } },
+      { toolId: "example/services/read", effect: "read", description, inputSchema: { type: "object", title: " " } },
+      { toolId: "example/services/save", effect: "write", description, inputSchema: { type: "object" } },
+      { toolId: "example/services/other", description, inputSchema: { type: "object" } },
+    ];
+    vi.stubGlobal("fetch", vi.fn().mockImplementation((input: string) => {
+      if (String(input).endsWith("/plugins")) return Promise.resolve(response({ items: [{ enabled: true, release: { tools } }] }));
+      if (String(input).endsWith("/resources")) return Promise.resolve(response({ items: [] }));
+      return Promise.resolve(response(packageFixture));
+    }));
+    renderPage(<PackageEditorPage />, "/workflow-packages/tool-label-check");
+    fireEvent.click(await screen.findByRole("button", { name: "Assistant" }));
+    for (const name of ["搜索我的资料", "读取资料 2", "保存内容 3", "服务操作 4"])
+      expect(await screen.findByRole("checkbox", { name })).toBeVisible();
+    expect(screen.queryByText(/includeDerived|sourceNoteIds|example\/services/)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("combobox", { name: "完成方式" }));
+    fireEvent.click(screen.getByRole("option", { name: "直接执行服务操作" }));
+    fireEvent.click(screen.getByRole("combobox", { name: "执行的服务操作" }));
+    expect(screen.getByRole("option", { name: "搜索我的资料" })).toBeVisible();
+    expect(screen.getByRole("option", { name: "保存内容 3" })).toBeVisible();
+    expect(screen.queryByText(/includeDerived|sourceNoteIds/)).not.toBeInTheDocument();
+  });
+  it("blocks editing when reading the saved workflow fails and offers recovery", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ code: "unavailable", message: "Read unavailable", details: [] }), { status: 503, headers: { "content-type": "application/json" } })));
     renderPage(<PackageEditorPage />, "/workflow-packages/example");
-    expect(await screen.findByText("Read unavailable")).toBeVisible();
-    expect(
-      screen.queryByLabelText("Workflow Package YAML"),
-    ).not.toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "重试" })).toBeVisible();
+    expect(screen.queryByLabelText("工作流集名称")).not.toBeInTheDocument();
+    expect(screen.queryByText("Read unavailable")).not.toBeInTheDocument();
   });
 });
 describe("execution inspection", () => {
@@ -169,29 +144,29 @@ describe("execution inspection", () => {
         ]}
       />,
     );
-    expect(screen.getByText("first → last")).toBeVisible();
-    for (const source of ["control", "input", "condition"])
+    expect(screen.getByText("步骤 1 → 步骤 2")).toBeVisible();
+    for (const source of ["等待完成", "使用结果", "根据结果判断"])
       expect(screen.getByText(source)).toBeVisible();
-    expect(screen.getByText("blocked")).toBeVisible();
-    expect(screen.getByText("upstream_failed")).toBeVisible();
+    expect(screen.getByText("前置步骤未完成")).toBeVisible();
+    expect(screen.queryByText("upstream_failed")).not.toBeInTheDocument();
   });
   it("renders invocation ownership separately from the dependency graph", () => {
     renderPage(<EvidenceTree evidence={runFixture.evidence} />);
-    const tree = screen.getByLabelText("Call ownership tree");
+    const tree = screen.getByLabelText("步骤与服务操作");
     const node = within(tree)
-      .getByRole("link", { name: "node · answer · attempt 1" })
+      .getByRole("link", { name: "任务步骤 · 第 1 次" })
       .closest("li")!;
     expect(
-      within(node).getByRole("link", { name: "tool · answer · attempt 1" }),
+      within(node).getByRole("link", { name: "服务操作 1 · 第 1 次" }),
     ).toHaveAttribute("href", "/?tab=evidence&target=tool-1");
-    expect(within(node).getByText("unknown")).toBeVisible();
-    expect(within(node).getByText("operation-stable")).toBeVisible();
+    expect(within(node).getByText("结果未确认")).toBeVisible();
+    expect(within(node).queryByText("operation-stable")).not.toBeInTheDocument();
   });
   it("validates evidence deep links against the loaded run", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(response(runFixture)));
     renderPage(<RunPage />, "/runs/run-1?tab=evidence&target=missing");
     expect(
-      await screen.findByText("Evidence target does not exist in this run"),
+      await screen.findByText("本次任务中找不到所选操作"),
     ).toBeVisible();
   });
   it("inspects a planned node without inventing missing input or reporting an invalid evidence link", async () => {
@@ -219,12 +194,12 @@ describe("execution inspection", () => {
       vi.fn().mockImplementation(async () => response(run)),
     );
     renderPage(<RunPage />, "/runs/run-1?tab=graph");
-    fireEvent.click(await screen.findByRole("button", { name: "future" }));
+    fireEvent.click(await screen.findByRole("button", { name: "步骤 2" }));
     expect(
-      await screen.findByText("Node future: no execution evidence"),
+      await screen.findByText("步骤 2：尚未开始处理"),
     ).toBeVisible();
     expect(
-      screen.queryByText("Evidence target does not exist in this run"),
+      screen.queryByText("本次任务中找不到所选操作"),
     ).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Input JSON")).not.toBeInTheDocument();
   });
@@ -247,17 +222,16 @@ describe("execution inspection", () => {
       </QueryClientProvider>,
     );
     expect(fetcher).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole("button", { name: "Inspect artifact" }));
-    expect(await screen.findByLabelText("Artifact content text")).toHaveValue(
-      '{"amount":"99999999999999999.01"}',
-    );
+    fireEvent.click(screen.getByRole("button", { name: "阅读附件正文" }));
+    expect(await screen.findByText("99999999999999999.01")).toBeVisible();
+    expect(screen.queryByText(ref.digest)).not.toBeInTheDocument();
     rerender(
       <QueryClientProvider client={client}>
         <ArtifactValue label="Output" value={{ other: "value" }} />
       </QueryClientProvider>,
     );
     expect(
-      screen.queryByLabelText("Artifact content text"),
+      screen.queryByText("99999999999999999.01"),
     ).not.toBeInTheDocument();
   });
   it("discovers nested CAS references without converting ordinary money strings", () => {
@@ -283,23 +257,23 @@ describe("resources and independent plugins", () => {
     const resource = {
       resourceId: "model",
       kind: "model",
-      config: { name: "Model" },
+      config: { name: "我的模型", baseUrl: "http://localhost:18081/v1", modelId: "local", apiStyle: "chat_completions" },
       hasCredentials: true,
       credentialRevision: "revision-1",
     };
-    const fetcher = vi.fn(async (_input: unknown, init?: RequestInit) =>
-      response(init?.method === "POST" ? resource : { items: [resource] }),
+    const fetcher = vi.fn(async (input: unknown, init?: RequestInit) =>
+      response(init?.method === "POST" ? resource : { items: String(input).includes("plugins") ? [] : [resource] }),
     );
     vi.stubGlobal("fetch", fetcher);
     renderPage(<ResourcesPage />);
-    fireEvent.click(await screen.findByRole("button", { name: "Edit model" }));
-    expect(screen.getByLabelText("New credentials JSON")).toHaveValue("");
-    fireEvent.change(screen.getByLabelText("New credentials JSON"), {
-      target: { value: '{"apiKey":"new-private-value"}' },
+    fireEvent.click(await screen.findByRole("button", { name: "编辑 我的模型" }));
+    expect(screen.getByLabelText("服务密钥")).toHaveValue("");
+    fireEvent.change(screen.getByLabelText("服务密钥"), {
+      target: { value: "new-private-value" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Save resource" }));
+    fireEvent.click(screen.getByRole("button", { name: "保存连接" }));
     await waitFor(() =>
-      expect(screen.getByLabelText("New credentials JSON")).toHaveValue(""),
+      expect(screen.getByLabelText("服务密钥")).toHaveValue(""),
     );
     const write = fetcher.mock.calls.find(
       ([, init]) => init?.method === "POST",
@@ -309,21 +283,19 @@ describe("resources and independent plugins", () => {
     });
     expect(document.body.textContent).not.toContain("new-private-value");
   });
-  it("does not echo malformed credential drafts into diagnostics", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(response({ items: [] })));
+  it("does not echo credential values from rejected saves into diagnostics", async () => {
+    vi.stubGlobal("fetch", vi.fn(async (_input: unknown, init?: RequestInit) => init?.method === "POST"
+      ? new Response(JSON.stringify({ code: "resource_invalid", message: "rejected private-secret", details: [] }), { status: 422, headers: { "content-type": "application/json" } })
+      : response({ items: [] })));
     renderPage(<ResourcesPage />);
-    fireEvent.change(screen.getByLabelText("Resource ID"), {
-      target: { value: "model" },
-    });
-    fireEvent.change(screen.getByLabelText("New credentials JSON"), {
-      target: { value: '{"apiKey":"private-secret' },
-    });
-    fireEvent.click(screen.getByRole("button", { name: "Save resource" }));
-    expect(
-      await screen.findByText(
-        "New credentials must be a JSON object with string values.",
-      ),
-    ).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "添加连接" }));
+    fireEvent.change(screen.getByLabelText("连接名称"), { target: { value: "另一模型" } });
+    fireEvent.change(screen.getByLabelText("服务地址"), { target: { value: "http://localhost:18081/v1" } });
+    fireEvent.change(screen.getByLabelText("模型名称"), { target: { value: "local" } });
+    fireEvent.change(screen.getByLabelText("服务密钥"), { target: { value: "private-secret" } });
+    fireEvent.click(screen.getByRole("button", { name: "保存连接" }));
+    expect(await screen.findByText("有些内容需要调整")).toBeVisible();
+    expect(screen.getByLabelText("服务密钥")).toHaveValue("private-secret");
     for (const alert of screen.getAllByRole("alert"))
       expect(alert).not.toHaveTextContent("private-secret");
   });
@@ -334,6 +306,7 @@ describe("resources and independent plugins", () => {
       protocolVersion: "v1",
       artifactDigest: "sha256:a",
       pageUrl: "https://weather.example/workspace",
+      configSchema: { type: "object", title: "天气服务" },
       tools: [],
     };
     vi.stubGlobal(
@@ -360,40 +333,17 @@ describe("resources and independent plugins", () => {
     );
     renderPage(<PluginsPage />);
     expect(
-      await screen.findByRole("link", { name: "Open external/weather" }),
+      await screen.findByRole("link", { name: "打开服务" }),
     ).toHaveAttribute("href", "https://weather.example/workspace");
+    expect(screen.getByText("天气服务")).toBeVisible();
+    expect(document.body.textContent).not.toContain("external/weather");
     expect(safePluginPageUrl("javascript:alert(1)")).toBeNull();
     expect(safePluginPageUrl("data:text/html,x")).toBeNull();
   });
-  it("applies advanced parameters through the same codec without losing optional omission", () => {
-    const change = vi.fn(),
-      dirty = vi.fn();
-    render(
-      <LaunchInputs
-        schema={{
-          type: "object",
-          properties: {
-            amount: { type: "string" },
-            optional: { type: "string" },
-          },
-          required: ["amount"],
-        }}
-        value={{ amount: "1.00" }}
-        onChange={change}
-        onDirtyChange={dirty}
-      />,
-    );
-    fireEvent.mouseDown(screen.getByRole("tab", { name: "Advanced JSON" }), {
-      button: 0,
-    });
-    fireEvent.change(screen.getByLabelText("Parameters JSON"), {
-      target: { value: '{"amount":"99999999999999999.01"}' },
-    });
-    expect(dirty).toHaveBeenLastCalledWith(true);
-    expect(change).not.toHaveBeenCalled();
-    fireEvent.click(
-      screen.getByRole("button", { name: "Apply parameters JSON" }),
-    );
+  it("edits exact string inputs without adding omitted optional values", () => {
+    const change = vi.fn(), dirty = vi.fn();
+    render(<LaunchInputs schema={{ type: "object", properties: { amount: { type: "string" }, optional: { type: "string" } }, required: ["amount"] }} value={{ amount: "1.00" }} onChange={change} onDirtyChange={dirty} />);
+    fireEvent.change(screen.getByLabelText("amount"), { target: { value: "99999999999999999.01" } });
     expect(change).toHaveBeenCalledWith({ amount: "99999999999999999.01" });
     expect(dirty).toHaveBeenLastCalledWith(false);
   });

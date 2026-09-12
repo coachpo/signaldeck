@@ -36,14 +36,14 @@ describe("RouteErrorPage", () => {
     const status = screen.getByTestId("route-error-status");
     const statusStrip = status.querySelector("[role='list']");
     const errorCard = screen
-      .getByText("Route error boundary")
+      .getByText("继续处理任务")
       .closest("[data-slot='card']");
 
     expect(page).toBeVisible();
     expect(page).toHaveClass("min-h-screen", "px-4", "py-8", "sm:py-10");
     expect(content).toHaveClass("w-full", "max-w-6xl", "flex-col", "gap-6");
     expect(
-      screen.getByRole("heading", { level: 1, name: "Route failed to render" }),
+      screen.getByRole("heading", { level: 1, name: "暂时无法打开页面" }),
     ).toBeVisible();
     expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
     expect(screen.getByTestId("route-error-description")).toHaveClass(
@@ -68,15 +68,15 @@ describe("RouteErrorPage", () => {
     expect(errorCard).toHaveClass("w-full", "max-w-none");
     expect(
       screen.getByText(
-        "SignalDeck hit an unexpected routed failure before this workspace could render safely.",
+        "可以重新加载此页；若仍无法打开，请返回首页。正在执行的任务不受页面关闭影响。",
       ),
-    ).toHaveClass("max-w-4xl", "leading-6");
-    expect(screen.getByText("Route error boundary")).toBeVisible();
-    expect(screen.getByText("Render failure")).toBeVisible();
+    ).toBeVisible();
+    expect(screen.getByText("继续处理任务")).toBeVisible();
+    expect(screen.getByText("页面暂时无法打开")).toBeVisible();
     expect(screen.queryByText("Route harness failure")).not.toBeInTheDocument();
     expect(
-      screen.getByRole("link", { name: "Open workflow packages" }),
-    ).toHaveAttribute("href", "/workflow-packages");
+      screen.getByRole("link", { name: "返回任务首页" }),
+    ).toHaveAttribute("href", "/");
   });
 
   it("renders route response failures without the default router error UI", () => {
@@ -87,10 +87,10 @@ describe("RouteErrorPage", () => {
     render(<RouteErrorPage />);
 
     expect(
-      screen.getByRole("heading", { level: 1, name: "Route resource not found" }),
+      screen.getByRole("heading", { level: 1, name: "找不到这项内容" }),
     ).toBeVisible();
     expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
-    expect(screen.getByText("404")).toBeVisible();
+    expect(screen.getByText("内容不可用")).toBeVisible();
     expect(
       screen.queryByText("Unexpected Application Error!"),
     ).not.toBeInTheDocument();

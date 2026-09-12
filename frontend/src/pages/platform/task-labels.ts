@@ -1,4 +1,4 @@
-/** Resource names come from the saved resource or plugin contract. */
+/** Display saved names without promoting internal identities into visible labels. */
 export function connectionName(name: string, id: string) {
-  return name || id;
+  return name.trim() && name !== id ? name : "服务连接";
 }

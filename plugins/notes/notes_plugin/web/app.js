@@ -1,6 +1,7 @@
 'use strict';
+class NotesReadError extends Error {}
 const $ = id => document.getElementById(id);
-const sourceLabel = kind => ({original: '原始资料', derived: '派生笔记', unclassified: '未分类'})[kind] || '未分类';
+const sourceLabel = kind => ({original: '原始资料', derived: '整理结果', unclassified: '来源未分类'})[kind] || '来源未分类';
 let generation = 0;
 let currentNote = null;
 let nextCursor = null;
@@ -8,14 +9,34 @@ function url(params) { const value = params.toString(); return location.pathname
 function navigate(params) { history.pushState(null, '', url(params)); render(); }
 async function read(path, params) {
   const response = await fetch(path + (params ? '?' + params : ''), {headers: {'Accept': 'application/json'}});
-  if (!response.ok) throw new Error(response.status === 404 ? '找不到这条笔记。' : '笔记暂时无法读取，请稍后重试。');
+  if (!response.ok) throw new NotesReadError(response.status === 404 ? '找不到这条笔记。请返回列表查找其他内容。' : '笔记暂时无法读取，请稍后重试。');
   return response.json();
+}
+async function showSources(note, params, revision) {
+  const ids = note.sourceNoteIds || [];
+  $('noteSources').textContent = ids.length ? '正在查找来源标题…' : note.sourceKind === 'derived'
+    ? '这份整理结果没有关联原始笔记。请核对正文中的依据后使用。'
+    : note.sourceKind === 'original' ? '这是一份原始资料。' : '保存时没有记录资料来源，请结合正文自行核对。';
+  if (!ids.length) return;
+  const sources = await Promise.allSettled(ids.map(id => read('api/note', new URLSearchParams({id}))));
+  if (revision !== generation) return;
+  $('noteSources').replaceChildren(...sources.map((result, index) => {
+    const row = document.createElement('p');
+    const target = new URLSearchParams(params); target.set('noteId', ids[index]);
+    const link = document.createElement('a'); link.href = url(target);
+    if (result.status === 'fulfilled') link.textContent = result.value.title || '未命名笔记';
+    else { row.append('这份来源暂时无法读取，尚不能核对其内容。'); link.textContent = '重新查看来源'; }
+    row.append(link); return row;
+  }));
 }
 async function render() {
   const revision = ++generation;
   const params = new URLSearchParams(location.search);
   const noteId = params.get('noteId');
   $('browse').hidden = Boolean(noteId); $('detail').hidden = true;
+  for (const control of $('search').elements) control.disabled = true;
+  $('search').setAttribute('aria-busy', 'true');
+  $('previous').disabled = true; $('next').disabled = true;
   $('status').textContent = '正在读取笔记…';
   currentNote = null; nextCursor = null;
   try {
@@ -25,8 +46,8 @@ async function render() {
       currentNote = note;
       $('noteTitle').textContent = note.title; $('noteText').textContent = note.text;
       $('noteSourceKind').textContent = sourceLabel(note.sourceKind);
-      $('noteSources').replaceChildren(...(note.sourceNoteIds || []).map(id => { const link = document.createElement('a'); const target = new URLSearchParams(params); target.set('noteId', id); link.href = url(target); link.textContent = `来源笔记：${id} `; return link; }));
-      $('noteCollection').textContent = note.collection; $('noteId').textContent = note.id;
+      void showSources(note, params, revision);
+      $('noteCollection').textContent = note.collection;
       params.delete('noteId'); $('back').href = url(params);
       $('detail').hidden = false; $('status').textContent = '';
       return;
@@ -61,9 +82,15 @@ async function render() {
     $('status').textContent = result.notes.length ? '' : '没有找到匹配的笔记。试试其他文字或集合。';
   } catch (error) {
     if (revision !== generation) return;
-    $('status').textContent = error.message || '笔记暂时无法读取，请稍后重试。';
+    $('status').textContent = error instanceof NotesReadError ? error.message : '笔记暂时无法读取，请检查连接后重试。';
     $('notes').replaceChildren(); $('summary').textContent = '';
+    const retry = document.createElement('button'); retry.textContent = '重新读取'; retry.onclick = render; $('status').append(retry);
     if (noteId) { params.delete('noteId'); const back = document.createElement('a'); back.href = url(params); back.textContent = ' 返回笔记'; $('status').append(back); }
+  } finally {
+    if (revision === generation) {
+      for (const control of $('search').elements) control.disabled = false;
+      $('search').removeAttribute('aria-busy');
+    }
   }
 }
 $('search').addEventListener('submit', event => { event.preventDefault(); navigate(new URLSearchParams({collection: $('collection').value, query: $('query').value, includeDerived: $('includeDerived').value})); });

@@ -1,7 +1,5 @@
 import { AlertTriangle } from "lucide-react";
-
 import { CanonicalErrorPage } from "@/components/shared/canonical-error-page";
-import { ProvenanceBadge } from "@/components/shared/provenance-badge";
 import { Button } from "@/components/ui/button";
 
 type ErrorBoundaryFallbackProps = {
@@ -9,63 +7,27 @@ type ErrorBoundaryFallbackProps = {
   onReset: () => void;
 };
 
-export function ErrorBoundaryFallback({
-  error,
-  onReset,
-}: ErrorBoundaryFallbackProps) {
+export function ErrorBoundaryFallback({ onReset }: ErrorBoundaryFallbackProps) {
   return (
     <CanonicalErrorPage
-      action={
-        <>
-          <Button onClick={onReset}>Try again</Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => window.location.reload()}
-          >
-            Reload app
-          </Button>
-        </>
-      }
+      action={<>
+        <Button onClick={onReset}>重试打开</Button>
+        <Button type="button" variant="outline" onClick={() => window.location.reload()}>重新加载</Button>
+      </>}
       contentTestId="error-boundary-fallback-content"
-      description="The page hit an unexpected error while rendering."
+      description="已保存的内容仍然保留，正在执行的任务会继续。"
       descriptionTestId="error-boundary-fallback-description"
       icon={<AlertTriangle className="size-4 text-destructive" />}
-      meta={
-        <>
-          <ProvenanceBadge
-            detail="error boundary"
-            label="Surface"
-            tone="destructive"
-          />
-          <ProvenanceBadge
-            detail="application render"
-            label="Failure"
-            tone="warning"
-          />
-        </>
-      }
+      meta={null}
       metaTestId="error-boundary-fallback-meta"
-      panelDescription={
-        error ? (
-          <p
-            className="w-full max-w-4xl break-words rounded-xl border border-border/70 bg-ui-surface-grouped px-3 py-2 text-sm leading-6 text-muted-foreground"
-            data-testid="error-boundary-fallback-error"
-          >
-            {error.message}
-          </p>
-        ) : undefined
-      }
+      panelDescription={<p className="w-full max-w-4xl break-words text-sm leading-6 text-muted-foreground" data-testid="error-boundary-fallback-error">请先重试打开。重新加载前，请留意尚未保存的输入；已保存草稿可以从任务首页恢复。</p>}
       panelTestId="error-boundary-fallback-panel"
-      panelTitle="Something went wrong"
+      panelTitle="恢复页面"
       rootElement="div"
-      statusItems={[
-        { label: "State", tone: "danger", value: "Render failure" },
-        { label: "Fallback", tone: "neutral", value: "Application shell" },
-      ]}
+      statusItems={[{ label: "当前状态", tone: "danger", value: "页面暂时不可用" }]}
       statusTestId="error-boundary-fallback-status"
       testId="error-boundary-fallback-page"
-      title="Something went wrong"
+      title="暂时无法显示页面"
       tone="danger"
     />
   );

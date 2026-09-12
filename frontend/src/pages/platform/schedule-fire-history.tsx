@@ -1,6 +1,5 @@
 import { ExecutionDiagnostic } from "./execution-diagnostic";
 import { scheduleFireLabel } from "@/lib/schedule-frequency";
-import { useDisplayMode } from "@/hooks/use-display-mode";
 import { Link } from "react-router";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,7 +15,6 @@ import { useScheduleFires } from "@/hooks/use-workflow-platform";
 import { RequestError } from "./feedback";
 export function ScheduleFireHistory({ scheduleId }: { scheduleId: string }) {
   const query = useScheduleFires(scheduleId);
-  const { expert } = useDisplayMode();
   return (
     <Card>
       <CardHeader>
@@ -63,14 +61,6 @@ export function ScheduleFireHistory({ scheduleId }: { scheduleId: string }) {
                 </span>
               )}
             </div>
-            <details open={expert}>
-              <summary className="cursor-pointer text-xs">技术来源</summary>
-              <code className="break-all text-xs">Fire {fire.triggerId}</code>
-              <p className="break-all text-xs text-muted-foreground">
-                Engine workflow {fire.engineWorkflowId} · execution{" "}
-                {fire.engineRunId}
-              </p>
-            </details>
             {fire.errorCode && (
               <ExecutionDiagnostic code={fire.errorCode} />
             )}

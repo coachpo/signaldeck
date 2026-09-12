@@ -21,8 +21,8 @@ it("preserves omitted defaults, nullable and unknown fields when editing sibling
 });
 it("edits arrays using the shared form without delimiter parsing", () => {
   render(<Form schema={{type:"object",properties:{collection:{type:"array",items:{type:"string"}}},required:["collection"]}} initial={{collection:["A,B"]}} />);
-  fireEvent.click(screen.getByRole("button",{name:"Add Item"}));
-  fireEvent.change(screen.getByLabelText("Item 2"),{target:{value:"C"}});
+  fireEvent.click(screen.getByRole("button",{name:"添加项目"}));
+  fireEvent.change(screen.getByLabelText("第 2 项"),{target:{value:"C"}});
   expect(JSON.parse(screen.getByRole("status").textContent!)).toEqual({collection:["A,B","C"]});
 });
 it("treats includeRisk/reportId/collection as ordinary data; only declared defaults seed drafts", () => {
@@ -30,10 +30,10 @@ it("treats includeRisk/reportId/collection as ordinary data; only declared defau
   expect(taskDefaults(schema)).toEqual({includeRisk:false,reportId:"",collection:[]});
   expect(taskDefaults({...schema,properties:{includeRisk:{type:"boolean","x-signaldeck-schema":"signaldeck.schema/2",default:true}},required:["includeRisk"]})).toEqual({includeRisk:true});
 });
-it("discovers new package and workflow names including unsupported legal roots", () => {
+it("discovers new package and workflow names including all legal roots", () => {
   const pkg={key:"unseen",definition:{metadata:{key:"unseen",name:"New package"},workflows:{custom:{name:"New task",description:"From package data",inputSchema:{type:"object",properties:{renamed:{type:"string",minLength:1}},required:["renamed"]}},scalar:{name:"Scalar",inputSchema:{type:"array",items:{type:"string"}}}}}} as unknown as WorkflowPackage;
   const tasks=availableTasks([pkg]);
-  expect(tasks.map(t=>[t.workflowKey,t.title,t.supported])).toEqual([["custom","New task",true],["scalar","Scalar",false]]);
+  expect(tasks.map(t=>[t.workflowKey,t.title,t.supported])).toEqual([["custom","New task",true],["scalar","Scalar",true]]);
   expect(supportsTaskForm(tasks[0].workflow.inputSchema)).toBe(true);
   expect(taskConstraintErrors(tasks[0].workflow.inputSchema,{renamed:""})).toEqual({"parameters.renamed":"请至少填写 1 个字符。"});
 });

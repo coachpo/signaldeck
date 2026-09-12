@@ -1,36 +1,25 @@
 import { expect, test } from "@playwright/test";
 import { apiBase } from "./platform-fixtures";
-test("resource credentials are write-only through save and reload", async ({
-  page,
-  request,
-}) => {
-  const id = `model-${crypto.randomUUID().slice(0, 8)}`;
+test("resource credentials are write-only through an ordinary form, save and reload", async ({ page, request }) => {
+  const name = `分析服务 ${crypto.randomUUID().slice(0, 8)}`;
   await page.goto("/resources");
-  await page.getByLabel("Resource ID").fill(id);
-  await page
-    .getByLabel("Resource configuration JSON")
-    .fill(
-      JSON.stringify({
-        name: "Model connection",
-        baseUrl: "http://127.0.0.1:18081/v1",
-        modelId: "fake-model",
-        apiStyle: "chat_completions",
-        timeoutSeconds: 30,
-      }),
-    );
-  await page
-    .getByLabel("New credentials JSON")
-    .fill('{"apiKey":"private-e2e-value"}');
-  await page.getByRole("button", { name: "Save resource" }).click();
-  await expect(page.getByLabel("New credentials JSON")).toHaveValue("");
+  await page.getByRole("button", { name: "添加连接", exact: true }).click();
+  await page.getByLabel("连接名称", { exact: true }).fill(name);
+  await page.getByLabel("服务地址", { exact: true }).fill(`${process.env.SIGNALDECK_FAKE_PROVIDER_BASE_URL ?? `http://127.0.0.1:${process.env.SIGNALDECK_FAKE_PROVIDER_PORT ?? "18081"}/v1`}/chat/completions`);
+  await page.getByLabel("模型名称", { exact: true }).fill("fake-model");
+  await page.getByLabel("最长等待时间（秒）", { exact: true }).fill("30");
+  await page.getByLabel("服务密钥", { exact: true }).fill("private-e2e-value");
+  await page.getByRole("button", { name: "保存连接", exact: true }).click();
+  await expect(page.getByLabel("服务密钥", { exact: true })).toHaveValue("");
   const response = await request.get(`${apiBase}/resources`);
   const body = await response.json();
   expect(JSON.stringify(body)).not.toContain("private-e2e-value");
-  expect(
-    body.items.find((item: { resourceId: string }) => item.resourceId === id)
-      .hasCredentials,
-  ).toBe(true);
+  const saved = body.items.find((item: { config: { name: string } }) => item.config.name === name);
+  expect(saved.hasCredentials).toBe(true);
+  expect(saved.config.baseUrl).not.toContain("chat/completions");
+  await expect(page.getByRole("main")).not.toContainText(saved.resourceId);
   await page.reload();
-  await page.getByRole("button", { name: `Edit ${id}`, exact: true }).click();
-  await expect(page.getByLabel("New credentials JSON")).toHaveValue("");
+  await page.getByRole("button", { name: `编辑 ${name}`, exact: true }).click();
+  await expect(page.getByLabel("服务密钥", { exact: true })).toHaveValue("");
+  await expect(page.getByLabel("模型名称", { exact: true })).toHaveValue("fake-model");
 });

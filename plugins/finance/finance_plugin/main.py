@@ -7,6 +7,7 @@ from pathlib import Path
 
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from plugin_runtime.errors import ApiError
 from plugin_runtime.operations import Journal, OperationBase
 from plugin_runtime.serialization import input_contract, model_wire_schema, project
@@ -61,23 +62,36 @@ def create_app(database_url=None, quote_provider=None, *, settings: FinanceSetti
             "InsiderData",
         )
     ]
+    capability_titles = [
+        "查询最新行情",
+        "查询历史行情",
+        "查询价格走势",
+        "计算技术指标",
+        "查询公司财务",
+        "查找市场新闻",
+        "了解市场讨论",
+        "查询内部人交易",
+    ]
     definitions = [
         tool(
             "signaldeck/finance",
             spec.key.rsplit("/", 1)[1],
-            input_contract(spec.parameters_schema),
+            {**input_contract(spec.parameters_schema), "title": title},
             model_wire_schema(model),
             spec.description,
             resources=("finance-market-data",),
         )
-        for spec, model in zip(specs, models, strict=True)
+        for spec, model, title in zip(specs, models, capability_titles, strict=True)
     ]
     report_schema = model_wire_schema(ReportRead)
     definitions.append(
         tool(
             "signaldeck/finance",
             "reports_lookup",
-            input_contract(REPORT_LOOKUP_TOOL_SPEC.parameters_schema),
+            {
+                **input_contract(REPORT_LOOKUP_TOOL_SPEC.parameters_schema),
+                "title": "查找已有报告",
+            },
             obj(
                 {
                     "count": {"type": "integer"},
@@ -102,13 +116,25 @@ def create_app(database_url=None, quote_provider=None, *, settings: FinanceSetti
             report_schema,
             "Persist a Finance report with immutable Agent invocation provenance.",
             write=True,
-            result_links=[{"version": "signaldeck.resultLink/1", "key": "report", "label": "打开报告", "path": "",
-                           "query": {"reportId": "tool.output.id"}}],
+            result_links=[
+                {
+                    "version": "signaldeck.resultLink/1",
+                    "key": "report",
+                    "label": "打开报告",
+                    "path": "",
+                    "query": {"reportId": "tool.output.id"},
+                }
+            ],
         )
     )
+    definitions[-1]["inputSchema"]["title"] = "保存报告"
     context = RuntimeToolContext(
         sessions,
-        quote_provider if quote_provider is not None else create_quote_provider(provider_settings),
+        (
+            quote_provider
+            if quote_provider is not None
+            else create_quote_provider(provider_settings)
+        ),
         create_news_providers(provider_settings),
         create_social_sentiment_adapters(provider_settings),
     )
@@ -174,16 +200,20 @@ def create_app(database_url=None, quote_provider=None, *, settings: FinanceSetti
         [root, root.parent / "runtime"],
         os.environ.get("PLUGIN_PAGE_URL", "http://localhost:8091/"),
         configuration=configuration,
-        config_schema=obj(
-            {
-                "allowedSymbols": {
-                    "type": "array",
-                    "items": {"type": "string", "minLength": 1, "maxLength": 32},
-                    "uniqueItems": True,
-                }
-            },
-            ("allowedSymbols",),
-        ),
+        config_schema={
+            "title": "金融服务",
+            **obj(
+                {
+                    "allowedSymbols": {
+                        "title": "允许查询的证券",
+                        "type": "array",
+                        "items": {"type": "string", "minLength": 1, "maxLength": 32},
+                        "uniqueItems": True,
+                    }
+                },
+                ("allowedSymbols",),
+            ),
+        },
     )
     app = application(binding, execute, journal.query, startup=startup)
     app.state.sessions = sessions
@@ -192,6 +222,7 @@ def create_app(database_url=None, quote_provider=None, *, settings: FinanceSetti
     app.state.journal = journal
     app.include_router(templates.router, prefix="/api")
     app.include_router(reports.router, prefix="/api")
+    app.mount("/assets", StaticFiles(directory=root / "web"), name="finance-assets")
 
     @app.exception_handler(ApiError)
     async def business_error(request, exc):
@@ -203,14 +234,22 @@ def create_app(database_url=None, quote_provider=None, *, settings: FinanceSetti
     @app.exception_handler(RequestValidationError)
     async def invalid_request(request, exc):
         return JSONResponse(
-            {"code": "validation_error", "message": "Invalid Finance request", "details": []},
+            {
+                "code": "validation_error",
+                "message": "Invalid Finance request",
+                "details": [],
+            },
             status_code=422,
         )
 
     @app.exception_handler(Exception)
     async def internal_error(request, exc):
         return JSONResponse(
-            {"code": "plugin_error", "message": "Finance operation failed", "details": []},
+            {
+                "code": "plugin_error",
+                "message": "Finance operation failed",
+                "details": [],
+            },
             status_code=500,
         )
 

@@ -1,4 +1,4 @@
-import { ApiRequestError } from "@/lib/api-client";
+import { userFacingError } from "@/lib/user-facing-error";
 import { InventoryStatePanel } from "@/components/shared/inventory-state-panel";
 import { Button } from "@/components/ui/button";
 export function RequestError({
@@ -9,24 +9,16 @@ export function RequestError({
   retry?: () => void;
 }) {
   if (!error) return null;
+  const notice = userFacingError(error);
   return (
     <InventoryStatePanel
       tone="danger"
-      title={error instanceof Error ? error.message : "Request failed"}
-      description={
-        error instanceof ApiRequestError ? (
-          <>
-            <span>{error.code}</span>
-            {error.details.map((d, i) => (
-              <p key={i}>{Object.values(d).join(" · ")}</p>
-            ))}
-          </>
-        ) : undefined
-      }
+      title={notice.title}
+      description={notice.description}
       action={
         retry ? (
           <Button variant="outline" onClick={retry}>
-            Retry
+            重试
           </Button>
         ) : undefined
       }

@@ -1,109 +1,31 @@
 import { Link, isRouteErrorResponse, useRouteError } from "react-router";
 import { AlertTriangle, Home } from "lucide-react";
-
 import { CanonicalErrorPage } from "@/components/shared/canonical-error-page";
-import { ProvenanceBadge } from "@/components/shared/provenance-badge";
 import { Button } from "@/components/ui/button";
-
-type RouteErrorDetails = {
-  description: string;
-  eyebrow: string;
-  statusLabel: string;
-  title: string;
-};
-
-function routeErrorDetails(error: unknown): RouteErrorDetails {
-  if (isRouteErrorResponse(error)) {
-    if (error.status === 404) {
-      return {
-        description:
-          "The route request could not find the resource it expected. Return to a known workspace route to continue.",
-        eyebrow: "Route error 404",
-        statusLabel: "404",
-        title: "Route resource not found",
-      };
-    }
-
-    return {
-      description:
-        "SignalDeck could not finish loading this route. Return to a known workspace route or retry after the service recovers.",
-      eyebrow: `Route error ${error.status}`,
-      statusLabel: String(error.status),
-      title: error.statusText || "Route failed to load",
-    };
-  }
-
-  if (error instanceof Error) {
-    return {
-      description:
-        "SignalDeck hit an unexpected routed failure before this workspace could render safely.",
-      eyebrow: "Route error",
-      statusLabel: "Render failure",
-      title: "Route failed to render",
-    };
-  }
-
-  return {
-    description:
-      "SignalDeck received an unknown routed failure before this workspace could render safely.",
-    eyebrow: "Route error",
-    statusLabel: "Unknown failure",
-    title: "Route failed to load",
-  };
-}
 
 export function RouteErrorPage() {
   const error = useRouteError();
-  const details = routeErrorDetails(error);
-
+  const missing = isRouteErrorResponse(error) && error.status === 404;
   return (
     <CanonicalErrorPage
-      action={
-        <Button asChild size="sm">
-          <Link to="/workflow-packages">
-            <Home data-icon="inline-start" />
-            Open workflow packages
-          </Link>
-        </Button>
-      }
+      action={<>
+        <Button variant="outline" onClick={() => window.location.reload()}>重新加载</Button>
+        <Button asChild size="sm"><Link to="/"><Home data-icon="inline-start" />返回任务首页</Link></Button>
+      </>}
       contentTestId="route-error-content"
-      description="React Router redirected this route into SignalDeck's product-owned error boundary."
+      description="已保存的任务和结果仍然保留。"
       descriptionTestId="route-error-description"
       icon={<AlertTriangle className="size-4 text-destructive" />}
-      meta={
-        <>
-          <ProvenanceBadge
-            detail="error boundary"
-            label="Surface"
-            tone="destructive"
-          />
-          <ProvenanceBadge
-            detail={details.eyebrow}
-            label="Failure"
-            tone="warning"
-          />
-        </>
-      }
+      meta={null}
       metaTestId="route-error-meta"
-      panelDescription={<p className="max-w-4xl leading-6">{details.description}</p>}
+      panelDescription={missing ? "这项内容可能已经移除。请返回首页选择任务，或在结果页查找历史记录。" : "可以重新加载此页；若仍无法打开，请返回首页。正在执行的任务不受页面关闭影响。"}
       panelTestId="route-error-panel"
-      panelTitle="Route error boundary"
+      panelTitle="继续处理任务"
       rootElement="main"
-      statusItems={[
-        {
-          label: "State",
-          tone: "danger",
-          value: details.statusLabel,
-        },
-        {
-          label: "Fallback",
-          tone: "neutral",
-          value: "Workflow packages",
-        },
-      ]}
+      statusItems={[{ label: "当前状态", tone: "danger", value: missing ? "内容不可用" : "页面暂时无法打开" }]}
       statusTestId="route-error-status"
       testId="route-error-page"
-      title={details.title}
+      title={missing ? "找不到这项内容" : "暂时无法打开页面"}
       tone="danger"
     />
   );

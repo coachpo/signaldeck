@@ -18,11 +18,11 @@ const routes = [
   { path: "/", label: "任务", nav: "tasks" },
   {
     path: "/workflow-packages",
-    label: "Workflow Packages",
+    label: "制作工作流",
     nav: "workflow-packages",
   },
-  { path: "/resources", label: "Resources", nav: "resources" },
-  { path: "/plugins", label: "Plugins", nav: "plugins" },
+  { path: "/resources", label: "服务连接", nav: "resources" },
+  { path: "/plugins", label: "扩展服务", nav: "plugins" },
   { path: "/settings", label: "设置", nav: "settings" },
   { path: "/runs", label: "结果", nav: "runs" },
   { path: "/attention", label: "执行更新", nav: "attention" },
@@ -60,7 +60,7 @@ test("generic navigation owns one route shell without embedded finance pages", a
   await expect(page.getByTestId("nav-templates")).toHaveCount(0);
   await page.goto("/templates");
   await expect(
-    page.getByRole("heading", { name: "Page not found" }),
+    page.getByRole("heading", { name: "找不到页面" }),
   ).toBeVisible();
 });
 for (const width of [375, 768, 1024, 1440])
@@ -85,7 +85,7 @@ for (const width of [375, 768, 1024, 1440])
       else await page.goto(path);
       await expect(page.getByRole("main")).toBeVisible();
       if (path === "/workflow-packages/new") {
-        await expect(page.getByLabel("Workflow Package YAML")).toBeVisible();
+        await expect(page.getByLabel("工作流集名称")).toBeVisible();
       }
       const screenshot = resolve(
         directory,

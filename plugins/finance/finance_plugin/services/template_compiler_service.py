@@ -39,9 +39,13 @@ class TemplateCompilerService:
         self.report_repo = ReportRepository(session)
         self._report_resolve_stack: set[str] = set()
         self._inputs: dict[str, str] = {}
+        self._input_labels: dict[str, str] = {}
 
     def compile(self, content: str, inputs: dict[str, str] | None = None) -> str:
         self._report_resolve_stack = set()
+        self._input_labels = {
+            match.group(1): match.group(2) for match in _INPUT_DECLARATION_RE.finditer(content)
+        }
         self._inputs = {
             match.group(1): ""
             for match in _INPUT_DECLARATION_RE.finditer(content)
@@ -58,6 +62,7 @@ class TemplateCompilerService:
             "reports": [
                 {
                     "name": report.name,
+                    "label": self._display_report_name(report),
                     "created_at": report.created_at,
                 }
                 for report in self.report_repo.list_all()
@@ -89,7 +94,10 @@ class TemplateCompilerService:
     def _render_all_inputs(self) -> str:
         if not self._inputs:
             return "*(no inputs)*"
-        return "\n".join(f"- {key}: {value}" for key, value in sorted(self._inputs.items()))
+        return "\n".join(
+            f"- {self._input_labels.get(key, key)}: {value}"
+            for key, value in sorted(self._inputs.items())
+        )
 
     def _resolve_reports_path(self, path: str) -> str:
         if path == "reports":
@@ -198,6 +206,8 @@ class TemplateCompilerService:
             return self._render_report_metadata(report)
         if field == "content":
             return self._resolve_report_content(report)
+        if field == "name":
+            return self._display_report_name(report)
         if field in _REPORT_SCALAR_FIELDS:
             return self._format_value(getattr(report, field, None))
         return f"[Unknown report field: {field}]"
@@ -233,7 +243,13 @@ class TemplateCompilerService:
         return "\n".join(f"- {self._render_report_metadata(report)}" for report in reports)
 
     def _render_report_metadata(self, report: Report) -> str:
-        return f"**{report.name}** ({self._format_value(report.created_at)})"
+        return f"**{self._display_report_name(report)}** ({self._format_value(report.created_at)})"
+
+    @staticmethod
+    def _display_report_name(report: Report) -> str:
+        if report.source == "agent":
+            return re.sub(r"_[a-f0-9]{32}$", "", report.name)
+        return report.name
 
     def _resolve_report_content(self, report: Report) -> str:
         if report.name in self._report_resolve_stack:

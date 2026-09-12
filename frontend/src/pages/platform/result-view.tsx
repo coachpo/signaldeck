@@ -13,6 +13,7 @@ import { ResourceStatusBadge } from "@/components/shared/resource-status-strip";
 import { useRunResult } from "@/hooks/use-results";
 import {
   usePlatformMutations,
+  usePlatformRun,
 } from "@/hooks/use-workflow-platform";
 import { useTaskReuse } from "@/hooks/use-task-experience";
 import type { RunResult } from "@/lib/types/result";
@@ -22,6 +23,8 @@ import { findArtifacts } from "./artifact-references";
 import { runSearch } from "./result-navigation";
 import { DeclaredResultSections } from "./result-sections";
 import { ResultRepeat } from "./result-repeat";
+import { ResultFreshness } from "./result-freshness";
+import { artifactPresentation } from "./result-artifact-presentation";
 import {
   ResultValue as Value,
   ResultAttachmentView as Attachment,
@@ -47,13 +50,14 @@ function ResultContent({ result }: { result: RunResult }) {
         ref.mediaType.startsWith("text/") || ref.mediaType.includes("json"),
     )?.ref;
   const original = useTaskReuse(result.runId);
+  const snapshot = usePlatformRun(result.runId);
   const mutations = usePlatformMutations();
   const active = result.status === "queued" || result.status === "running";
   return (
     <InventoryPageShell
       pageContext={{
         title: result.title,
-        description: `${originLabels[result.origin.kind]} · ${new Date(result.createdAt).toLocaleString()}`,
+        description: `${originLabels[result.origin.kind] ?? "任务开始"} · ${new Date(result.createdAt).toLocaleString()}`,
         status: (
           <ResourceStatusBadge
             label={resultStatusLabels[result.status] ?? result.status}
@@ -102,16 +106,16 @@ function ResultContent({ result }: { result: RunResult }) {
       )}
       {!!result.readUnknownEvidenceIds?.length && (
         <InlineStatePanel tone="warning" title="读取结果未确认"
-          description="只读调用未取得确认结果，可检查执行证据或重新运行。此读取不涉及保存。" />
+          description="只读调用未取得确认结果，可检查执行过程或重新运行。此读取不涉及保存。" />
       )}
       {result.contentStatus === "unknown" && (
         <InlineStatePanel
           tone="warning"
           title="保存状态待核实"
-          description="服务尚未确认是否保存成功。请先检查执行证据或目标位置，避免重复保存。"
+          description="服务尚未确认是否保存成功。请先检查执行过程或目标位置，避免重复保存。"
         />
       )}
-      {result.errorCode && (
+      {result.errorCode && result.status !== "cancelled" && (
         <InlineStatePanel
           tone="danger"
           title="本次任务未能完成"
@@ -136,12 +140,12 @@ function ResultContent({ result }: { result: RunResult }) {
         </InlineStatePanel>
       )}
       {result.deferredSections?.length ? (
-        <InlineStatePanel title="内容保存在执行产物">
+        <InlineStatePanel title="内容保存在附件">
           {result.deferredSections.join("、")}：请阅读或下载下方附件。
         </InlineStatePanel>
       ) : null}
       {result.executionIssues?.length ? (
-        <InlineStatePanel tone="danger" title="执行未完成">
+        <InlineStatePanel tone={result.status === "cancelled" ? "warning" : "danger"} title={result.status === "cancelled" ? "未完成的步骤" : "执行未完成"}>
           {result.executionIssues.map((issue) => <p key={issue}>{issue}</p>)}
         </InlineStatePanel>
       ) : null}
@@ -149,7 +153,7 @@ function ResultContent({ result }: { result: RunResult }) {
         <InlineStatePanel title="已跳过的分支">{result.skipped.join("、")}</InlineStatePanel>
       ) : null}
       {result.sections?.length ? (
-        <DeclaredResultSections sections={result.sections} search={search} />
+        <DeclaredResultSections sections={result.sections} search={search} run={snapshot.data} />
       ) : result.body ? (
         <article
           aria-label="结果正文"
@@ -158,10 +162,10 @@ function ResultContent({ result }: { result: RunResult }) {
           <MarkdownContent>{result.body}</MarkdownContent>
         </article>
       ) : result.receipt !== null ? (
-        <details open={expert} className="rounded border border-border bg-card p-4">
-          <summary className="cursor-pointer font-semibold">保存回执（完整原值）</summary>
-          <Value value={result.receipt} />
-        </details>
+        <section className="rounded border border-border bg-card p-4">
+          <h2 className="font-semibold">保存确认</h2>
+          <p>此项保存已确认。</p>
+        </section>
       ) : primaryArtifact ? (
         <section aria-label="结果正文">
           <p>正文保存在附件中，请选择阅读或下载。</p>
@@ -182,7 +186,8 @@ function ResultContent({ result }: { result: RunResult }) {
           }
         />
       )}
-      <ResultExport result={result} />
+      {!!result.sections?.length && !result.attachments.length && <RequestError error={snapshot.error} retry={() => void snapshot.refetch()} />}
+      <ResultExport result={result} run={snapshot.data} pendingRun={!snapshot.data} />
       <ResultMetadataControls runId={result.runId} />
       <section className="grid gap-4 border-y border-border py-4 sm:grid-cols-2">
         <div>
@@ -195,7 +200,7 @@ function ResultContent({ result }: { result: RunResult }) {
               : "尚未结束"}
           </p>
           {result.sections?.some((section) => section.kind === "sources") ? (
-            <p className="text-sm text-muted-foreground">资料来源见上方声明内容。</p>
+            <p className="text-sm text-muted-foreground">资料来源见上方内容。</p>
           ) : result.sources.length ? (
             result.sources.map((source, i) => <Value key={i} value={source} />)
           ) : (
@@ -221,25 +226,27 @@ function ResultContent({ result }: { result: RunResult }) {
             <p className="text-sm">计划时间：{result.origin.scheduledAt}</p>
           )}
           {result.freshness.map((item, i) => (
-            <Value key={i} value={item} />
+            <ResultFreshness key={i} value={item} />
           ))}
         </div>
         <div>
           <details open={expert}>
-            <summary className="cursor-pointer font-semibold">本次输入（完整原值）</summary>
-            {original.data && <Value value={original.data.parameters} />}
+            <summary className="cursor-pointer font-semibold">本次输入</summary>
+            {original.data && <Value value={original.data.parameters} schema={original.data.inputSchema} />}
           </details>
         </div>
       </section>
       {result.attachments.length > 0 && (
         <section>
           <h2 className="font-semibold">附件与保存位置</h2>
+          <RequestError error={snapshot.error} retry={() => void snapshot.refetch()} />
           <ul>
             {result.attachments.map((attachment, i) => (
               <Attachment
                 key={i}
                 attachment={attachment}
-
+                pending={!snapshot.data}
+                presentation={artifactPresentation(snapshot.data, attachment, findArtifacts(attachment.reference)[0]?.ref.digest ?? "")}
               />
             ))}
           </ul>
@@ -287,7 +294,7 @@ function ResultContent({ result }: { result: RunResult }) {
         </Button>
         <Button asChild variant="ghost">
           <Link to={`?${runSearch(search, { tab: "evidence" })}`}>
-            技术详情与调用证据
+            查看执行过程
           </Link>
         </Button>
       </div>

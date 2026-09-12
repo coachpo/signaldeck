@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useUnsavedWork } from "@/hooks/use-unsaved-work";
+import { scheduleDrafts, scheduleTriggerDrafts, scheduleConfigKey } from "./schedule-drafts";
 import { Link, useNavigate, useParams, useLocation } from "react-router";
 import { ApiRequestError } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
@@ -23,7 +25,6 @@ import {
   usePackages,
   usePlatformMutations,
 } from "@/hooks/use-workflow-platform";
-import { initialParameters } from "@/lib/platform-authoring/parameter-values";
 import { validateLaunchValueForSchema } from "@/lib/platform-authoring/schema/launch-input-state";
 import type {
   Json,
@@ -52,19 +53,21 @@ export interface ScheduleInput {
   name?: string;
 }
 function ScheduleEditor({ schedule }: { schedule?: Schedule }) {
-  const { timeZone, expert } = useDisplayMode();
+  const { timeZone } = useDisplayMode();
   const location = useLocation();
   const inherited = (location.state as { scheduleInput?: ScheduleInput } | null)
     ?.scheduleInput;
   const packages = usePackages();
   const mutations = usePlatformMutations();
   const navigate = useNavigate();
+  const draftKey = schedule?.id ?? `new:${JSON.stringify(inherited ?? null)}`;
+  const restored = scheduleDrafts.get(draftKey);
   const [draft, setDraft] = useState<ScheduleConfig>(
-    schedule ?? {
+    restored?.value ?? schedule ?? {
       creationId: crypto.randomUUID(),
       name:
         inherited?.name ??
-        (inherited ? `${inherited.workflowKey} · 自动执行` : ""),
+        (inherited ? "任务自动执行" : ""),
       packageKey: inherited?.packageKey ?? "",
       workflowKey: inherited?.workflowKey ?? "",
       parameters: inherited?.parameters ?? null,
@@ -75,12 +78,23 @@ function ScheduleEditor({ schedule }: { schedule?: Schedule }) {
       paused: false,
     },
   );
-  const [creationUncertain, setCreationUncertain] = useState(false);
+  const [creationUncertain, setCreationUncertain] = useState(restored?.creationUncertain ?? false);
+  const [savedValue, setSavedValue] = useState(restored?.savedValue ?? scheduleConfigKey(draft));
+  const [validationMessage, setValidationMessage] = useState("");
+  const [savedNotice, setSavedNotice] = useState("");
   const [parametersDirty, setParametersDirty] = useState(false);
   const [error, setError] = useState<unknown>(null);
-  const [acceptedTrigger, setAcceptedTrigger] = useState<string | null>(null);
+  const [acceptedTrigger, setAcceptedTrigger] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [triggerId, setTriggerId] = useState(() => crypto.randomUUID());
+  const [triggerId, setTriggerId] = useState(() => restored?.triggerId ?? scheduleTriggerDrafts.get(schedule?.id ?? "") ?? crypto.randomUUID());
+  const [triggerUncertain, setTriggerUncertain] = useState(restored?.triggerUncertain ?? scheduleTriggerDrafts.has(schedule?.id ?? ""));
+  const changed = scheduleConfigKey(draft) !== savedValue;
+  const unsaved = changed || parametersDirty || creationUncertain || triggerUncertain;
+  useUnsavedWork(unsaved);
+  useEffect(() => {
+    if (unsaved) scheduleDrafts.set(draftKey, { value: draft, savedValue, creationUncertain, triggerId, triggerUncertain });
+    else scheduleDrafts.delete(draftKey);
+  }, [draftKey, draft, savedValue, creationUncertain, triggerId, triggerUncertain, unsaved]);
   const pkg = packages.data?.items.find((p) => p.key === draft.packageKey);
   const workflow = pkg?.definition.workflows[draft.workflowKey];
   const set = <K extends keyof ScheduleConfig>(
@@ -89,19 +103,19 @@ function ScheduleEditor({ schedule }: { schedule?: Schedule }) {
   ) => setDraft((d) => ({ ...d, [key]: value }));
   async function save() {
     try {
-      if (parametersDirty) throw new Error("请先应用业务信息，再保存安排。");
+      setValidationMessage("");
+      if (parametersDirty) { setValidationMessage("请先完成业务信息，再保存安排。"); return; }
+      if (draft.catchupWindowSeconds < 10 || !Number.isInteger(draft.catchupWindowSeconds)) { setValidationMessage("补做期限至少为 10 秒，请调整后保存。"); return; }
       const value = draft.parameters;
       const businessErrors =
         workflow
           ? taskConstraintErrors(workflow.inputSchema, value)
           : {};
-      if (Object.keys(businessErrors).length)
-        throw new Error(Object.entries(businessErrors).map(([path, message]) => `${path}: ${message}`).join("; "));
+      if (Object.keys(businessErrors).length) { setValidationMessage(Object.values(businessErrors).join("；")); return; }
       const issues = workflow
         ? validateLaunchValueForSchema(workflow.inputSchema, value)
         : [];
-      if (issues.length)
-        throw new Error(issues.map((i) => `${i.field}: ${i.issue}`).join("; "));
+      if (issues.length) { setValidationMessage("请检查业务信息中标出的内容，补齐或修正后再保存。"); return; }
       if (!schedule) setCreationUncertain(true);
       const saved = await mutations.saveSchedule.mutateAsync({
         ...draft,
@@ -110,6 +124,9 @@ function ScheduleEditor({ schedule }: { schedule?: Schedule }) {
       setError(null);
       setCreationUncertain(false);
       setDraft(saved);
+      setSavedValue(scheduleConfigKey(saved));
+      setSavedNotice("安排已保存，请查看下方状态确认何时生效。");
+      scheduleDrafts.delete(draftKey);
       navigate(`/scheduled-tasks/${encodeURIComponent(saved.id)}`);
     } catch (e) {
       if (
@@ -122,6 +139,8 @@ function ScheduleEditor({ schedule }: { schedule?: Schedule }) {
     }
   }
   async function trigger() {
+    scheduleTriggerDrafts.set(schedule!.id, triggerId);
+    setTriggerUncertain(true);
     try {
       const accepted = await mutations.triggerSchedule.mutateAsync({
         id: schedule!.id,
@@ -130,9 +149,15 @@ function ScheduleEditor({ schedule }: { schedule?: Schedule }) {
       if (accepted.status !== "accepted")
         throw new Error("尚未确认执行请求，请使用同一请求重试。");
       setError(null);
-      setAcceptedTrigger(accepted.triggerId);
+      setAcceptedTrigger(true);
+      setTriggerUncertain(false);
+      scheduleTriggerDrafts.delete(schedule!.id);
       setTriggerId(crypto.randomUUID());
     } catch (e) {
+      if (e instanceof ApiRequestError && [400, 404, 422].includes(e.status)) {
+        setTriggerUncertain(false);
+        scheduleTriggerDrafts.delete(schedule!.id);
+      }
       setError(e);
     }
   }
@@ -151,6 +176,7 @@ function ScheduleEditor({ schedule }: { schedule?: Schedule }) {
               <Button
                 disabled={
                   parametersDirty ||
+                  triggerUncertain ||
                   !draft.name ||
                   (!schedule && !workflow) ||
                   mutations.saveSchedule.isPending
@@ -164,12 +190,13 @@ function ScheduleEditor({ schedule }: { schedule?: Schedule }) {
                   variant="outline"
                   disabled={
                     !workflow ||
+                    changed || parametersDirty ||
                     schedule.desiredDeleted ||
                     mutations.triggerSchedule.isPending
                   }
                   onClick={() => void trigger()}
                 >
-                  立即执行
+                  {triggerUncertain ? "确认执行请求" : "立即执行"}
                 </Button>
               )}
             </div>
@@ -179,13 +206,18 @@ function ScheduleEditor({ schedule }: { schedule?: Schedule }) {
     >
       <FieldGroup>
         <RequestError error={error || packages.error} />
+        {validationMessage && <p role="alert" className="text-sm text-destructive">{validationMessage}</p>}
+        {(changed || parametersDirty) && <p role="status" className="text-sm">有尚未保存的修改。保存后才会用于自动执行；返回本页可继续编辑，刷新或关闭前请先保存。</p>}
+        {schedule && (changed || parametersDirty) && <p className="text-sm">立即执行使用已保存的安排，请先保存本次修改。</p>}
+        {savedNotice && !changed && <p role="status" className="text-sm">{savedNotice}</p>}
+        {triggerUncertain && <p role="alert">执行请求尚未确认，任务可能已经开始。请点击“确认执行请求”核对，避免重复执行。</p>}
         {schedule && (
           <InventoryStatePanel
             title={
               <ResourceStatusBadge
                 label={
                   schedule.desiredDeleted
-                    ? `正在删除 · ${schedule.syncStatus}`
+                    ? "正在停止未来自动执行"
                     : schedule.syncStatus === "synced"
                       ? "安排已生效"
                       : schedule.syncStatus === "failed"
@@ -196,17 +228,16 @@ function ScheduleEditor({ schedule }: { schedule?: Schedule }) {
               />
             }
             description={
-              schedule.syncErrorCode ??
-              (schedule.syncStatus === "synced"
-                ? `已生效版本 ${schedule.syncedRevision}`
-                : `版本 ${schedule.revision} 尚未生效。`)
+              schedule.syncStatus === "synced"
+                ? schedule.paused ? "未来自动执行已暂停，当前任务继续运行。" : "将按下方确认的时间自动执行。"
+                : schedule.syncStatus === "failed" ? "修改尚未生效，之前的安排可能仍在执行。请核对设置后再次保存，系统也会继续尝试。" : "正在应用修改，之前的安排可能仍在执行。请等待状态确认。"
             }
           />
         )}
         {acceptedTrigger && (
           <InventoryStatePanel
             title="已接受执行请求"
-            description={`请求 ${acceptedTrigger} 已进入执行队列，尚不代表任务完成。`}
+            description="任务正在准备开始，尚不代表任务完成。请在下方执行记录中跟进结果。"
             action={
               <Button asChild variant="outline">
                 <Link to="/runs">查看结果</Link>
@@ -218,7 +249,7 @@ function ScheduleEditor({ schedule }: { schedule?: Schedule }) {
           <InventoryStatePanel
             tone="warning"
             title="此任务已不可用"
-            description="立即执行 is unavailable. Timing and pause settings can still be saved."
+            description="暂时不能立即执行。你仍可修改时间或暂停安排；请到任务目录检查此任务。"
           />
         )}
         {creationUncertain && (
@@ -233,14 +264,14 @@ function ScheduleEditor({ schedule }: { schedule?: Schedule }) {
             ；系统会沿用同一请求，避免创建重复安排。
           </p>
         )}
-        <fieldset disabled={creationUncertain} className="min-w-0">
+        <fieldset disabled={creationUncertain || triggerUncertain} className="min-w-0">
           <FieldGroup>
             <TextField
               label="安排名称"
               value={draft.name}
               onChange={(v) => set("name", v)}
             />
-            {!expert && !schedule && !inherited && (
+            {!schedule && !inherited && (
               <ChoiceField
                 label="选择任务"
                 value={
@@ -272,44 +303,26 @@ function ScheduleEditor({ schedule }: { schedule?: Schedule }) {
                 }}
               />
             )}
-            <div hidden={!expert}>
-              <div className="flex flex-col gap-4">
-                <ChoiceField
-                  label="任务包"
-                  value={draft.packageKey}
-                  disabled={!!schedule}
-                  options={(packages.data?.items ?? []).map((p) => ({
-                    value: p.key,
-                    label: p.name,
-                  }))}
-                  onChange={(v) => {
-                    setDraft((d) => ({ ...d, packageKey: v, workflowKey: "" }));
-                    set("parameters", {});
-                    setParametersDirty(false);
-                  }}
-                />
-                <ChoiceField
-                  label="任务"
-                  value={draft.workflowKey}
-                  disabled={!!schedule}
-                  options={Object.entries(pkg?.definition.workflows ?? {}).map(
-                    ([value, w]) => ({ value, label: w.name || value }),
-                  )}
-                  onChange={(v) => {
-                    const selected = pkg?.definition.workflows[v];
-                    setDraft((current) => ({
-                      ...current,
-                      workflowKey: v,
-                      name: current.name || `${selected?.name || v} · 自动执行`,
-                      parameters: selected
-                        ? initialParameters(selected.inputSchema)
-                        : null,
-                    }));
-                    setParametersDirty(false);
-                  }}
-                />
-              </div>
-            </div>
+            {workflow && (
+              <>
+                <div>
+                  <LaunchInputs
+                    technical={false}
+                    key={`${draft.packageKey}/${draft.workflowKey}`}
+                    schema={workflow.inputSchema}
+                    inputHints={workflow.presentation?.inputHints}
+                    value={draft.parameters}
+                    onChange={(value) => set("parameters", value)}
+                    onDirtyChange={setParametersDirty}
+                  />
+                </div>
+                {parametersDirty && (
+                  <p role="alert">
+                    业务信息尚未填写完成，请检查后保存安排。
+                  </p>
+                )}
+              </>
+            )}
             <ScheduleTiming draft={draft} onChange={setDraft} />
             <p className="text-sm">
               上一次尚未结束时：{" "}
@@ -320,9 +333,7 @@ function ScheduleEditor({ schedule }: { schedule?: Schedule }) {
                   : "允许同时执行"}
               。错过执行超过 {draft.catchupWindowSeconds} 秒不再补跑。
             </p>
-            <details open={expert}>
-              <summary className="cursor-pointer text-sm">高级执行设置</summary>
-              <div className="mt-3 flex flex-col gap-4">
+            <div className="flex flex-col gap-4">
                 <ChoiceField
                   label="上一次尚未结束时"
                   value={draft.overlapPolicy}
@@ -339,45 +350,24 @@ function ScheduleEditor({ schedule }: { schedule?: Schedule }) {
                   }
                 />
                 <TextField
-                  label="错过执行的补跑期限（秒；超过期限不再补跑）"
+                  label="错过后多久内补做（秒）"
                   type="number"
                   value={String(draft.catchupWindowSeconds)}
                   onChange={(v) => set("catchupWindowSeconds", Number(v))}
                 />
-              </div>
-            </details>
+            </div>
             <ChoiceField
               label="自动执行状态"
               value={draft.paused ? "paused" : "active"}
               options={[
-                { value: "active", label: "已启用" },
-                { value: "paused", label: "已暂停" },
+                { value: "active", label: "启用自动执行" },
+                { value: "paused", label: "暂停自动执行" },
               ]}
               onChange={(v) => set("paused", v === "paused")}
             />
             <p className="text-sm text-muted-foreground">
               暂停只停止未来自动执行，不会取消当前任务。每次执行使用当时已保存的任务和连接，已有结果保持不变。
             </p>
-            {workflow && (
-              <>
-                <div>
-                  <LaunchInputs
-                    technical={expert}
-                    key={`${draft.packageKey}/${draft.workflowKey}`}
-                    schema={workflow.inputSchema}
-                    inputHints={workflow.presentation?.inputHints}
-                    value={draft.parameters}
-                    onChange={(value) => set("parameters", value)}
-                    onDirtyChange={setParametersDirty}
-                  />
-                </div>
-                {parametersDirty && !expert && (
-                  <p role="alert">
-                    专家输入尚未应用，请先应用或放弃修改，避免覆盖草稿。
-                  </p>
-                )}
-              </>
-            )}
           </FieldGroup>
         </fieldset>
         {schedule && (
@@ -385,6 +375,7 @@ function ScheduleEditor({ schedule }: { schedule?: Schedule }) {
             <AppliedSchedulePreview
               id={schedule.id}
               revision={schedule.revision}
+              syncStatus={schedule.syncStatus}
             />
             <ScheduleFireHistory scheduleId={schedule.id} />
             <p className="text-sm text-muted-foreground">

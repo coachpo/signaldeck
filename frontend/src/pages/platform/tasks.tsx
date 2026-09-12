@@ -86,7 +86,7 @@ export function TasksPage() {
                   <p className="text-sm">
                     {task.supported
                       ? "选择后核对所需连接和保存位置。"
-                      : "此任务通过完整 JSON 编辑输入。"}
+                      : "填写任务信息后，可核对连接并开始。"}
                   </p>
                   <TaskRecent
                     packageKey={task.packageKey}

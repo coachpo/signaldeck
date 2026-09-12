@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Field, FieldGroup } from "@/components/shared/form-field";
@@ -7,6 +7,8 @@ import { useResultMetadata, usePatchResultMetadata } from "@/hooks/use-result-me
 import type { ResultMetadata } from "@/lib/types/result-metadata";
 import { ApiRequestError } from "@/lib/api-client";
 import { RequestError } from "./feedback";
+type NoteDraft = { note: string; revision: number };
+const noteDrafts = new Map<string, NoteDraft>();
 
 export function ResultMetadataControls({ runId }: { runId: string }) {
   const query = useResultMetadata(runId);
@@ -16,7 +18,18 @@ export function ResultMetadataControls({ runId }: { runId: string }) {
 }
 function MetadataEditor({ metadata, refresh }: { metadata: ResultMetadata; refresh: () => void }) {
   const mutation = usePatchResultMetadata(metadata.runId);
-  const [draft, setDraft] = useState<{ note: string; revision: number } | null>(null);
+  const [draft, updateDraft] = useState<NoteDraft | null>(() => noteDrafts.get(metadata.runId) ?? null);
+  function setDraft(next: NoteDraft | null) {
+    if (next) noteDrafts.set(metadata.runId, next);
+    else noteDrafts.delete(metadata.runId);
+    updateDraft(next);
+  }
+  useEffect(() => {
+    if (!draft || draft.note === metadata.note) return;
+    const preserve = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ""; };
+    window.addEventListener("beforeunload", preserve);
+    return () => window.removeEventListener("beforeunload", preserve);
+  }, [draft, metadata.note]);
   const conflict = mutation.error instanceof ApiRequestError && mutation.error.status === 409;
   function patch(changes: { isFavorite?: boolean; isRead?: boolean }) {
     void mutation.mutateAsync({ expectedRevision: metadata.revision, ...changes }).catch(() => {});
@@ -38,7 +51,7 @@ function MetadataEditor({ metadata, refresh }: { metadata: ResultMetadata; refre
       <Button variant="outline" onClick={refresh}>读取最新标记</Button>
     </InlineStatePanel> : <RequestError error={mutation.error} />}
     {draft && <FieldGroup>
-      <Field label="个人备注" description="清空后保存可删除备注；不会修改执行结果。">
+      <Field label="个人备注" description="清空后保存可删除备注；不会修改执行结果。刷新或关闭页面前，请先保存备注。">
         <Textarea aria-label="个人备注" maxLength={20000} value={draft.note} onChange={(event) => setDraft({ ...draft, note: event.target.value })} />
       </Field>
       {draft.revision !== metadata.revision && <InlineStatePanel tone="warning" title="保存版本已变化" description={`最新已保存备注：${metadata.note || "（空）"}`}>

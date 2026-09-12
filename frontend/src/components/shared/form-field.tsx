@@ -82,7 +82,7 @@ export function ChoiceField({
       <Label htmlFor={id}>{label}</Label>
       <Select value={value} onValueChange={onChange} disabled={disabled}>
         <SelectTrigger id={id} aria-label={label}>
-          <SelectValue placeholder="Select…" />
+          <SelectValue placeholder="请选择…" />
         </SelectTrigger>
         <SelectContent>
           <SelectGroup>

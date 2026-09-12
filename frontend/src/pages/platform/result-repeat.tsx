@@ -17,7 +17,7 @@ export function ResultRepeat({
 }) {
   const command = usePendingResultRerun(result.runId);
   const [launchId] = useState(() => command.pending?.launchId ?? crypto.randomUUID());
-  const [showRepeat, setShowRepeat] = useState(false);
+  const [showRepeat, setShowRepeat] = useState(!!command.pending);
   const [unknownChecked, setUnknownChecked] = useState(!!command.pending);
   const task = useTaskMutations();
   const rerun = useResultRerun();
@@ -93,7 +93,7 @@ export function ResultRepeat({
                 checked={unknownChecked}
                 onChange={(e) => setUnknownChecked(e.target.checked)}
               />
-              我已核实目标位置与执行证据，确认需要再次执行
+              我已核实目标位置与执行过程，确认需要再次执行
             </label>
           )}
           <Button

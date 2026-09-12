@@ -37,8 +37,8 @@ export const queryKeys = {
     schedules: {
       ...resourceKeys("schedules"),
       fires: (id: string) => [...root, "schedules", "fires", id] as const,
-      preview: (id: string, revision?: number) =>
-        [...root, "schedules", "detail", id, "preview", revision] as const,
+      preview: (id: string, revision?: number, syncStatus?: string) =>
+        [...root, "schedules", "detail", id, "preview", revision, syncStatus] as const,
     },
     resources: {
       ...resourceKeys("resources"),

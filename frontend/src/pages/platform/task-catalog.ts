@@ -1,9 +1,27 @@
 import type { Json, JsonObject, WorkflowPackage } from "@/lib/types/workflow-platform";
 import { initialParameters, isJsonObject } from "@/lib/platform-authoring/parameter-values";
-import { createLaunchInputState } from "@/lib/platform-authoring/schema/launch-input-state";
 
 export function supportsTaskForm(schema: JsonObject) {
-  return createLaunchInputState(schema).schemaSupported;
+  const types = Array.isArray(schema.type) ? schema.type : [schema.type];
+  return types.every((type) => typeof type === "string" && ["object", "array", "string", "integer", "number", "boolean", "null"].includes(type));
+}
+
+export function inputFieldLabel(schema: JsonObject, path: string): string {
+  const tokens = path.replace(/^parameters\.?/, "").replace(/\[(\d+)\]/g, ".$1").split(".").filter(Boolean);
+  let node = schema;
+  const labels: string[] = [];
+  for (const token of tokens) {
+    if (Array.isArray(node.type) ? node.type.includes("array") : node.type === "array") {
+      labels.push(`第 ${Number(token) + 1} 项`);
+      node = isJsonObject(node.items ?? null) ? node.items as JsonObject : {};
+    } else {
+      const properties = isJsonObject(node.properties ?? null) ? node.properties as JsonObject : {};
+      const child = properties[token];
+      node = isJsonObject(child ?? null) ? child as JsonObject : {};
+      labels.push(typeof node.title === "string" ? node.title : token);
+    }
+  }
+  return labels.join(" / ") || (typeof schema.title === "string" ? schema.title : "任务信息");
 }
 
 /** Initial values are used only when creating a new input draft. */

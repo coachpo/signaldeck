@@ -83,10 +83,10 @@ test("running cancellation reports actual stopped state and does not fabricate o
       ),
     ).toBe(false);
     await page
-      .getByRole("link", { name: "技术详情与调用证据", exact: true })
+      .getByRole("link", { name: "查看执行过程", exact: true })
       .click();
-    await page.getByRole("tab", { name: "Call evidence", exact: true }).click();
-    await expect(page.getByLabel("Call ownership tree")).toBeVisible();
+    await page.getByRole("tab", { name: "执行过程", exact: true }).click();
+    await expect(page.getByLabel("步骤与服务操作")).toBeVisible();
     await page.screenshot({
       path: testInfo.outputPath("cancelled-run.png"),
       fullPage: true,

@@ -172,7 +172,7 @@ function promptForApiToken(): string | null {
     return null;
   }
 
-  const token = window.prompt("API token")?.trim();
+  const token = window.prompt("请输入访问口令以继续使用 SignalDeck")?.trim();
   if (!token) {
     return null;
   }
@@ -418,8 +418,8 @@ async function downloadFileWithBaseUrl(
   const response = await fetchWithBaseUrl(baseUrl, path, options, "*/*");
   const blob = await response.blob();
   const filename =
-    filenameFromContentDisposition(response.headers.get("content-disposition")) ??
     options.filename ??
+    filenameFromContentDisposition(response.headers.get("content-disposition")) ??
     "download";
 
   triggerBrowserDownload(blob, filename);

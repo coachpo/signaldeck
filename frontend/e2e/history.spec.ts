@@ -71,11 +71,12 @@ test("UX03: complete history preserves filters, respects local dates and refresh
     page.getByRole("heading", { name: `${prefix} 26`, exact: true }),
   ).toBeVisible();
   await page
-    .getByRole("link", { name: "技术详情与调用证据", exact: true })
+    .getByRole("link", { name: "查看执行过程", exact: true })
     .click();
   await page
-    .getByRole("tab", { name: "Immutable snapshot", exact: true })
+    .getByRole("tab", { name: "本次设置", exact: true })
     .click();
+  await expect(page.getByRole("region", { name: "本次输入", exact: true })).toContainText(`Immutable original for ${prefix} 26`);
   await page.getByRole("link", { name: "返回结果", exact: true }).click();
   await page.getByRole("link", { name: "全部结果", exact: true }).click();
   await expect(page).toHaveURL(secondPage);

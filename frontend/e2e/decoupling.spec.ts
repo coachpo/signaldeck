@@ -77,7 +77,11 @@ for (const renamed of [false, true]) {
     await expect(caption).toHaveValue("Draft exhibit");
     await expect(caption).toHaveAttribute("placeholder", "Describe this exhibit");
     expect(await caption.evaluate((element) => element.tagName)).toBe("TEXTAREA");
+    await caption.fill("");
+    await expect(page.getByText("请至少填写 1 个字符。", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "开始任务", exact: true })).toBeDisabled();
     await caption.fill("Explicit exhibit caption");
+    await expect(page.getByRole("tab", { name: /JSON/ })).toHaveCount(0);
     await page.getByRole("switch", { name: "专家模式", exact: true }).check();
     await page.getByRole("switch", { name: "专家模式", exact: true }).uncheck();
     await expect(caption).toHaveValue("Explicit exhibit caption");
@@ -127,7 +131,7 @@ for (const renamed of [false, true]) {
       await expect(caption).toHaveValue("Explicit exhibit caption");
       await page.getByLabel("安排名称").fill(`Exhibit schedule ${key}`);
       await page.getByRole("combobox", { name: "自动执行状态", exact: true }).click();
-      await page.getByRole("option", { name: "已暂停", exact: true }).click();
+      await page.getByRole("option", { name: "暂停自动执行", exact: true }).click();
       const saving = page.waitForResponse((response) => response.url() === `${apiBase}/schedules` && response.request().method() === "POST");
       await page.getByRole("button", { name: "启用自动执行", exact: true }).click();
       const saved = await saving;

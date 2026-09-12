@@ -1,7 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
-const BACKEND_PORT = 8001;
-const FRONTEND_PORT = 4173;
+const BACKEND_PORT = Number(process.env.SIGNALDECK_E2E_BACKEND_PORT ?? 8001);
+const FRONTEND_PORT = Number(process.env.SIGNALDECK_E2E_FRONTEND_PORT ?? 4173);
 
 export default defineConfig({
   testDir: "./e2e",

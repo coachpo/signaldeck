@@ -16,6 +16,7 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const backendDir = resolve(__dirname, "..", "..", "backend");
+const backendPort = process.env.SIGNALDECK_E2E_BACKEND_PORT ?? "8001";
 const fakeProviderPort = process.env.SIGNALDECK_FAKE_PROVIDER_PORT ?? "18081";
 const fakeProviderBaseUrl =
   process.env.SIGNALDECK_FAKE_PROVIDER_BASE_URL ??
@@ -278,6 +279,10 @@ async function main() {
     OTEL_EXPORTER_OTLP_METRICS_ENDPOINT: "",
     OTEL_EXPORTER_OTLP_LOGS_ENDPOINT: "",
     SIGNALDECK_API_TOKEN: "",
+    CORS_ALLOWED_ORIGINS: [
+      `http://127.0.0.1:${process.env.SIGNALDECK_E2E_FRONTEND_PORT ?? "4173"}`,
+      `http://localhost:${process.env.SIGNALDECK_E2E_FRONTEND_PORT ?? "4173"}`,
+    ].join(","),
     SIGNALDECK_FAKE_PROVIDER_BASE_URL: fakeProviderBaseUrl,
     SIGNALDECK_FAKE_PROVIDER_PORT: fakeProviderPort,
   };
@@ -382,7 +387,7 @@ async function main() {
     "--host",
     "127.0.0.1",
     "--port",
-    "8001",
+    backendPort,
   ]);
 }
 

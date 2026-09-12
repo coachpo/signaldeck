@@ -52,17 +52,17 @@ describe("platform shell", () => {
       "data-route-shell-mode",
       "fullHeight",
     );
-    const source = await screen.findByLabelText("Workflow Package YAML");
+    const source = await screen.findByLabelText("工作流集名称");
     expect(source).toBeVisible();
-    fireEvent.change(source, { target: { value: "unfinished: [draft" } });
+    fireEvent.change(source, { target: { value: "继续制作访谈工作流" } });
     fireEvent.click(screen.getByRole("switch", { name: "专家模式" }));
     fireEvent.click(screen.getByRole("switch", { name: "专家模式" }));
-    expect(source).toHaveValue("unfinished: [draft");
+    expect(source).toHaveValue("继续制作访谈工作流");
   });
   it("does not restore historical product entry points", async () => {
     renderRoute("/templates");
     expect(
-      await screen.findByRole("heading", { name: "Page not found" }),
+      await screen.findByRole("heading", { name: "找不到页面" }),
     ).toBeVisible();
   });
 });

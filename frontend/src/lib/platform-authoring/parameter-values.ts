@@ -1,8 +1,5 @@
 import { parseJsonValue } from "./common/serialization";
-import { parseSchemaJsonObject } from "./schema/codec";
-import { createLaunchInputState } from "./schema/launch-input-state";
-import { createValueEntryForSchema } from "./values/factories";
-import { decodeValueEntry } from "./values/codec";
+import { newInputValue } from "./schema/input-values";
 import type { Json, JsonObject } from "@/lib/types/workflow-platform";
 export function isJsonObject(value: Json): value is JsonObject {
   return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -21,12 +18,5 @@ export function parseParameters(text: string): Json {
   return value;
 }
 export function initialParameters(schema: JsonObject): Json {
-  if (schema["x-signaldeck-schema"] === "signaldeck.schema/2" && Object.prototype.hasOwnProperty.call(schema, "default"))
-    return structuredClone(schema.default);
-  const object = createLaunchInputState(schema);
-  if (object.schemaSupported) return object.payload as Json;
-  const parsed = parseSchemaJsonObject(schema);
-  return parsed.builder
-    ? (decodeValueEntry(createValueEntryForSchema(parsed.builder)) as Json)
-    : null;
+  return newInputValue(schema);
 }

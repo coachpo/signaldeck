@@ -2,7 +2,15 @@
 
 ## 目的
 
-SignalDeck 是一个用于 Workflow Package、Agent 定义、资源绑定、Scheduled Task、Run 和 Plugin 目录的高密度管理界面。Finance 的 Template 和 Report 由独立插件页面拥有。设计系统在不改变产品行为的前提下保持这些页面一致。当前视觉语言是紧凑企业后台：灰白画布、细分隔线、约 14px 正文、统一 4–6px 圆角、表格优先和清晰键盘 focus。普通模式默认使用任务、结果与设置；专家模式增加制作和诊断入口，切换只改变展示，不改写业务配置或卸载当前草稿。
+SignalDeck 帮助用户完成任务、阅读结果、复用常用配置、安排自动执行和制作工作流。Finance 的格式和报告由独立插件页面拥有。设计系统保持这些页面的操作与视觉一致。当前视觉语言是紧凑企业后台：灰白画布、细分隔线、约 14px 正文、统一 4–6px 圆角、表格优先和清晰键盘 focus。普通模式默认使用任务、结果与设置；专家模式增加制作、服务和执行控制，切换只改变展示，不改写业务配置或卸载当前草稿。
+
+## 产品语言与控制
+
+遵循[产品界面合同](../docs/产品说明.md#产品范围)。所有模式、插件页面、提示、弹窗、错误、空状态、加载状态、结果和折叠区均不得展示平台内部身份、原始 API 响应、堆栈、存储路径、schema、调度引擎或资源绑定。复杂能力使用字段、列表、选项、步骤、条件、资料来源、服务和预算控件，不能要求 JSON/YAML/cron 输入，也不能仅改名、补长篇说明或删除能力。
+
+每一步说明当前状态、需要用户做什么、操作后的结果。结果未确认时指出不确定内容及可执行的核对方式；请求取消与已经停止分别表达。服务配置与最近成功记录不等于实时在线。错误说明应基于已知类别，无法确认原因时如实表达并保留重试、返回或修复入口。
+
+业务草稿在当前应用内导航和模式切换后保留；刷新或关闭前提醒先保存。任务显式服务器草稿可刷新恢复，浏览器持久存储不保存业务输入或凭据。用户正文、代码及原始业务附件保持原文，不通过术语过滤改写。
 
 ## 系统层次
 
@@ -24,7 +32,7 @@ SignalDeck 是一个用于 Workflow Package、Agent 定义、资源绑定、Sche
 - `Layout` 负责 app shell、sidebar、breadcrumb、scroll mode、full-height mode 和 route width。
 - inventory route 使用 `InventoryPageShell`、`PageContextBar`、`ResourceToolbar`、可选 `ResourceFilterBar` 和 route-owned content。
 - full-height editor 与 console 使用 `WorkspacePageShell`。
-- 可检查的 source/detail 工作区使用 `WorkspacePageShell`，由 feature 组合 source 与详情布局；结构化值和原始 JSON 分别复用 `StructuredValueInspector` 与 `ExactJsonPreview`。
+- 制作和执行详情工作区使用 `WorkspacePageShell`，由 feature 组合业务控件与详情布局。结构化业务值按字段与列表阅读；只有用户原始业务附件需要字面内容预览时才使用原文预览，不把平台快照或原始响应作为产品详情。
 - 避免嵌套 page shell 和 route-local top-level layout wrapper。
 
 ## 组件规则

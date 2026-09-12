@@ -10,7 +10,7 @@ Notes 1.2.0 serves a read-only workspace at `/`, alongside its existing immutabl
 
 Reads do not create operations or modify notes. Errors use `{code, message, details: []}`. There are no HTTP edit/delete or secondary write endpoints.
 
-The workspace keeps collection, literal query and the cursor chain in its URL; detail uses `noteId`, so refresh, direct links, browser navigation and return-to-list preserve context. Content is rendered as text and can be copied. Unknown IDs and unavailable reads have explicit messages.
+The workspace keeps collection, literal query and the cursor chain in its URL; detail uses `noteId`, so refresh, direct links, browser navigation and return-to-list preserve context. Search controls stay disabled while the list is loading, including before the first collection response, so initialization cannot overwrite an in-progress selection. Content is rendered as text and can be copied. Unknown records and unavailable reads have explicit messages and a retry action. Source references resolve to readable note titles; an unavailable source leaves the main note readable, states that its content cannot be checked, and offers a source retry link. Internal note identities are never rendered in the page. User bodies remain unchanged.
 
 ## Frozen result links
 
@@ -18,7 +18,7 @@ The `example/notes/create` descriptor declares `signaldeck.resultLink/1`, key `n
 
 ## Validation
 
-From `backend`, run `uv run pytest tests/test_notes_workspace.py tests/test_independent_plugins.py tests/test_result_declarations.py -q`. Tests use isolated PostgreSQL and real MCP transport, covering literal search, collection isolation, pagination, 200-character identity limits, read-only behavior and frozen projections. Browser evidence and the joint acceptance boundary are recorded in [PU-S6 verification](../../docs/planning/personal-use-s6-verification.md).
+From `backend`, run `uv run pytest tests/test_notes_workspace.py tests/test_notes_browser.py tests/test_independent_plugins.py tests/test_result_declarations.py -q`. Tests use isolated PostgreSQL and real MCP transport, covering literal search, collection isolation, pagination, 200-character identity limits, read-only behavior and frozen projections. Browser evidence and the joint acceptance boundary are recorded in [PU-S6 verification](../../docs/planning/personal-use-s6-verification.md).
 
 ## Provenance and retrieval
 
@@ -26,6 +26,6 @@ The closed 1.2.0 create contract accepts optional `sourceKind` (`original` or `d
 
 Notes, the `note_provenance` sidecar (`note_id`, `source_kind`, `source_ids`) and the operation receipt commit in the same journal transaction. Startup creates the new table but never alters or backfills existing `notes`. Historical rows without sidecars remain visible as `unclassified`, and their bodies and operation receipts remain unchanged. Existing deployments require a separately published immutable artifact/endpoint; do not replace artifacts serving frozen runs or convert original instance data as part of this change.
 
-MCP search returns both `notes` and `sourceNoteIds` identifying exactly those returned notes. Optional `includeDerived` defaults to true for generic callers. False excludes only explicit `derived` rows and retains original and historical unclassified notes. The read-only HTTP list accepts the same filter. The Notes page defaults to original/unclassified and offers an explicit “包含派生内容” selector, displays classification and provides source links in detail.
+MCP search returns both `notes` and `sourceNoteIds` identifying exactly those returned notes. Optional `includeDerived` defaults to true for generic callers. False excludes only explicit `derived` rows and retains original and historical unclassified notes. The read-only HTTP list accepts the same filter. The Notes page defaults to original/unclassified and offers an explicit “包含整理结果” selector, displays classification and provides titled source links in detail. A derived record without references explicitly states that its source evidence must be checked in the body. Browser regression evidence is written to `output/playwright/notes-ux/`.
 
 The revised research workflow explicitly defaults `includeDerived` to false, saves derived results with search references, preserves conflicting original claims, and never makes its saved summaries new default search inputs. Capture marks new material original. Users may explicitly include derived material. Every new run searches current records, so new originals remain discoverable; the query and 20-record limit still bound the selected result set. This is explicit package data, not platform memory or title-based filtering.

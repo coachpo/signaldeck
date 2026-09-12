@@ -1,52 +1,27 @@
 import { Link } from "react-router";
 import { ArrowLeft, SearchX } from "lucide-react";
-
 import { CanonicalErrorPage } from "@/components/shared/canonical-error-page";
-import { ProvenanceBadge } from "@/components/shared/provenance-badge";
 import { Button } from "@/components/ui/button";
 
 export function NotFoundPage() {
   return (
     <CanonicalErrorPage
-      action={
-        <Button asChild size="sm">
-          <Link to="/workflow-packages">
-            <ArrowLeft data-icon="inline-start" />
-            Open workflow packages
-          </Link>
-        </Button>
-      }
+      action={<Button asChild size="sm"><Link to="/"><ArrowLeft data-icon="inline-start" />返回任务首页</Link></Button>}
       contentClassName="min-h-0 justify-start"
       contentTestId="not-found-content"
-      description="The requested path did not match any registered SignalDeck route metadata."
+      description="链接可能已失效，或这项内容已经移除。"
       descriptionTestId="not-found-description"
       icon={<SearchX className="size-4" />}
-      meta={
-        <>
-          <ProvenanceBadge detail="catch-all" label="Route owner" />
-          <ProvenanceBadge
-            detail="product fallback"
-            label="Shell"
-            tone="verified"
-          />
-        </>
-      }
+      meta={null}
       metaTestId="not-found-meta"
-      panelDescription="The workspace path you requested is not registered in SignalDeck. Return to a known route to continue your workflow."
+      panelDescription="可以返回首页选择任务，或从结果页找回已完成的内容。"
       panelTestId="not-found-panel"
-      panelTitle="Unknown route"
+      panelTitle="继续使用 SignalDeck"
       rootClassName="min-h-[calc(100vh-3rem)]"
-      statusItems={[
-        { label: "State", tone: "warning", value: "Not found" },
-        {
-          label: "Fallback",
-          tone: "neutral",
-          value: "Workflow packages",
-        },
-      ]}
+      statusItems={[{ label: "当前状态", tone: "warning", value: "页面不可用" }]}
       statusTestId="not-found-status"
       testId="not-found-page"
-      title="Page not found"
+      title="找不到页面"
       tone="warning"
     />
   );

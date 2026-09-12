@@ -117,6 +117,32 @@ def test_compiler_diagnostics_and_missing_report(finance_client):
     assert client.get("/api/reports/missing").status_code == 404
 
 
+def test_business_labels_preserve_report_identity(finance_client):
+    client = finance_client
+    report = client.app.state.execute(
+        "signaldeck/finance/reports_create",
+        {"name": "季度研究", "content": "保持原始正文。"},
+        {
+            "operationId": "business-label-operation",
+            "runId": "internal-run",
+            "nodeId": "internal-node",
+            "invocationId": "internal-invocation",
+        },
+    )
+    assert report["name"].startswith("季度研究_")
+    tree = client.get("/api/templates/placeholders").json()
+    assert tree["reports"][0]["name"] == report["name"]
+    assert tree["reports"][0]["label"] == "季度研究"
+    content = "<!-- input: field_1 | 本周进展 | required -->\n{{inputs}}\n{{reports.latest.name}}"
+    compiled = client.post(
+        "/api/templates/compile",
+        json={"content": content, "inputs": {"field_1": "已完成"}},
+    ).json()["compiled"]
+    assert "本周进展: 已完成" in compiled
+    assert "季度研究" in compiled and report["name"] not in compiled
+    assert client.get(f"/api/reports/{report['slug']}").json()["content"] == "保持原始正文。"
+
+
 def test_actual_browser_flow(finance_client):
     """Actual Finance HTTP + PostgreSQL, not route mocks or synthetic UI responses."""
     import socket
@@ -143,6 +169,16 @@ def test_actual_browser_flow(finance_client):
             "/api/reports",
             json={"name": f"Report {index:02d}", "content": "Historical evidence"},
         )
+    client.app.state.execute(
+        "signaldeck/finance/reports_create",
+        {"name": "任务生成结果", "content": "任务保存的原始正文。"},
+        {
+            "operationId": "browser-private-operation",
+            "runId": "browser-private-run",
+            "nodeId": "browser-private-node",
+            "invocationId": "browser-private-invocation",
+        },
+    )
     sock = socket.socket()
     sock.bind(("127.0.0.1", 0))
     port = sock.getsockname()[1]

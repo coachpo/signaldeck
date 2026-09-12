@@ -241,7 +241,7 @@ export function ResultHistoryPage() {
                   </TableCell>
                   <TableCell>
                     {tasks.find((t) => t.packageKey === run.packageKey && t.workflowKey === run.workflowKey)?.title ??
-                      run.workflowKey}
+                      "历史任务"}
                   </TableCell>
                   <TableCell>{originLabels[run.origin.kind]}</TableCell>
                   <TableCell>

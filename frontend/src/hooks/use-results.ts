@@ -6,11 +6,23 @@ import { resultsApi, rerunResult } from "@/lib/api/results";
 import { isRunActive } from "./use-workflow-platform";
 type PendingRerun = { launchId: string; preparation: Preparation };
 const pendingReruns = new WeakMap<QueryClient, Map<string, PendingRerun>>();
+function readPendingRerun(runId: string): PendingRerun | undefined {
+  try {
+    const value = JSON.parse(sessionStorage.getItem(`signaldeck:pending-rerun:${runId}`) ?? "null");
+    if (!value || typeof value.launchId !== "string" || typeof value.bindingToken !== "string") return undefined;
+    return { launchId: value.launchId, preparation: {
+      packageKey: typeof value.packageKey === "string" ? value.packageKey : "",
+      workflowKey: typeof value.workflowKey === "string" ? value.workflowKey : "",
+      packageHash: typeof value.packageHash === "string" ? value.packageHash : "",
+      bindingToken: value.bindingToken, ready: true, requirements: [], issues: [], changedBindings: [], previousBindings: {}, effectiveSettings: {},
+    } };
+  } catch { return undefined; }
+}
 
-/** Keep uncertain commands through evidence navigation without persisting business data. */
+/** Preserve the same uncertain command across navigation and refresh in this tab. */
 export function usePendingResultRerun(runId: string) {
   const client = useQueryClient();
-  const [pending, setPending] = useState(() => pendingReruns.get(client)?.get(runId));
+  const [pending, setPending] = useState(() => pendingReruns.get(client)?.get(runId) ?? readPendingRerun(runId));
   return {
     pending,
     retain(command: PendingRerun) {
@@ -20,10 +32,15 @@ export function usePendingResultRerun(runId: string) {
         pendingReruns.set(client, commands);
       }
       commands.set(runId, command);
+      try { sessionStorage.setItem(`signaldeck:pending-rerun:${runId}`, JSON.stringify({
+        launchId: command.launchId, bindingToken: command.preparation.bindingToken,
+        packageKey: command.preparation.packageKey, workflowKey: command.preparation.workflowKey, packageHash: command.preparation.packageHash,
+      })); } catch { /* In-memory recovery remains available when browser storage is disabled. */ }
       setPending(command);
     },
     clear() {
       pendingReruns.get(client)?.delete(runId);
+      try { sessionStorage.removeItem(`signaldeck:pending-rerun:${runId}`); } catch { /* Browser storage may be unavailable. */ }
       setPending(undefined);
     },
   };

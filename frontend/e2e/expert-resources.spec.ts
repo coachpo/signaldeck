@@ -1,0 +1,43 @@
+import { expect, test, type Page } from "@playwright/test";
+import { apiBase, seed } from "./platform-fixtures";
+async function roundtrip(page: Page) {
+  const mode = page.getByRole("switch", { name: "专家模式", exact: true });
+  await mode.check(); await mode.uncheck(); await mode.check();
+}
+test("expert service forms and installation review preserve drafts across modes without writing credentials", async ({ page, request }, testInfo) => {
+  const { model } = await seed(request);
+  const resource = (await (await request.get(`${apiBase}/resources`)).json()).items.find((item: { resourceId: string }) => item.resourceId === model);
+  const name = `体验复测模型 ${crypto.randomUUID().slice(0, 8)}`;
+  expect((await request.post(`${apiBase}/resources`, { data: { resourceId: model, kind: "model", config: { ...resource.config, name } } })).ok()).toBeTruthy();
+  const releaseResponse = await request.get(`http://127.0.0.1:${process.env.SIGNALDECK_E2E_NOTES_PORT ?? "18082"}/release`);
+  expect(releaseResponse.ok(), await releaseResponse.text()).toBeTruthy();
+  const release = await releaseResponse.json();
+  const installed = await request.post(`${apiBase}/plugins`, { data: { release, enabled: true } });
+  expect(installed.ok(), await installed.text()).toBeTruthy();
+  await page.goto("/resources");
+  await page.getByRole("button", { name: `编辑 ${name}`, exact: true }).click();
+  await page.getByLabel("连接名称", { exact: true }).fill("尚未保存的分析服务");
+  await page.getByLabel("最长等待时间（秒）", { exact: true }).fill("37");
+  await page.getByLabel("服务密钥", { exact: true }).fill("controlled-draft-not-saved");
+  const writes: string[] = [];
+  page.on("request", (req) => { if (["POST", "PUT", "PATCH", "DELETE"].includes(req.method())) writes.push(req.url()); });
+  await roundtrip(page);
+  await expect(page.getByLabel("连接名称", { exact: true })).toHaveValue("尚未保存的分析服务");
+  await expect(page.getByLabel("最长等待时间（秒）", { exact: true })).toHaveValue("37");
+  await expect(page.getByLabel("服务密钥", { exact: true })).toHaveValue("controlled-draft-not-saved");
+  expect(await page.evaluate(() => JSON.stringify({ local: { ...localStorage }, session: { ...sessionStorage } }))).not.toContain("controlled-draft-not-saved");
+  expect(writes).toEqual([]);
+  await page.getByLabel("服务密钥", { exact: true }).fill("");
+  await page.screenshot({ path: testInfo.outputPath("expert-resource-draft.png"), fullPage: true });
+  await page.getByRole("link", { name: "扩展服务", exact: true }).click();
+  await page.getByLabel("选择安装文件", { exact: true }).setInputFiles({ name: "service-install.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(release)) });
+  await expect(page.getByRole("region", { name: "待添加的服务" })).toBeVisible();
+  await roundtrip(page);
+  await expect(page.getByRole("region", { name: "待添加的服务" })).toContainText("service-install.json");
+  await expect(page.getByRole("button", { name: "更新服务", exact: true })).toBeDisabled();
+  expect(writes).toEqual([]);
+  await page.screenshot({ path: testInfo.outputPath("expert-plugin-installation.png"), fullPage: true });
+  await page.getByRole("button", { name: "放弃本次选择", exact: true }).click();
+  await page.getByRole("link", { name: "服务连接", exact: true }).click();
+  await expect(page.getByLabel("连接名称", { exact: true })).toHaveValue("尚未保存的分析服务");
+});

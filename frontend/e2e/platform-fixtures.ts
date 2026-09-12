@@ -1,6 +1,6 @@
 import { expect, type APIRequestContext } from "@playwright/test";
 import { stringify } from "yaml";
-export const apiBase = "http://127.0.0.1:8001/api";
+export const apiBase = `http://127.0.0.1:${process.env.SIGNALDECK_E2E_BACKEND_PORT ?? "8001"}/api`;
 export function packageSource(key: string, model: string) {
   const schema = {
     type: "object",
@@ -60,7 +60,7 @@ export async function seed(request: APIRequestContext) {
         name: "Fake E2E model",
         baseUrl:
           process.env.SIGNALDECK_FAKE_PROVIDER_BASE_URL ??
-          "http://127.0.0.1:18081/v1",
+          `http://127.0.0.1:${process.env.SIGNALDECK_FAKE_PROVIDER_PORT ?? "18081"}/v1`,
         modelId: "fake-e2e-model",
         apiStyle: "chat_completions",
         timeoutSeconds: 30,

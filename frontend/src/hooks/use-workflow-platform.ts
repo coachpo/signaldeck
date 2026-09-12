@@ -52,7 +52,7 @@ export function usePlatformSchedules() {
     refetchInterval: (q) =>
       q.state.data?.items.some((s) => s.syncStatus === "pending")
         ? 1000
-        : false,
+        : q.state.data?.items.some((s) => s.syncStatus === "failed") ? 5000 : false,
   });
 }
 export function usePlatformSchedule(id?: string) {
@@ -61,7 +61,7 @@ export function usePlatformSchedule(id?: string) {
     queryFn: () => api.schedule(id!),
     enabled: !!id,
     refetchInterval: (q) =>
-      q.state.data?.syncStatus === "pending" ? 1000 : false,
+      q.state.data?.syncStatus === "pending" ? 1000 : q.state.data?.syncStatus === "failed" ? 5000 : false,
   });
 }
 export function useScheduleFires(id: string) {

@@ -23,9 +23,10 @@ export function useSchedulePreview() {
 export function useAppliedSchedulePreview(
   id: string | undefined,
   revision?: number,
+  syncStatus?: string,
 ) {
   return useQuery({
-    queryKey: queryKeys.platform.schedules.preview(id ?? "", revision),
+    queryKey: queryKeys.platform.schedules.preview(id ?? "", revision, syncStatus),
     queryFn: () =>
       requestPlatform<SchedulePreview>(
         `/schedules/${toPathSegment(id!)}/preview`,
@@ -33,5 +34,6 @@ export function useAppliedSchedulePreview(
     enabled: !!id,
     retry: false,
     staleTime: 60_000,
+    refetchInterval: (query) => query.state.data && query.state.data.desiredRevision !== query.state.data.syncedRevision ? 1000 : false,
   });
 }

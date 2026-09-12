@@ -1,9 +1,10 @@
 import { ModelUsagePanel } from "./model-usage-panel";
-import { connectionName } from "./task-labels";
+import { pluginName } from "./connection-model";
+import { PluginHealth } from "./plugin-health";
 import { Link } from "react-router";
 import { useState } from "react";
 import { InventoryPageShell } from "@/components/shared/inventory-page-shell";
-import { Field, FieldGroup } from "@/components/shared/form-field";
+import { Field, FieldGroup, ChoiceField } from "@/components/shared/form-field";
 import {
   Card,
   CardHeader,
@@ -11,7 +12,6 @@ import {
   CardDescription,
   CardContent,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -25,6 +25,7 @@ export function SettingsPage() {
   const { expert, setExpert, timeZone, setTimeZone } = useDisplayMode();
   const [zone, setZone] = useState(timeZone);
   const [zoneError, setZoneError] = useState("");
+  const [zoneSaved, setZoneSaved] = useState(false);
   const plugins = usePlugins();
   const resources = useResources();
   function saveZone() {
@@ -32,8 +33,9 @@ export function SettingsPage() {
       new Intl.DateTimeFormat("zh-CN", { timeZone: zone }).format();
       setTimeZone(zone);
       setZoneError("");
+      setZoneSaved(true);
     } catch {
-      setZoneError("请选择有效时区，例如 Asia/Shanghai。");
+      setZoneError("请选择有效的城市时区。");
     }
   }
   return (
@@ -66,24 +68,18 @@ export function SettingsPage() {
               <Field
                 label="新安排的默认时区"
                 invalid={!!zoneError}
-                description={zoneError || `当前偏好：${timeZone}`}
+                description={zoneError || "新建自动执行时使用这个时区。已经保存的安排保持原时区。"}
               >
-                <Input
-                  aria-label="默认时区"
-                  aria-invalid={!!zoneError}
-                  list="display-timezones"
+                <ChoiceField
+                  label="默认时区"
                   value={zone}
-                  onChange={(event) => setZone(event.target.value)}
+                  onChange={(value) => { setZone(value); setZoneSaved(false); }}
+                  options={[...new Set(["UTC", timeZone, ...Intl.supportedValuesOf("timeZone")])].map((value) => ({ value, label: `${value.split("/").at(-1)?.replaceAll("_", " ")} · ${new Intl.DateTimeFormat("zh-CN", { timeZone: value, timeZoneName: "longGeneric" }).formatToParts().find((part) => part.type === "timeZoneName")?.value ?? value}` }))}
                 />
-                <datalist id="display-timezones">
-                  {Intl.supportedValuesOf("timeZone").map((value) => (
-                    <option key={value} value={value} />
-                  ))}
-                  <option value="UTC" />
-                </datalist>
                 <Button variant="outline" onClick={saveZone}>
                   保存时区偏好
                 </Button>
+                {zoneSaved && <p role="status" className="text-sm">已保存时区偏好。</p>}
               </Field>
             </FieldGroup>
           </CardContent>
@@ -93,7 +89,7 @@ export function SettingsPage() {
           <CardHeader>
             <CardTitle>已连接服务</CardTitle>
             <CardDescription>
-              配置存在不代表服务在线；最近调用记录反映实际观测。
+              最近使用记录帮助判断服务状态；尚未使用的连接需要通过任务执行确认。
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-3">
@@ -113,14 +109,10 @@ export function SettingsPage() {
                 >
                   <div>
                     <p>
-                      {connectionName(plugin.pluginId, plugin.pluginId)} ·{" "}
+                      {pluginName(plugin.release)} ·{" "}
                       {plugin.enabled ? "已启用" : "未启用"}
                     </p>
-                    <p className="text-sm text-muted-foreground">
-                      {plugin.health.observedAt
-                        ? `最近调用：${plugin.health.status} · ${plugin.health.observedAt}`
-                        : "尚无调用观测"}
-                    </p>
+                    <PluginHealth health={plugin.health} />
                   </div>
                   {plugin.enabled && url && (
                     <Button asChild variant="outline">
@@ -133,7 +125,7 @@ export function SettingsPage() {
               );
             })}
             {plugins.data?.items.length === 0 && (
-              <p>还没有登记服务。选择任务后可查看所需连接。</p>
+              <p>还没有添加扩展服务。选择任务后可查看所需连接。</p>
             )}
             {resources.data && resources.data.items.length > 0 && (
               <TaskConnections
@@ -161,16 +153,14 @@ export function SettingsPage() {
             <Button asChild variant="outline">
               <Link to="/">选择任务并检查连接</Link>
             </Button>
-            {expert && (
               <div className="flex flex-wrap gap-2">
                 <Button asChild variant="outline">
-                  <Link to="/resources">完整资源配置</Link>
+                  <Link to="/resources">管理服务连接</Link>
                 </Button>
                 <Button asChild variant="outline">
-                  <Link to="/plugins">插件发布与诊断</Link>
+                  <Link to="/plugins">管理扩展服务</Link>
                 </Button>
               </div>
-            )}
           </CardContent>
         </Card>
       </div>

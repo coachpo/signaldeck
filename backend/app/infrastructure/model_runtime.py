@@ -165,11 +165,16 @@ class GatewayModel(Model):
             )
             return response
         except asyncio.CancelledError:
+            cancellation = activity.cancellation_details()
+            # A lost activity lease is retryable; it does not confirm that the
+            # logical model call was cancelled by its workflow. Terminal evidence
+            # would otherwise prevent Temporal's next attempt from recovering it.
+            runtime_interrupted = activity.is_worker_shutdown() or (
+                cancellation is not None and not cancellation.cancel_requested
+            )
             updates = {
-                "status": "unknown" if activity.is_worker_shutdown() else "cancelled",
-                "error_code": (
-                    "worker_interrupted" if activity.is_worker_shutdown() else "model_cancelled"
-                ),
+                "status": "unknown" if runtime_interrupted else "cancelled",
+                "error_code": "worker_interrupted" if runtime_interrupted else "model_cancelled",
                 "finished_at": datetime.now(UTC),
             }
             await asyncio.shield(

@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
 import { workflowPlatformApi } from "@/lib/api/workflow-platform";
 import type { ConfirmedContent } from "@/pages/platform/result-delivery";
+import { projectedArtifactText } from "@/pages/platform/result-artifact-presentation";
 
 export function useResultArtifactSelection() {
   const client = useQueryClient();
@@ -19,7 +20,7 @@ export function useResultArtifactSelection() {
         queryKey: queryKeys.platform.artifacts.detail(artifact.digest),
         queryFn: () => workflowPlatformApi.artifact(artifact.digest), staleTime: Infinity,
       });
-      setLoaded((values) => ({ ...values, [item.id]: text }));
+      setLoaded((values) => ({ ...values, [item.id]: projectedArtifactText(text, artifact.mediaType, item.presentation) }));
     } catch {
       setErrors((errors) => ({ ...errors, [item.id]: "附件读取失败。请重试读取或取消选择。" }));
     } finally {

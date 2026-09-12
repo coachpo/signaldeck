@@ -3,7 +3,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router";
 import { afterEach, expect, it, vi } from "vitest";
 import { SchedulePage } from "./schedules";
-afterEach(() => vi.unstubAllGlobals());
+import { scheduleDrafts, scheduleTriggerDrafts } from "./schedule-drafts";
+afterEach(() => { vi.unstubAllGlobals(); scheduleDrafts.clear(); scheduleTriggerDrafts.clear(); });
 it("inherits business input and keeps one creation identity after an uncertain response", async () => {
   const submitted: Record<string, unknown>[] = [];
   const packages = {
@@ -42,7 +43,7 @@ it("inherits business input and keeps one creation identity after an uncertain r
       throw new Error(`Unexpected request: ${url}`);
     }),
   );
-  render(
+  const ui = (
     <QueryClientProvider
       client={
         new QueryClient({
@@ -70,19 +71,27 @@ it("inherits business input and keeps one creation identity after an uncertain r
       >
         <SchedulePage />
       </MemoryRouter>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
+  const view = render(ui);
   expect(await screen.findByRole("textbox", { name: "标题" })).toHaveValue(
     "会议",
   );
   expect(screen.getByRole("textbox", { name: "原文" })).toHaveValue("原文内容");
   expect(
-    screen.getByRole("tab", { name: "JSON 输入" }),
-  ).toBeVisible();
+    screen.queryByRole("tab", { name: "JSON 输入" }),
+  ).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "启用自动执行" }));
   await waitFor(() => expect(submitted).toHaveLength(1));
   await screen.findByText(/尚未确认新安排是否已生效/);
   expect(screen.getByRole("textbox", { name: "原文" })).toBeDisabled();
+  view.unmount();
+  render(ui);
+  expect(await screen.findByRole("textbox", { name: "原文" })).toHaveValue("原文内容");
+  expect(screen.getByRole("textbox", { name: "原文" })).toBeDisabled();
+  const refresh = new Event("beforeunload", { cancelable: true });
+  window.dispatchEvent(refresh);
+  expect(refresh.defaultPrevented).toBe(true);
   fireEvent.click(screen.getByRole("button", { name: "启用自动执行" }));
   await waitFor(() => expect(submitted).toHaveLength(2));
   expect(submitted[1]).toEqual(submitted[0]);

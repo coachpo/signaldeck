@@ -34,8 +34,8 @@ describe("ErrorBoundaryFallback", () => {
     expect(meta).toHaveClass("w-full", "min-w-0", "flex-wrap", "gap-2");
     expect(panel).toHaveClass("w-full", "max-w-none");
     expect(message).toHaveClass("w-full", "max-w-4xl", "break-words");
-    expect(screen.getByText(error.message)).toBeVisible();
-    expect(screen.getByRole("button", { name: "Try again" })).toBeVisible();
-    expect(screen.getByRole("button", { name: "Reload app" })).toBeVisible();
+    expect(screen.queryByText(error.message)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "重试打开" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "重新加载" })).toBeVisible();
   });
 });

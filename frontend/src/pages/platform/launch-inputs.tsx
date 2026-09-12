@@ -1,25 +1,15 @@
-import { useMemo, useState } from "react";
-import { SchemaValueEntryForm, type InputHint } from "@/components/platform-authoring/generated-form/schema-form";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { ValueEditor } from "@/components/platform-authoring/generated-form/value-editor";
+import type { InputHint } from "@/components/platform-authoring/generated-form/schema-form";
 import { Button } from "@/components/ui/button";
-import { InventoryStatePanel } from "@/components/shared/inventory-state-panel";
-import {
-  createLaunchInputState,
-  validateLaunchValueForSchema,
-  createLaunchDraftFromPayload,
-  createLaunchPayloadFromDraft,
-  reconcileLaunchDraftChange,
-} from "@/lib/platform-authoring/schema/launch-input-state";
-import {
-  isJsonObject,
-  parseParameters,
-} from "@/lib/platform-authoring/parameter-values";
+import { InlineStatePanel } from "@/components/shared/inline-state-panel";
+import { parseParameters } from "@/lib/platform-authoring/parameter-values";
 import type { Json, JsonObject } from "@/lib/types/workflow-platform";
+
 export function LaunchInputs({
   schema,
   inputHints,
-  technical = true,
+  label = "任务输入",
   value,
   onChange,
   onDirtyChange,
@@ -29,97 +19,107 @@ export function LaunchInputs({
   schema: JsonObject;
   inputHints?: readonly InputHint[];
   technical?: boolean;
+  label?: string;
   value: Json;
   onChange: (value: Json) => void;
   onDirtyChange: (dirty: boolean) => void;
   initialJsonText?: string | null;
   onJsonTextChange?: (text: string | null) => void;
 }) {
-  const state = useMemo(() => createLaunchInputState(schema), [schema]);
-  const draft = isJsonObject(value)
-    ? createLaunchDraftFromPayload(state, value)
-    : null;
-  const formSupported = state.schemaSupported && draft !== null;
-  const [json, setJson] = useState<string | null>(initialJsonText);
-  const [error, setError] = useState("");
-  function apply() {
+  const [unfinished, setUnfinished] = useState(initialJsonText);
+  const [downloadError, setDownloadError] = useState("");
+  const recovery = useMemo(() => {
+    if (unfinished === null) return null;
     try {
-      const next = parseParameters(json ?? JSON.stringify(value));
-      const issues = validateLaunchValueForSchema(schema, next);
-      if (issues.length)
-        throw new Error(issues.map((i) => `${i.field}: ${i.issue}`).join("; "));
-      onChange(next);
-      setJson(null);
-      onJsonTextChange?.(null);
-      onDirtyChange(false);
-      setError("");
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Invalid input");
+      return { value: parseParameters(unfinished) };
+    } catch {
+      return null;
+    }
+  }, [unfinished]);
+  const validityChanged = useCallback(
+    (valid: boolean) => onDirtyChange(unfinished !== null || !valid),
+    [onDirtyChange, unfinished],
+  );
+  useEffect(() => {
+    if (unfinished !== null) onDirtyChange(true);
+  }, [onDirtyChange, unfinished]);
+
+  function clearUnfinished() {
+    setUnfinished(null);
+    onJsonTextChange?.(null);
+    setDownloadError("");
+  }
+
+  function downloadUnfinished() {
+    if (unfinished === null) return;
+    try {
+      const url = URL.createObjectURL(
+        new Blob([unfinished], { type: "text/plain;charset=utf-8" }),
+      );
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "未完成输入原稿.txt";
+      link.click();
+      URL.revokeObjectURL(url);
+      setDownloadError("");
+    } catch {
+      setDownloadError(
+        "下载未成功，原稿仍保留。请再次下载后再决定是否放弃修改。",
+      );
     }
   }
+
   return (
-    <Tabs defaultValue={formSupported && initialJsonText === null ? "form" : "json"}>
-      <TabsList>
-        <TabsTrigger value="form" disabled={!formSupported}>
-          {technical ? "Input form" : "填写输入"}
-        </TabsTrigger>
-        <TabsTrigger value="json">{technical ? "Advanced JSON" : "JSON 输入"}</TabsTrigger>
-      </TabsList>
-      <TabsContent value="form">
-        {state.schema && draft && (
-          <SchemaValueEntryForm
-            label={technical ? "Workflow parameters" : "任务输入"}
-            technical={technical}
-            disabled={json !== null}
-            inputHints={inputHints}
-            schema={state.schema}
-            value={draft}
-            onChange={(next) => {
-              const updated = reconcileLaunchDraftChange(state, draft, next);
-              onChange(createLaunchPayloadFromDraft(updated) as JsonObject);
-              setJson(null);
-      onJsonTextChange?.(null);
-              onDirtyChange(false);
-            }}
-          />
-        )}
-      </TabsContent>
-      <TabsContent value="json">
-        <div className="flex flex-col gap-3">
-          {!formSupported && (
-            <InventoryStatePanel
-              title={technical ? "Advanced JSON input" : "使用 JSON 填写输入"}
-              description={technical ? "Use JSON for this root value or schema. The server validates the complete input contract at launch." : "此任务需要使用 JSON 编辑完整输入。填写后先应用，再开始任务。"}
-            />
-          )}
-          <Textarea
-            aria-label={technical ? "Parameters JSON" : "任务输入 JSON"}
-            value={json ?? JSON.stringify(value, null, 2)}
-            onChange={(e) => {
-              setJson(e.target.value);
-              onJsonTextChange?.(e.target.value);
-              onDirtyChange(true);
-            }}
-            spellCheck={false}
-            className="min-h-40 font-mono"
-          />
-          {error && (
-            <p role="alert" className="text-destructive">
-              {error}
+    <div className="flex flex-col gap-4">
+      {unfinished !== null && (
+        <InlineStatePanel
+          tone="warning"
+          title="发现未完成的输入修改"
+          description={
+            recovery
+              ? "可以恢复后继续填写。恢复前，下方保留的是上次确认的内容。"
+              : "上次修改没有填写完整，暂时无法恢复为表单。原稿仍完整保留，可先下载，或放弃这次修改后继续使用下方内容。"
+          }
+        >
+          <div className="flex flex-wrap gap-2">
+            {recovery && (
+              <Button
+                type="button"
+                onClick={() => {
+                  onChange(recovery.value);
+                  clearUnfinished();
+                }}
+              >
+                恢复未完成输入
+              </Button>
+            )}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={downloadUnfinished}
+            >
+              下载未完成输入原稿
+            </Button>
+            <Button type="button" variant="ghost" onClick={clearUnfinished}>
+              保留已确认内容，放弃未完成修改
+            </Button>
+          </div>
+          {downloadError && (
+            <p role="alert" className="mt-2 text-sm text-destructive">
+              {downloadError}
             </p>
           )}
-          <Button variant="outline" onClick={apply}>
-            {technical ? "Apply parameters JSON" : "应用 JSON 输入"}
-          </Button>
-          {json !== null && <Button variant="ghost" onClick={() => { setJson(null);
-      onJsonTextChange?.(null); setError(""); onDirtyChange(false); }}>{technical ? "Discard parameters JSON" : "放弃 JSON 修改"}</Button>}
-          {json !== null && (
-            <p className="text-sm text-muted-foreground">
-              {technical ? "Apply this JSON before launching. The run uses the last applied value." : "请先应用或放弃当前 JSON 修改，再开始任务。"}
-            </p>
-          )}
-        </div>
-      </TabsContent>
-    </Tabs>
+        </InlineStatePanel>
+      )}
+      <ValueEditor
+        label={label}
+        schema={schema}
+        value={value}
+        inputHints={inputHints}
+        disabled={unfinished !== null}
+        onValidityChange={validityChanged}
+        onChange={onChange}
+      />
+    </div>
   );
 }

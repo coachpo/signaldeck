@@ -22,7 +22,7 @@ export async function connectTaskServices(request: APIRequestContext, model = tr
 export async function connectResearchModel(request: APIRequestContext) {
   const saved = await request.post(`${apiBase}/resources`, { data: {
     resourceId: "research-model", kind: "model",
-    config: {name: "Controlled local research", baseUrl: process.env.SIGNALDECK_FAKE_PROVIDER_BASE_URL ?? "http://127.0.0.1:18081/v1", modelId: "fake-e2e-oracle-tools", apiStyle: "chat_completions", timeoutSeconds: 30},
+    config: {name: "Controlled local research", baseUrl: process.env.SIGNALDECK_FAKE_PROVIDER_BASE_URL ?? `http://127.0.0.1:${process.env.SIGNALDECK_FAKE_PROVIDER_PORT ?? "18081"}/v1`, modelId: "fake-e2e-oracle-tools", apiStyle: "chat_completions", timeoutSeconds: 30},
     credentials: {apiKey: "fake-local-key"},
   }});
   expect(saved.ok(), await saved.text()).toBeTruthy();

@@ -129,16 +129,15 @@ test("UX01/03/06: four ordinary tasks execute with real plugins and retain reusa
       const connection = page
         .locator("details")
         .filter({
-          has: page.locator("summary", { hasText: "research-model · 补齐连接" }),
+          has: page.locator("summary", { hasText: "模型服务 · 补齐连接" }),
         })
         .last();
-      await connection.locator("summary").click();
-      await expect(connection.getByText("没有适用于此任务的部署方服务预设", { exact: false })).toHaveCount(0);
-      await expect(connection.getByText("请选择部署方提供的服务，再确认业务范围与保存位置。", { exact: true })).toBeVisible();
-      await connection.getByLabel("部署方提供的服务").focus();
+      await expect(connection.getByRole("combobox", { name: "连接来源", exact: true })).toBeVisible();
+      await expect(connection.getByText("请选择一个连接，或填写自己的服务。", { exact: true })).toBeVisible();
+      await connection.getByLabel("连接来源").focus();
       await page.keyboard.press("Enter");
       await page.getByRole("option", { name: "本地受控研究服务" }).click();
-      await connection.getByLabel("本地测试密钥").fill("fake-local-key");
+      await connection.getByLabel("本地测试密钥（必填）").fill("fake-local-key");
       await connection
         .getByLabel("确认使用以上服务、账户、业务范围及保存位置")
         .check();
@@ -292,9 +291,9 @@ test("UX01/03/06: four ordinary tasks execute with real plugins and retain reusa
             }),
           },
           {
-            name: "技术详情与调用证据",
+            name: "查看执行过程",
             locator: page.getByRole("link", {
-              name: "技术详情与调用证据",
+              name: "查看执行过程",
               exact: true,
             }),
           },
@@ -312,7 +311,9 @@ test("UX01/03/06: four ordinary tasks execute with real plugins and retain reusa
         .first()
         .click();
       const reportPage = await popupPromise;
-      await expect(reportPage.getByLabel("报告正文")).toContainText(
+      const reportBody = reportPage.getByRole("article", { name: "报告正文", exact: true });
+      await expect(reportBody).toBeVisible();
+      await expect(reportBody).toContainText(
         "fake provider content",
       );
       const downloadPromise = reportPage.waitForEvent("download");

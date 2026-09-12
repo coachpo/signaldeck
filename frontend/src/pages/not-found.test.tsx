@@ -21,14 +21,14 @@ describe("NotFoundPage", () => {
     const status = screen.getByTestId("not-found-status");
     const statusStrip = status.querySelector("[role='list']");
     const emptyStateCard = screen
-      .getByText("Unknown route")
+      .getByText("继续使用 SignalDeck")
       .closest("[data-slot='card']");
 
     expect(page).toBeVisible();
     expect(page).toHaveClass("min-h-[calc(100vh-3rem)]", "px-4", "py-8");
     expect(content).toHaveClass("w-full", "max-w-6xl", "flex-col", "gap-6");
     expect(
-      screen.getByRole("heading", { level: 1, name: "Page not found" }),
+      screen.getByRole("heading", { level: 1, name: "找不到页面" }),
     ).toBeVisible();
     expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
     expect(screen.getByTestId("not-found-description")).toHaveClass(
@@ -51,12 +51,12 @@ describe("NotFoundPage", () => {
       "gap-2",
     );
     expect(emptyStateCard).toHaveClass("w-full", "max-w-none");
-    expect(screen.getByText("Unknown route")).toBeVisible();
-    expect(screen.getByText("Not found")).toBeVisible();
-    expect(screen.getByText("Workflow packages")).toBeVisible();
-    expect(screen.getByText(/did not match any registered/i)).toBeVisible();
+    expect(screen.getByText("继续使用 SignalDeck")).toBeVisible();
+    expect(screen.getByText("页面不可用")).toBeVisible();
+    expect(screen.queryByText(/route metadata|catch-all|Shell/i)).not.toBeInTheDocument();
+    expect(screen.getByText("链接可能已失效，或这项内容已经移除。")).toBeVisible();
     expect(
-      screen.getByRole("link", { name: "Open workflow packages" }),
-    ).toHaveAttribute("href", "/workflow-packages");
+      screen.getByRole("link", { name: "返回任务首页" }),
+    ).toHaveAttribute("href", "/");
   });
 });

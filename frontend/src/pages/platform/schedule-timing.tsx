@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { decodeCalendar, decodeInterval } from "@/lib/schedule-calendar";
+import { ScheduleCalendarControls, ScheduleIntervalControls } from "./schedule-calendar-controls";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Field, TextField, ChoiceField } from "@/components/shared/form-field";
@@ -29,7 +31,7 @@ function PreviewTimes({ preview }: { preview: SchedulePreview }) {
       {preview.scope === "applied" &&
         preview.desiredRevision !== preview.syncedRevision && (
           <p role="status">
-            修改尚未完成同步。以下时间属于调度服务当前生效的安排，不代表新配置已确认生效。
+            修改尚未生效。以下仍是之前的执行时间，请等待确认后再按新安排操作。
           </p>
         )}
       {preview.times.length ? (
@@ -39,7 +41,7 @@ function PreviewTimes({ preview }: { preview: SchedulePreview }) {
               <time dateTime={time}>
                 {new Intl.DateTimeFormat(undefined, {
                   dateStyle: "medium",
-                  timeStyle: "short",
+                  timeStyle: "medium",
                   timeZone: preview.timeZone,
                 }).format(new Date(time))}
               </time>{" "}
@@ -50,15 +52,9 @@ function PreviewTimes({ preview }: { preview: SchedulePreview }) {
       ) : (
         <p>未查到后续执行时间。</p>
       )}
-      {preview.scope === "applied" && (
-        <p>
-          已生效：{preview.appliedNote || "未知版本"}；待应用版本：
-          {preview.desiredRevision}。
-        </p>
-      )}
       <p className="text-muted-foreground">
         查询时间：{new Date(preview.observedAt).toLocaleString()}
-        。夏令时切换时，以调度服务返回的实际时间为准。
+        。已按所选时区核对夏令时。
       </p>
     </div>
   );
@@ -66,11 +62,13 @@ function PreviewTimes({ preview }: { preview: SchedulePreview }) {
 export function AppliedSchedulePreview({
   id,
   revision,
+  syncStatus,
 }: {
   id: string;
   revision: number;
+  syncStatus?: string;
 }) {
-  const query = useAppliedSchedulePreview(id, revision);
+  const query = useAppliedSchedulePreview(id, revision, syncStatus);
   return (
     <div className="text-sm">
       {query.data ? (
@@ -82,6 +80,7 @@ export function AppliedSchedulePreview({
             : "暂时无法查询下次时间，已保存的安排与历史仍可查看。"}
         </p>
       )}
+      {query.isError && <Button variant="outline" onClick={() => void query.refetch()}>重新核对下次时间</Button>}
     </div>
   );
 }
@@ -93,7 +92,9 @@ export function ScheduleTiming({
   onChange: (value: ScheduleConfig) => void;
 }) {
   const frequency = decodeFrequency(draft.cron);
-  const [advanced, setAdvanced] = useState(false);
+  const [custom, setCustom] = useState(false);
+  const calendar = decodeCalendar(draft.cron);
+  const interval = decodeInterval(draft.cron);
   const preview = useSchedulePreview();
   const [previewKey, setPreviewKey] = useState("");
   const key = JSON.stringify([draft.cron, draft.timeZone]);
@@ -106,16 +107,23 @@ export function ScheduleTiming({
     <div className="flex flex-col gap-4">
       <ChoiceField
         label="重复频率"
-        value={frequency?.kind ?? "custom"}
+        value={interval ? "interval" : custom ? "custom" : frequency?.kind ?? "custom"}
         options={[
           { value: "daily", label: "每天" },
           { value: "weekly", label: "每周" },
           { value: "monthly", label: "每月" },
-          { value: "custom", label: "自定义安排" },
+          { value: "custom", label: "组合日期与时刻" },
+          { value: "interval", label: "固定间隔" },
         ]}
         onChange={(value) => {
           if (value === "custom") {
-            setAdvanced(true);
+            setCustom(true);
+            if (!calendar) onChange({ ...draft, cron: "0 9 * * *" });
+            return;
+          }
+          setCustom(false);
+          if (value === "interval") {
+            onChange({ ...draft, cron: "@every 1h" });
             return;
           }
           onChange({
@@ -128,7 +136,7 @@ export function ScheduleTiming({
           });
         }}
       />
-      {frequency && (
+      {frequency && !custom && (
         <>
           {frequency.kind === "weekly" && (
             <ChoiceField
@@ -165,11 +173,10 @@ export function ScheduleTiming({
           />
         </>
       )}
-      {!frequency && (
-        <p className="text-sm">
-          已保留自定义安排。修改名称或业务信息不会覆盖此时间规则。
-        </p>
-      )}
+      {interval && <ScheduleIntervalControls interval={interval} onChange={cron => onChange({ ...draft, cron })} />}
+      {calendar && (custom || !frequency) && <ScheduleCalendarControls calendar={calendar} onChange={cron => onChange({ ...draft, cron })} />}
+      {!calendar && !interval && <p role="status" className="text-sm">已保留原安排，其他修改不会改变执行时间。选择一种重复频率后可重新安排时间。</p>}
+      {(interval && interval.seconds < 60 || calendar && (calendar.values.second === null || calendar.values.second.length > 1)) && <p role="status" className="text-sm">此安排可能在一分钟内执行多次。请确认服务用量，并选择上一次尚未结束时的处理方式。</p>}
       <Field
         label="时区"
         description="保存后时区保持固定，不随旅行地点改变。可搜索或填写城市时区。"
@@ -194,16 +201,6 @@ export function ScheduleTiming({
           ? "没有此日期的月份会跳过。"
           : ""}
       </p>
-      <Button variant="outline" onClick={() => setAdvanced((value) => !value)}>
-        {advanced ? "收起自定义安排" : "编辑自定义安排"}
-      </Button>
-      {advanced && (
-        <TextField
-          label="自定义时间表达式"
-          value={draft.cron}
-          onChange={(cron) => onChange({ ...draft, cron })}
-        />
-      )}
       <Button
         variant="outline"
         disabled={preview.isPending}
@@ -212,7 +209,7 @@ export function ScheduleTiming({
           preview.mutate({ cron: draft.cron, timeZone: draft.timeZone });
         }}
       >
-        预览下次时间
+        {preview.isPending ? "正在核对下次时间…" : "预览下次时间"}
       </Button>
       {previewKey === key && preview.data && (
         <PreviewTimes preview={preview.data} />

@@ -115,6 +115,6 @@ export const workflowPlatformApi = {
     ),
   artifact: (digest: string) =>
     requestPlatformText(`/artifacts/${segment(digest)}`),
-  downloadArtifact: (digest: string) =>
-    downloadPlatformFile(`/artifacts/${segment(digest)}`, { filename: digest }),
+  downloadArtifact: (digest: string, filename = "任务附件") =>
+    downloadPlatformFile(`/artifacts/${segment(digest)}`, { filename }),
 };

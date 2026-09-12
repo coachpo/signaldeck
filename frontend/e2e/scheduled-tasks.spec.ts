@@ -155,7 +155,7 @@ test("schedule retains timezone, overlap, synchronization state and trigger prov
     await request.get(`${apiBase}/schedules/${schedule.id}/fires`)
   ).json();
   await page.getByRole("button", { name: "删除安排", exact: true }).click();
-  await page.getByRole("button", { name: "Delete", exact: true }).click();
+  await page.getByRole("alertdialog", { name: "删除这个安排？", exact: true }).getByRole("button", { name: "删除", exact: true }).click();
   await expect(page).toHaveURL("/scheduled-tasks");
   const run = await (await request.get(`${apiBase}/runs/${runId}`)).json();
   expect(run.origin.scheduleId).toBe(schedule.id);
@@ -179,7 +179,7 @@ test("schedule retains timezone, overlap, synchronization state and trigger prov
   });
 });
 
-test("failed scheduled launch retains a visible fire identity and failure reason", async ({
+test("failed scheduled launch retains provenance with a readable failure reason", async ({
   page,
   request,
 }, testInfo) => {
@@ -238,8 +238,8 @@ test("failed scheduled launch retains a visible fire identity and failure reason
   await expect(page.getByText("未能启动", { exact: true })).toBeVisible();
   await expect(page.getByText("找不到工作流。请检查安排中的任务选择。", { exact: true })).toBeVisible();
   await expect(page.getByText("workflow_not_found", { exact: true })).not.toBeVisible();
-  await page.getByText("原始错误码", { exact: true }).click();
-  await expect(page.getByText("workflow_not_found", { exact: true })).toBeVisible();
+  await expect(page.getByText("原始错误码", { exact: true })).toHaveCount(0);
+  await expect(page.getByText(/Engine workflow|execution engine|Fire [a-f0-9-]/)).toHaveCount(0);
   await expect(page.getByText("尚未生成结果", { exact: true })).toBeVisible();
   const records = await (
     await request.get(`${apiBase}/schedules/${schedule.id}/fires`)
@@ -321,17 +321,31 @@ test("weekly preview and custom schedules preserve business input and advanced p
   ).toBeTruthy();
   const weeklyAppliedPreview = await weeklyAppliedPreviewResponse.json();
   await captureOrdinarySchedule(page, testInfo, "weekly-ordinary");
-  await page
-    .getByRole("button", { name: "编辑自定义安排", exact: true })
-    .click();
-  await page.getByLabel("自定义时间表达式").fill("0 8,17 * * 1-5");
+  await page.getByRole("combobox", { name: "重复频率", exact: true }).click();
+  await page.getByRole("option", { name: "组合日期与时刻", exact: true }).click();
+  await page.getByRole("combobox", { name: "执行小时范围", exact: true }).click();
+  await page.getByRole("option", { name: "选择多个或按间隔", exact: true }).click();
+  await page.getByRole("checkbox", { name: "执行小时 8时", exact: true }).check();
+  await page.getByRole("checkbox", { name: "执行小时 17时", exact: true }).check();
+  await page.getByRole("checkbox", { name: "执行小时 9时", exact: true }).uncheck();
+  await page.getByRole("combobox", { name: "每小时的分钟选择", exact: true }).click();
+  await page.getByRole("option", { name: "0分", exact: true }).click();
+  await page.getByRole("combobox", { name: "执行星期范围", exact: true }).click();
+  await page.getByRole("option", { name: "选择多个或按间隔", exact: true }).click();
+  for (const day of ["周二", "周三", "周四", "周五"]) {
+    await page.getByRole("checkbox", { name: `执行星期 ${day}`, exact: true }).check();
+  }
   await page.getByLabel("安排名称").fill(`Custom ${key}`);
   await page.getByRole("switch", { name: "专家模式" }).click();
   await expect(page.getByLabel("上一次尚未结束时")).toContainText("保留一次");
   await page.getByRole("switch", { name: "专家模式" }).click();
-  await expect(page.getByLabel("自定义时间表达式")).toHaveValue(
-    "0 8,17 * * 1-5",
-  );
+  await expect(page.getByLabel("自定义时间表达式")).toHaveCount(0);
+  await expect(page.getByText(/SignalDeck revision|调度服务|待应用版本|技术来源/)).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "立即执行", exact: true })).toBeDisabled();
+  await page.getByRole("link", { name: "自动执行", exact: true }).first().click();
+  await page.getByRole("link", { name: `查看 Weekly ${key}`, exact: true }).click();
+  await expect(page.getByLabel("安排名称")).toHaveValue(`Custom ${key}`);
+  await expect(page.getByRole("checkbox", { name: "执行小时 17时", exact: true })).toBeChecked();
   await page.getByRole("button", { name: "保存安排", exact: true }).click();
   await expect
     .poll(

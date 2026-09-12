@@ -44,16 +44,18 @@ test("array input uses the same definition for manual and scheduled launches wit
   });
   expect(saved.ok(), await saved.text()).toBeTruthy();
   await page.goto("/tasks");
-  const card = page.locator("section").filter({
-    has: page.getByRole("heading", { name: "Array workflow", exact: true }),
-  }).last();
+  const card = page
+    .locator("section")
+    .filter({
+      has: page.getByRole("heading", { name: "Array workflow", exact: true }),
+    })
+    .last();
   await card.getByRole("link", { name: "选择任务", exact: true }).click();
-  await expect(
-    page.getByRole("tab", { name: "填写输入", exact: true }),
-  ).toBeDisabled();
-  await expect(page.getByLabel("任务输入 JSON")).toHaveValue("[]");
-  await page.getByLabel("任务输入 JSON").fill('["alpha","beta"]');
-  await page.getByRole("button", { name: "应用 JSON 输入" }).click();
+  await expect(page.getByRole("tab", { name: /JSON|填写输入/ })).toHaveCount(0);
+  await page.getByRole("button", { name: "添加项目", exact: true }).click();
+  await page.getByLabel("第 1 项", { exact: true }).fill("alpha");
+  await page.getByRole("button", { name: "添加项目", exact: true }).click();
+  await page.getByLabel("第 2 项", { exact: true }).fill("beta");
   await page.getByRole("button", { name: "开始任务", exact: true }).click();
   await expect(page).toHaveURL(/\/runs\/[^/]+$/);
   const manualId = page.url().split("/").at(-1)!;
@@ -65,16 +67,13 @@ test("array input uses the same definition for manual and scheduled launches wit
       { timeout: 60000 },
     )
     .toBe("succeeded");
-  await page
-    .getByRole("link", { name: "技术详情与调用证据", exact: true })
-    .click();
-  await page
-    .getByRole("tab", { name: "Immutable snapshot", exact: true })
-    .click();
+  await page.getByRole("link", { name: "查看执行过程", exact: true }).click();
+  await page.getByRole("tab", { name: "本次设置", exact: true }).click();
+  await expect(page.getByText("alpha", { exact: true })).toBeVisible();
+  await expect(page.getByText("beta", { exact: true })).toBeVisible();
   expect(
-    JSON.parse(
-      await page.getByLabel("Frozen run specification JSON").inputValue(),
-    ).parameters,
+    (await (await request.get(`${apiBase}/runs/${manualId}`)).json()).spec
+      .parameters,
   ).toEqual(["alpha", "beta"]);
   await page.goto("/scheduled-tasks/new");
   await page.getByLabel("安排名称").fill(`Array schedule ${key}`);
@@ -82,14 +81,14 @@ test("array input uses the same definition for manual and scheduled launches wit
   await page
     .getByRole("option", { name: "Array workflow", exact: true })
     .click();
-  await page.getByLabel("任务输入 JSON", { exact: true }).fill("[]");
-  await page
-    .getByRole("button", { name: "应用 JSON 输入", exact: true })
-    .click();
+  await expect(
+    page.getByText("暂无项目。可按需添加。", { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByLabel("任务输入 JSON")).toHaveCount(0);
   await page
     .getByRole("combobox", { name: "自动执行状态", exact: true })
     .click();
-  await page.getByRole("option", { name: "已暂停", exact: true }).click();
+  await page.getByRole("option", { name: "暂停自动执行", exact: true }).click();
   const saving = page.waitForResponse(
     (response) =>
       response.url() === `${apiBase}/schedules` &&
@@ -135,4 +134,78 @@ test("array input uses the same definition for manual and scheduled launches wit
   ).json();
   expect(detail.spec.parameters).toEqual([]);
   expect(detail.origin.scheduleId).toBe(scheduleId);
+});
+
+test("a task with no input starts with an exact null root through the ordinary form", async ({
+  page,
+  request,
+}) => {
+  const { key, model } = await seed(request);
+  const inputSchema = { type: "null" };
+  const outputSchema = { type: "string" };
+  const manifestSource = stringify(
+    {
+      apiVersion: "signaldeck.workflowPackage/v2",
+      metadata: { key, name: "无需输入的任务" },
+      agents: {
+        reader: {
+          inputSchema,
+          outputSchema,
+          strategy: {
+            kind: "model",
+            modelRef: model,
+            prompt: "Return a short confirmation.",
+          },
+        },
+      },
+      workflows: {
+        main: {
+          name: `无输入任务 ${key}`,
+          inputSchema,
+          outputSchema,
+          nodes: {
+            consume: {
+              uses: "reader",
+              inputMapping: { ref: "workflow.input" },
+            },
+          },
+          outputMapping: { ref: "nodes.consume.output" },
+        },
+      },
+    },
+    { aliasDuplicateObjects: false },
+  );
+  const saved = await request.patch(`${apiBase}/workflow-packages/${key}`, {
+    data: { manifestSource },
+  });
+  expect(saved.ok(), await saved.text()).toBeTruthy();
+  await page.goto("/tasks");
+  const card = page
+    .locator("section")
+    .filter({
+      has: page.getByRole("heading", {
+        name: `无输入任务 ${key}`,
+        exact: true,
+      }),
+    })
+    .last();
+  await card.getByRole("link", { name: "选择任务", exact: true }).click();
+  await expect(
+    page.getByText("此项为空值，无需填写。", { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole("tab", { name: /JSON/ })).toHaveCount(0);
+  await page.getByRole("button", { name: "开始任务", exact: true }).click();
+  await expect(page).toHaveURL(/\/runs\/[^/?]+$/);
+  const runId = new URL(page.url()).pathname.split("/").at(-1)!;
+  await expect
+    .poll(
+      async () =>
+        (await (await request.get(`${apiBase}/runs/${runId}`)).json()).status,
+      { timeout: 60000 },
+    )
+    .toBe("succeeded");
+  expect(
+    (await (await request.get(`${apiBase}/runs/${runId}`)).json()).spec
+      .parameters,
+  ).toBeNull();
 });

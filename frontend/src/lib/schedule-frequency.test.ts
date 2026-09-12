@@ -23,7 +23,7 @@ describe("schedule frequency codec", () => {
     "0 9 * * 7",
   ])("retains unsupported timing %s", (cron) => {
     expect(decodeFrequency(cron)).toBeNull();
-    expect(scheduleSummary(cron)).toContain(cron);
+    expect(scheduleSummary(cron)).not.toContain(cron);
   });
   it("describes weekly timing without calculating dates", () => {
     expect(scheduleSummary("30 9 * * 1")).toBe("每周一 09:30");

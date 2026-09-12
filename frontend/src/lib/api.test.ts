@@ -131,7 +131,7 @@ describe("api client", () => {
     await expect(listTemplates()).resolves.toEqual([templateFixture]);
 
     expect(promptSpy).toHaveBeenCalledTimes(1);
-    expect(promptSpy).toHaveBeenCalledWith("API token");
+    expect(promptSpy).toHaveBeenCalledWith("请输入访问口令以继续使用 SignalDeck");
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(localStorage.getItem("signaldeck.apiToken")).toBe("test-token");
     expect(new Headers(fetchMock.mock.calls[1]?.[1]?.headers).get("Authorization")).toBe(
@@ -311,16 +311,17 @@ describe("api client", () => {
     );
   });
 
-  it("keeps blob download URLs alive until after the browser click starts", async () => {
+  it.each([[undefined, "report.md"], ["访谈附件.txt", "访谈附件.txt"]])("downloads the original bytes with the requested name %s and keeps the URL alive", async (filename, expectedName) => {
     const { downloadFile } = await loadApiModule();
     const originalCreateObjectUrl = URL.createObjectURL;
     const originalRevokeObjectUrl = URL.revokeObjectURL;
-    const createObjectUrlMock = vi.fn(() => "blob:signaldeck-report");
+    const createObjectUrlMock = vi.fn((_blob: Blob) => "blob:signaldeck-report");
     const revokeObjectUrlMock = vi.fn();
     const clickSpy = vi
       .spyOn(HTMLAnchorElement.prototype, "click")
-      .mockImplementation(() => {
+      .mockImplementation(function (this: HTMLAnchorElement) {
         expect(revokeObjectUrlMock).not.toHaveBeenCalled();
+        expect(this.download).toBe(expectedName);
       });
 
     Object.defineProperty(URL, "createObjectURL", {
@@ -339,8 +340,9 @@ describe("api client", () => {
     );
 
     try {
-      await expect(downloadFile("/reports/report/download")).resolves.toBeUndefined();
+      await expect(downloadFile("/reports/report/download", { filename })).resolves.toBeUndefined();
       expect(clickSpy).toHaveBeenCalledOnce();
+      expect(await createObjectUrlMock.mock.calls[0][0].text()).toBe("Downloaded report");
       expect(revokeObjectUrlMock).not.toHaveBeenCalled();
 
       await vi.runAllTimersAsync();

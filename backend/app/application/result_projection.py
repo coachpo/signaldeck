@@ -58,10 +58,69 @@ def project_result(run: RunDetail) -> ResultRead:
     )
     package = PackageDefinition.model_validate(run.spec.definition)
     workflow = package.workflows[run.workflow_key]
+
+    def step_label(node_id: str) -> str:
+        node = workflow.nodes.get(node_id)
+        if node is None:
+            return "其他步骤"
+        planned_order = run.spec.plan.get("nodeOrder")
+        order = planned_order if isinstance(planned_order, list) else list(workflow.nodes)
+        position = order.index(node_id) + 1 if node_id in order else 1
+        return package.agents[node.uses].name or f"步骤 {position}"
+
     evidence = sorted(
         run.evidence, key=lambda e: (e.finished_at or run.created_at, e.id), reverse=True
     )
-    result.error_category = project_model_failure(run.error_code, evidence)
+
+    def user_strings(value: Any) -> set[str]:
+        if isinstance(value, str):
+            return {value}
+        if isinstance(value, dict):
+            return set().union(*(user_strings(child) for child in value.values()))
+        if isinstance(value, list):
+            return set().union(*(user_strings(child) for child in value))
+        return set()
+
+    original_strings = user_strings(run.spec.parameters)
+    identities = {run.id: "本次任务"}
+    for record in evidence:
+        identities[record.id] = f"{step_label(record.node_id)}的执行记录"
+        if record.operation_id:
+            identities[record.operation_id] = f"{step_label(record.node_id)}的服务操作"
+
+    def readable_value(value: Any) -> Any:
+        """Project only proven platform identities, preserving user-supplied values."""
+        if isinstance(value, str):
+            return value if value in original_strings else identities.get(value, value)
+        if isinstance(value, list):
+            return [readable_value(child) for child in value]
+        if isinstance(value, dict):
+            return {key: readable_value(child) for key, child in value.items()}
+        return value
+
+    if run.status == "failed" and run.error_code in {None, "workflow_nodes_failed"}:
+        latest_nodes: dict[str, ExecutionEvidence] = {}
+        for record in evidence:
+            latest = latest_nodes.get(record.node_id)
+            if record.kind == "node" and (latest is None or record.attempt > latest.attempt):
+                latest_nodes[record.node_id] = record
+        # A recovered attempt must not explain another step's terminal failure.
+        if any(
+            node.status == "failed"
+            and (
+                node.error_code == "agent_output_invalid"
+                or any(
+                    record.kind == "agent"
+                    and record.parent_id == node.id
+                    and record.status == "failed"
+                    and record.error_code == "agent_output_invalid"
+                    for record in evidence
+                )
+            )
+            for node in latest_nodes.values()
+        ):
+            result.error_code = "agent_output_invalid"
+    result.error_category = project_model_failure(result.error_code, evidence)
     result.unknown_evidence_ids, result.read_unknown_evidence_ids = unknown_evidence(
         run.spec.model_dump(by_alias=True), [e.model_dump(by_alias=True) for e in evidence]
     )
@@ -97,7 +156,7 @@ def project_result(run: RunDetail) -> ResultRead:
         return ResultSection(
             kind=kind,
             label=label,
-            value=value,
+            value=readable_value(value) if kind in {"value", "sources"} else value,
             evidence_id=item.id if item else None,
             node_id=item.node_id if item else None,
             operation_id=owned.operation_id if owned else None,
@@ -118,7 +177,7 @@ def project_result(run: RunDetail) -> ResultRead:
                     result.attachments.append(
                         ResultAttachment(
                             kind="artifact",
-                            label="执行产物",
+                            label=f"{step_label(item.node_id)}的附件" if item else "结果附件",
                             reference=value,
                             node_id=item.node_id if item else None,
                             operation_id=owned.operation_id if owned else None,
@@ -141,9 +200,15 @@ def project_result(run: RunDetail) -> ResultRead:
     for item in evidence:
         if item.kind == "node":
             if item.status == "skipped":
-                result.skipped.append(item.node_id)
+                result.skipped.append(step_label(item.node_id))
             elif item.status in {"failed", "blocked", "timed_out", "cancelled"}:
-                result.execution_issues.append(f"{item.node_id}: {item.status}")
+                status_label = {
+                    "failed": "未能完成",
+                    "blocked": "前置条件未满足，尚未执行",
+                    "timed_out": "超过等待时间",
+                    "cancelled": "已取消",
+                }[item.status]
+                result.execution_issues.append(f"{step_label(item.node_id)}：{status_label}")
         cache = item.metadata.get("cacheProvenance")
         if cache is not None and cache not in result.freshness:
             result.freshness.append(cache)
@@ -261,17 +326,25 @@ def project_result(run: RunDetail) -> ResultRead:
             ):
                 result.data_time = value
             elif declaration["kind"] == "sources" and isinstance(value, list):
-                result.sources.extend(value)
+                projected_sources = result.sections[-1].value
+                if isinstance(projected_sources, list):
+                    result.sources.extend(projected_sources)
             if declaration["kind"] == "notice" and declaration.get("severity") == "missing":
                 result.missing.extend(
                     str(v) for v in (value if isinstance(value, list) else [value])
                 )
     else:
         if run.output is not None or run.status == "succeeded":
-            result.sections.append(section("value", "工作流输出", run.output))
+            result.sections.append(section("value", "任务结果", run.output))
         for item in confirmed:
+            result_label = "步骤结果" if item.kind == "node" else "服务结果"
             result.sections.append(
-                section("value", f"{item.node_id} · {item.kind}", item.output, item)
+                section(
+                    "value",
+                    f"{step_label(item.node_id)} · {result_label}",
+                    item.output,
+                    item,
+                )
             )
     if result.unknown_evidence_ids:
         result.content_status = "unknown"

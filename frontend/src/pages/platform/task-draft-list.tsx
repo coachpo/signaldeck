@@ -10,7 +10,7 @@ export function TaskDraftList() {
     {drafts.data?.items.length === 0 && <p className="text-sm text-muted-foreground">尚未保存草稿。草稿可以保留未完成的输入。</p>}
     {drafts.data?.items.map(draft => <div key={draft.id} className="flex flex-wrap gap-3 text-sm">
       <Link className="underline" to={`/tasks/new?draftId=${encodeURIComponent(draft.id)}`}>{draft.name}</Link>
-      <span>{draft.pending ? "启动待核实" : "可恢复"} · 修订 {draft.revision} · {new Date(draft.updatedAt).toLocaleString()}</span>
+      <span>{draft.pending ? "启动待核实" : "可继续填写"} · {new Date(draft.updatedAt).toLocaleString()}</span>
     </div>)}
   </section>;
 }
