@@ -144,8 +144,9 @@ def test_read_projection_does_not_decrypt(store: PlatformStore, monkeypatch):
     secret = "controlled-test-secret"
     monkeypatch.setenv("AGENT_PLATFORM_ENCRYPTION_KEY", "test-key-one")
     reset_settings_cache()
-    store.save_resource("model", "model", {"model": "example"}, {"apiKey": secret})
-    assert store.resolve_credentials("model") == {"apiKey": secret}
+    resource = store.save_resource("model", "model", {"model": "example"}, {"apiKey": secret})
+    revision = resource["credentialRevision"]
+    assert store.resolve_bound_credentials("model", revision) == {"apiKey": secret}
     with store.session_factory() as session:
         raw = session.execute(
             text("SELECT credentials FROM platform_resources WHERE id='model'")
@@ -158,8 +159,15 @@ def test_read_projection_does_not_decrypt(store: PlatformStore, monkeypatch):
     assert len(store.list_resources()) == 1
     store.save_resource("model", "model", {"model": "updated"})
     with pytest.raises(ValueError, match="Invalid encrypted"):
-        store.resolve_credentials("model")
+        store.resolve_bound_credentials("model", revision)
     assert secret not in str(store.list_resources())
+
+
+def test_bound_credentials_reject_missing_resource(store: PlatformStore):
+    with pytest.raises(ApplicationError) as failure:
+        store.resolve_bound_credentials("missing", "unavailable-revision")
+    assert failure.value.code == "resource_not_found"
+    assert failure.value.status == 404
 
 
 def test_plugin_release_reads_are_detached_and_immutable(store: PlatformStore):

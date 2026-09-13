@@ -3,28 +3,14 @@
 import json
 
 import pytest
-from fastapi.testclient import TestClient
 
-from app.api.platform_dependencies import get_artifacts, get_launch_service, get_platform_store
-from app.application.launch import LaunchService
 from app.domain.execution import ExecutionEvidence
-from app.infrastructure.artifact_store import ArtifactStore
-from app.infrastructure.platform_store import PlatformStore
-from app.main import create_app
-from tests.test_platform_api import FixedCore, release, source
+from tests.test_platform_api import platform_environment, release, source
 
 
 @pytest.fixture
 def platform(session_factory, tmp_path):
-    artifacts = ArtifactStore(tmp_path / "artifacts", inline_threshold=4096)
-    store = PlatformStore(session_factory, artifacts)
-    store.initialize()
-    app = create_app(init_database=False)
-    app.dependency_overrides[get_platform_store] = lambda: store
-    app.dependency_overrides[get_launch_service] = lambda: LaunchService(store, FixedCore())
-    app.dependency_overrides[get_artifacts] = lambda: artifacts
-    with TestClient(app) as client:
-        yield client, store, artifacts
+    yield from platform_environment(session_factory, tmp_path, inline_threshold=4096)
 
 
 def configured(client, store, *, model=False):

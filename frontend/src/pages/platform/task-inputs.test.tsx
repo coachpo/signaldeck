@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
 import { expect, it } from "vitest";
 import { LaunchInputs } from "./launch-inputs";
-import { supportsTaskForm, taskConstraintErrors, taskDefaults, availableTasks } from "./task-catalog";
+import { taskConstraintErrors, taskDefaults, availableTasks } from "./task-catalog";
 import type { Json, JsonObject, WorkflowPackage } from "@/lib/types/workflow-platform";
 function Form({ schema, initial }: { schema: JsonObject; initial: Json }) {
   const [value, setValue] = useState(initial);
@@ -33,8 +33,8 @@ it("treats includeRisk/reportId/collection as ordinary data; only declared defau
 it("discovers new package and workflow names including all legal roots", () => {
   const pkg={key:"unseen",definition:{metadata:{key:"unseen",name:"New package"},workflows:{custom:{name:"New task",description:"From package data",inputSchema:{type:"object",properties:{renamed:{type:"string",minLength:1}},required:["renamed"]}},scalar:{name:"Scalar",inputSchema:{type:"array",items:{type:"string"}}}}}} as unknown as WorkflowPackage;
   const tasks=availableTasks([pkg]);
-  expect(tasks.map(t=>[t.workflowKey,t.title,t.supported])).toEqual([["custom","New task",true],["scalar","Scalar",true]]);
-  expect(supportsTaskForm(tasks[0].workflow.inputSchema)).toBe(true);
+  expect(tasks.map(t=>[t.workflowKey,t.title])).toEqual([["custom","New task"],["scalar","Scalar"]]);
+  expect(tasks.map(t=>t.workflow.inputSchema)).toEqual([pkg.definition.workflows.custom.inputSchema,pkg.definition.workflows.scalar.inputSchema]);
   expect(taskConstraintErrors(tasks[0].workflow.inputSchema,{renamed:""})).toEqual({"parameters.renamed":"请至少填写 1 个字符。"});
 });
 

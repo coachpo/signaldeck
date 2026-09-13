@@ -187,7 +187,6 @@ def test_breakdown_uses_frozen_models_and_api_reads_do_not_resolve_credentials(
     def forbidden(*args):
         raise AssertionError("Usage reads cannot resolve credentials")
 
-    monkeypatch.setattr(store, "resolve_credentials", forbidden)
     monkeypatch.setattr(store, "resolve_bound_credentials", forbidden)
     read = client.get("/api/model-usage", params={"date": "2026-09-10", "timezone": "UTC"})
     assert read.status_code == 200, read.text

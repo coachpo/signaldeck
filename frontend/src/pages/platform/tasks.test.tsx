@@ -446,3 +446,17 @@ it("keeps a resumed unsaved draft locked while the launch response is still pend
   complete({ id: "resumed-result" });
   await waitFor(() => expect(screen.getByLabelText("Current route").textContent).toBe("/runs/resumed-result"));
 });
+
+it.each(["object", "array", "string", "integer", "number", "boolean", "null"])(
+  "keeps a %s input task discoverable from its catalog action",
+  (type) => {
+    mocks.schema = type === "object"
+      ? { type, properties: {} }
+      : type === "array" ? { type, items: { type: "string" } } : { type };
+    render(<Page path="/tasks" />);
+    expect(screen.getByRole("heading", { name: "保存原文" })).toBeVisible();
+    expect(screen.getByRole("link", { name: "选择任务" })).toHaveAttribute(
+      "href", "/tasks/new?packageKey=research_notes&workflowKey=capture",
+    );
+  },
+);

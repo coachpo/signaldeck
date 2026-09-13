@@ -223,16 +223,6 @@ class PlatformStore(PlatformRunStore):
                 for row in session.execute(query.order_by(ResourceRow.id))
             ]
 
-    def resolve_credentials(self, resource_id: str) -> dict[str, Any]:
-        """I/O adapters alone may call this explicit decryption boundary."""
-        with self.session_factory() as session:
-            value = session.scalar(
-                select(ResourceRow.credentials).where(ResourceRow.id == resource_id)
-            )
-            if value is None:
-                raise ApplicationError("resource_not_found", "Resource is unavailable", status=404)
-            return deepcopy(value)
-
     def resolve_bound_credentials(self, resource_id: str, expected_revision: str) -> dict[str, Any]:
         """Resolve one pinned secret reference without accepting a rotated identity."""
         with self.session_factory() as session, session.begin():

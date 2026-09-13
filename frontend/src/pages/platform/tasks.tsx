@@ -46,7 +46,7 @@ export function TasksPage() {
       contextBar={
         <PageContextBar
           title="任务"
-          description="选择要做的事，填写业务信息后开始。"
+          description="选择任务，填写业务信息，核对连接和保存位置后开始。"
           actions={
             <Button variant="outline" asChild>
               <Link to="/scheduled-tasks">自动执行</Link>
@@ -82,11 +82,6 @@ export function TasksPage() {
                   <h2 className="font-medium">{task.title}</h2>
                   <p className="text-sm text-muted-foreground">
                     {task.description}
-                  </p>
-                  <p className="text-sm">
-                    {task.supported
-                      ? "选择后核对所需连接和保存位置。"
-                      : "填写任务信息后，可核对连接并开始。"}
                   </p>
                   <TaskRecent
                     packageKey={task.packageKey}

@@ -75,11 +75,10 @@ def release() -> dict[str, Any]:
     ).model_dump(mode="json", by_alias=True)
 
 
-@pytest.fixture
-def platform(
-    session_factory: sessionmaker[Session], tmp_path: Path
+def platform_environment(
+    session_factory: sessionmaker[Session], tmp_path: Path, *, inline_threshold: int
 ) -> Iterator[tuple[TestClient, PlatformStore, ArtifactStore]]:
-    artifacts = ArtifactStore(tmp_path / "artifacts", inline_threshold=64)
+    artifacts = ArtifactStore(tmp_path / "artifacts", inline_threshold=inline_threshold)
     store = PlatformStore(session_factory, artifacts)
     store.initialize()
     app = create_app(init_database=False)
@@ -88,6 +87,13 @@ def platform(
     app.dependency_overrides[get_artifacts] = lambda: artifacts
     with TestClient(app) as client:
         yield client, store, artifacts
+
+
+@pytest.fixture
+def platform(
+    session_factory: sessionmaker[Session], tmp_path: Path
+) -> Iterator[tuple[TestClient, PlatformStore, ArtifactStore]]:
+    yield from platform_environment(session_factory, tmp_path, inline_threshold=64)
 
 
 def test_definition_editor_uses_canonical_immutable_source(platform: tuple) -> None:

@@ -1,11 +1,6 @@
 import type { Json, JsonObject, WorkflowPackage } from "@/lib/types/workflow-platform";
 import { initialParameters, isJsonObject } from "@/lib/platform-authoring/parameter-values";
 
-export function supportsTaskForm(schema: JsonObject) {
-  const types = Array.isArray(schema.type) ? schema.type : [schema.type];
-  return types.every((type) => typeof type === "string" && ["object", "array", "string", "integer", "number", "boolean", "null"].includes(type));
-}
-
 export function inputFieldLabel(schema: JsonObject, path: string): string {
   const tokens = path.replace(/^parameters\.?/, "").replace(/\[(\d+)\]/g, ".$1").split(".").filter(Boolean);
   let node = schema;
@@ -38,7 +33,6 @@ export function availableTasks(packages: WorkflowPackage[]) {
       description: workflow.description ?? pkg.definition.metadata.description ?? "",
       pkg,
       workflow,
-      supported: supportsTaskForm(workflow.inputSchema),
     })),
   );
 }
