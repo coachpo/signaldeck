@@ -1,4 +1,7 @@
 import { expect, test, type APIRequestContext } from "@playwright/test";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import ReactMarkdown from "react-markdown";
 import type { AttentionList } from "../src/lib/types/result-metadata";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
@@ -194,14 +197,21 @@ test("actual independent write remains unknown after cancellation and history su
     expect(await markdown.failure()).toBeNull();
     const exportedPath = join(directory, "offline-confirmed.md");
     await markdown.saveAs(exportedPath);
-    expect(readFileSync(exportedPath, "utf8")).toContain("Confirmed offline output");
-    expect(readFileSync(exportedPath, "utf8")).toContain(`# ${confirmedResult.title}`);
-    expect(readFileSync(exportedPath, "utf8")).not.toContain(confirmedId);
-    expect(readFileSync(exportedPath, "utf8")).toContain(confirmedResult.createdAt);
+    const exported = readFileSync(exportedPath, "utf8");
+    expect(exported).toContain("Confirmed offline output");
+    expect(exported).toContain(`# ${confirmedResult.title}`);
+    // Link destinations may contain addressing IDs; rendered headings, prose and code may not.
+    const displayedExport = renderToStaticMarkup(createElement(ReactMarkdown, { children: exported })).replace(/<[^>]*>/g, "");
+    expect(displayedExport).not.toContain(confirmedId);
+    const resultUrl = new URL(`/runs/${confirmedId}`, page.url()).href;
+    expect(exported).toContain(`[查看完整结果和全部来源](${resultUrl})`);
+    expect(exported).toContain(confirmedResult.createdAt);
+    await page.goto(resultUrl);
+    await expect(page.getByRole("region", { name: "任务结果", exact: true })).toContainText("Confirmed offline output");
     await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
     await page.getByRole("button", { name: "复制所选正文", exact: true }).click();
     await expect(page.getByText("所选确认内容已复制。", { exact: true })).toBeVisible();
-    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(readFileSync(exportedPath, "utf8"));
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(exported);
     const annotated = await request.patch(`${apiBase}/runs/${confirmedId}/metadata`, {
       data: { expectedRevision: 0, isFavorite: true, note: "Retained while execution services are offline" },
     });
@@ -227,7 +237,10 @@ test("actual independent write remains unknown after cancellation and history su
     await expect(page.getByRole("region", { name: "复制与导出", exact: true })).toBeVisible();
     expect(artifactRequests).toHaveLength(0);
     await page.getByText(/^选择复制与导出的内容/).click();
-    await page.getByRole("checkbox", { name: /^读取并选入附件：/ }).and(page.locator("input:enabled")).first().check();
+    const attachment = page.getByRole("checkbox", { name: /^读取并选入附件：/, disabled: false }).first();
+    await expect(attachment).not.toBeChecked();
+    await attachment.check();
+    await expect(attachment).toBeChecked();
     await expect(page.getByRole("button", { name: "导出 Markdown", exact: true })).toBeEnabled();
     expect(artifactRequests.length).toBeGreaterThan(0);
     const largeDownloadPromise = page.waitForEvent("download");

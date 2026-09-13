@@ -8,6 +8,7 @@ import { parse, stringify } from "yaml";
 import { apiBase, seed } from "./platform-fixtures";
 import { connectTaskServices } from "./task-fixtures";
 import { captureResponsiveEvidence } from "./responsive-evidence";
+import type { RunResult } from "../src/lib/types/result";
 
 const directory = resolve("../output/playwright/personal-use");
 
@@ -115,7 +116,17 @@ test("personal workflow retains drafts and launch identity, delivers results, an
   expect(displayedExport).not.toContain(firstId);
   await expect(page.locator("main")).not.toContainText(firstId);
   const noteUrl = await page.getByRole("link", { name: "打开笔记", exact: true }).getAttribute("href");
-  expect(exported).toContain(`[打开笔记](${noteUrl})`);
+  const firstResult: RunResult = await (await request.get(`${apiBase}/runs/${firstId}/result`)).json();
+  const frozenNoteLink = firstResult.sections?.find((section) => section.kind === "link" && section.label === "打开笔记");
+  expect(frozenNoteLink?.href).toBeTruthy();
+  const frozenNoteUrl = new URL(frozenNoteLink!.href!);
+  expect(exported).toContain(`[打开笔记](${frozenNoteLink!.href})`);
+  const navigationUrl = new URL(noteUrl!);
+  expect(navigationUrl.searchParams.get("sdTheme")).toBe("system");
+  expect(navigationUrl.searchParams.get("sdExpert")).toBe("false");
+  expect(navigationUrl.searchParams.get("sdPlatform")).toBe(new URL(page.url()).origin);
+  for (const key of ["sdTheme", "sdExpert", "sdPlatform"]) navigationUrl.searchParams.delete(key);
+  expect(navigationUrl.href).toBe(frozenNoteUrl.href);
   expect(exported).toContain(firstRun.createdAt);
   await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
   await page.getByRole("button", { name: "复制所选正文", exact: true }).click();
@@ -142,12 +153,15 @@ test("personal workflow retains drafts and launch identity, delivers results, an
   await expect(page.getByText("My retained note", { exact: true })).toBeVisible();
   expect(await (await request.get(`${apiBase}/runs/${firstId}`)).json()).toEqual(firstRun);
 
-  const popupPromise = page.waitForEvent("popup");
+  const resultUrl = page.url();
   await page.getByRole("link", { name: "打开笔记", exact: true }).click();
-  const notePage = await popupPromise;
-  await expect(notePage.locator("#noteTitle")).toHaveText(firstInput.caption);
-  await expect(notePage.locator("#noteText")).toHaveText(firstInput.passage);
-  await notePage.close();
+  await expect(page).toHaveURL(frozenNoteUrl.href);
+  await expect(page.locator("#noteTitle")).toHaveText(firstInput.caption);
+  await expect(page.locator("#noteText")).toHaveText(firstInput.passage);
+  await page.goBack();
+  await expect(page).toHaveURL(resultUrl);
+  await expect(page.getByRole("region", { name: "笔记正文", exact: true })).toContainText("Confirmed original");
+  await expect(page.getByText("My retained note", { exact: true })).toBeVisible();
 
   const secondInput = { caption: `${key} second`, passage: "# Confirmed revision\n\n1. First item\n2. Changed item\n\nAnother retained source." };
   const launched = await request.post(`${apiBase}/workflow-packages/${key}/launches`, { data: { workflowKey: "retain", parameters: secondInput, revisionHash: originalHash, launchId: crypto.randomUUID() } });

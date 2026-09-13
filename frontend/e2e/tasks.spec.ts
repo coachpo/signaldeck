@@ -1,8 +1,9 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { expect, test } from "@playwright/test";
 import { apiBase } from "./platform-fixtures";
 import { connectTaskServices } from "./task-fixtures";
+import type { RunResult } from "../src/lib/types/result";
 import {
   captureResponsiveEvidence,
   type ResponsiveObservation,
@@ -202,7 +203,7 @@ test("UX01/03/06: four ordinary tasks execute with real plugins and retain reusa
     await expect(
       page.getByRole("heading", { name: "来源与时间" }),
     ).toBeVisible();
-    const result = await (
+    const result: RunResult = await (
       await request.get(`${apiBase}/runs/${runId}/result`)
     ).json();
     const run = await (await request.get(`${apiBase}/runs/${runId}`)).json();
@@ -305,28 +306,32 @@ test("UX01/03/06: four ordinary tasks execute with real plugins and retain reusa
       JSON.stringify(visualEvidence, null, 2),
     );
     if (scenario.key !== "research_notes") {
-      const popupPromise = page.waitForEvent("popup");
+      const resultUrl = page.url();
+      const reportLink = result.sections?.find((section) => section.kind === "link" && section.label === "在 Finance 中查看报告");
+      expect(reportLink?.href).toBeTruthy();
       await page
         .getByRole("link", { name: "在 Finance 中查看报告", exact: true })
         .first()
         .click();
-      const reportPage = await popupPromise;
-      const reportBody = reportPage.getByRole("article", { name: "报告正文", exact: true });
+      await expect(page).toHaveURL(reportLink!.href!);
+      const reportBody = page.getByRole("article", { name: "报告正文", exact: true });
       await expect(reportBody).toBeVisible();
       await expect(reportBody).toContainText(
         "fake provider content",
       );
-      const downloadPromise = reportPage.waitForEvent("download");
-      await reportPage.getByRole("button", { name: "下载 Markdown" }).click();
+      const downloadPromise = page.waitForEvent("download");
+      await page.getByRole("button", { name: "下载 Markdown" }).click();
       const download = await downloadPromise;
       expect(await download.failure()).toBeNull();
-      await download.saveAs(
-        resolve(evidenceDirectory, `${scenario.key}-report.md`),
-      );
-      await reportPage.close();
+      const reportPath = resolve(evidenceDirectory, `${scenario.key}-report.md`);
+      await download.saveAs(reportPath);
+      expect(readFileSync(reportPath, "utf8")).toContain("fake provider content");
+      await page.goBack();
+      await expect(page).toHaveURL(resultUrl);
+      await expect(page.getByRole("link", { name: "查看执行过程", exact: true })).toBeVisible();
     }
     if (scenario.workflow === "capture") {
-      expect(result.sections.find((section: { kind: string }) => section.kind === "markdown").value).toContain(
+      expect(result.sections?.find((section) => section.kind === "markdown")?.value).toContain(
         originalText,
       );
       const before = JSON.stringify(run.spec);
