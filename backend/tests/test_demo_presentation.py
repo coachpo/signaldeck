@@ -16,6 +16,7 @@ ROOT = Path(__file__).resolve().parents[2]
     [
         ("tradingagents_advisory_research", "research", "市场研究"),
         ("digital_oracle_researcher", "research", "综合资料研究"),
+        ("us_equity_research", "research", "美股多空研究"),
         ("research_notes", "research", "整理笔记"),
         ("research_notes", "capture", "保存原文"),
     ],

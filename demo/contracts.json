@@ -1,6 +1,6 @@
 {
   "digital_oracle_researcher": {
-    "contentHash": "d75b50154393d7541c37bb98d4ac18504ff3ff9ce9b23d719c03f16c65d792de",
+    "contentHash": "d2efb2e22d1093e4c097778d3f4ebc08c47225831afdc25dfd2c734427fd6b13",
     "tools": [
       "signaldeck/digital-oracle/cftc_positioning_lookup",
       "signaldeck/digital-oracle/crypto_derivatives_lookup",
@@ -68,7 +68,7 @@
     }
   },
   "research_notes": {
-    "contentHash": "74c0eb23437a33433cbe3be90394a06aa079ea77ad047b86eba705f0fc354e81",
+    "contentHash": "02d61cf12ce717c03251d141744bd51ec92f3594750b42e16542ce7710bc33c1",
     "tools": [
       "example/notes/create",
       "example/notes/search"
@@ -144,9 +144,11 @@
     }
   },
   "tradingagents_advisory_research": {
-    "contentHash": "01675d6da511805090e0e1b7159439093d5626a26f33ee2b987c0a83f380abfd",
+    "contentHash": "66af34a24529f6f54f6ea7a01054f00737abb5084365d3a544670d67d10536fe",
     "tools": [
+      "signaldeck/finance/market_data_history_lookup",
       "signaldeck/finance/market_data_quote_lookup",
+      "signaldeck/finance/news_lookup",
       "signaldeck/finance/reports_create"
     ],
     "resources": [
@@ -157,6 +159,7 @@
         "workflowKey": "research",
         "nodeOrder": [
           "collect",
+          "evidence",
           "opportunity",
           "risk",
           "summary",
@@ -164,22 +167,38 @@
         ],
         "dependencies": {
           "collect": [],
-          "opportunity": [
+          "evidence": [
             "collect"
           ],
+          "opportunity": [
+            "collect",
+            "evidence"
+          ],
           "risk": [
-            "collect"
+            "collect",
+            "evidence"
           ],
           "save": [
             "summary"
           ],
           "summary": [
             "collect",
+            "evidence",
             "opportunity",
             "risk"
           ]
         },
         "edges": [
+          {
+            "source": "collect",
+            "target": "evidence",
+            "sources": [
+              "input"
+            ],
+            "paths": [
+              "$.workflows.research.nodes.evidence.inputMapping.object.market.ref"
+            ]
+          },
           {
             "source": "collect",
             "target": "opportunity",
@@ -215,6 +234,36 @@
             ]
           },
           {
+            "source": "evidence",
+            "target": "opportunity",
+            "sources": [
+              "input"
+            ],
+            "paths": [
+              "$.workflows.research.nodes.opportunity.inputMapping.object.evidence.ref"
+            ]
+          },
+          {
+            "source": "evidence",
+            "target": "risk",
+            "sources": [
+              "input"
+            ],
+            "paths": [
+              "$.workflows.research.nodes.risk.inputMapping.object.evidence.ref"
+            ]
+          },
+          {
+            "source": "evidence",
+            "target": "summary",
+            "sources": [
+              "input"
+            ],
+            "paths": [
+              "$.workflows.research.nodes.summary.inputMapping.object.evidence.ref"
+            ]
+          },
+          {
             "source": "opportunity",
             "target": "summary",
             "sources": [
@@ -242,6 +291,480 @@
             ],
             "paths": [
               "$.workflows.research.nodes.save.inputMapping.ref"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "us_equity_research": {
+    "contentHash": "39741ded50504b9587544536482998650c0c78227d7c2e7107b6ac3b2c8e4d65",
+    "tools": [
+      "signaldeck/digital-oracle/macro_rates_lookup",
+      "signaldeck/digital-oracle/sec_filings_lookup",
+      "signaldeck/finance/indicators_lookup",
+      "signaldeck/finance/market_data_ohlcv_lookup",
+      "signaldeck/finance/market_data_quote_lookup",
+      "signaldeck/finance/news_lookup",
+      "signaldeck/finance/reports_create"
+    ],
+    "resources": [
+      "finance-market-data"
+    ],
+    "plans": {
+      "research": {
+        "workflowKey": "research",
+        "nodeOrder": [
+          "company",
+          "macro",
+          "market",
+          "news",
+          "bear",
+          "bull",
+          "bear_reply",
+          "bull_reply",
+          "risk",
+          "decision",
+          "save"
+        ],
+        "dependencies": {
+          "bear": [
+            "company",
+            "macro",
+            "market",
+            "news"
+          ],
+          "bear_reply": [
+            "bear",
+            "bull",
+            "company",
+            "macro",
+            "market",
+            "news"
+          ],
+          "bull": [
+            "company",
+            "macro",
+            "market",
+            "news"
+          ],
+          "bull_reply": [
+            "bear",
+            "bull",
+            "company",
+            "macro",
+            "market",
+            "news"
+          ],
+          "company": [],
+          "decision": [
+            "bear",
+            "bear_reply",
+            "bull",
+            "bull_reply",
+            "company",
+            "macro",
+            "market",
+            "news",
+            "risk"
+          ],
+          "macro": [],
+          "market": [],
+          "news": [],
+          "risk": [
+            "bear",
+            "bear_reply",
+            "bull",
+            "bull_reply",
+            "company",
+            "macro",
+            "market",
+            "news"
+          ],
+          "save": [
+            "decision"
+          ]
+        },
+        "edges": [
+          {
+            "source": "bear",
+            "target": "bear_reply",
+            "sources": [
+              "input"
+            ],
+            "paths": [
+              "$.workflows.research.nodes.bear_reply.inputMapping.object.ownCase.ref"
+            ]
+          },
+          {
+            "source": "bear",
+            "target": "bull_reply",
+            "sources": [
+              "input"
+            ],
+            "paths": [
+              "$.workflows.research.nodes.bull_reply.inputMapping.object.opposingCase.ref"
+            ]
+          },
+          {
+            "source": "bear",
+            "target": "decision",
+            "sources": [
+              "input"
+            ],
+            "paths": [
+              "$.workflows.research.nodes.decision.inputMapping.object.bearCase.ref"
+            ]
+          },
+          {
+            "source": "bear",
+            "target": "risk",
+            "sources": [
+              "input"
+            ],
+            "paths": [
+              "$.workflows.research.nodes.risk.inputMapping.object.bearCase.ref"
+            ]
+          },
+          {
+            "source": "bear_reply",
+            "target": "decision",
+            "sources": [
+              "input"
+            ],
+            "paths": [
+              "$.workflows.research.nodes.decision.inputMapping.object.bearReply.ref"
+            ]
+          },
+          {
+            "source": "bear_reply",
+            "target": "risk",
+            "sources": [
+              "input"
+            ],
+            "paths": [
+              "$.workflows.research.nodes.risk.inputMapping.object.bearReply.ref"
+            ]
+          },
+          {
+            "source": "bull",
+            "target": "bear_reply",
+            "sources": [
+              "input"
+            ],
+            "paths": [
+              "$.workflows.research.nodes.bear_reply.inputMapping.object.opposingCase.ref"
+            ]
+          },
+          {
+            "source": "bull",
+            "target": "bull_reply",
+            "sources": [
+              "input"
+            ],
+            "paths": [
+              "$.workflows.research.nodes.bull_reply.inputMapping.object.ownCase.ref"
+            ]
+          },
+          {
+            "source": "bull",
+            "target": "decision",
+            "sources": [
+              "input"
+            ],
+            "paths": [
+              "$.workflows.research.nodes.decision.inputMapping.object.bullCase.ref"
+            ]
+          },
+          {
+            "source": "bull",
+            "target": "risk",
+            "sources": [
+              "input"
+            ],
+            "paths": [
+              "$.workflows.research.nodes.risk.inputMapping.object.bullCase.ref"
+            ]
+          },
+          {
+            "source": "bull_reply",
+            "target": "decision",
+            "sources": [
+              "input"
+            ],
+            "paths": [
+              "$.workflows.research.nodes.decision.inputMapping.object.bullReply.ref"
+            ]
+          },
+          {
+            "source": "bull_reply",
+            "target": "risk",
+            "sources": [
+              "input"
+            ],
+            "paths": [
+              "$.workflows.research.nodes.risk.inputMapping.object.bullReply.ref"
+            ]
+          },
+          {
+            "source": "company",
+            "target": "bear",
+            "sources": [
+              "input"
+            ],
+            "paths": [
+              "$.workflows.research.nodes.bear.inputMapping.object.company.ref"
+            ]
+          },
+          {
+            "source": "company",
+            "target": "bear_reply",
+            "sources": [
+              "input"
+            ],
+            "paths": [
+              "$.workflows.research.nodes.bear_reply.inputMapping.object.company.ref"
+            ]
+          },
+          {
+            "source": "company",
+            "target": "bull",
+            "sources": [
+              "input"
+            ],
+            "paths": [
+              "$.workflows.research.nodes.bull.inputMapping.object.company.ref"
+            ]
+          },
+          {
+            "source": "company",
+            "target": "bull_reply",
+            "sources": [
+              "input"
+            ],
+            "paths": [
+              "$.workflows.research.nodes.bull_reply.inputMapping.object.company.ref"
+            ]
+          },
+          {
+            "source": "company",
+            "target": "decision",
+            "sources": [
+              "input"
+            ],
+            "paths": [
+              "$.workflows.research.nodes.decision.inputMapping.object.company.ref"
+            ]
+          },
+          {
+            "source": "company",
+            "target": "risk",
+            "sources": [
+              "input"
+            ],
+            "paths": [
+              "$.workflows.research.nodes.risk.inputMapping.object.company.ref"
+            ]
+          },
+          {
+            "source": "decision",
+            "target": "save",
+            "sources": [
+              "input"
+            ],
+            "paths": [
+              "$.workflows.research.nodes.save.inputMapping.object.content.ref",
+              "$.workflows.research.nodes.save.inputMapping.object.name.ref"
+            ]
+          },
+          {
+            "source": "macro",
+            "target": "bear",
+            "sources": [
+              "input"
+            ],
+            "paths": [
+              "$.workflows.research.nodes.bear.inputMapping.object.macro.ref"
+            ]
+          },
+          {
+            "source": "macro",
+            "target": "bear_reply",
+            "sources": [
+              "input"
+            ],
+            "paths": [
+              "$.workflows.research.nodes.bear_reply.inputMapping.object.macro.ref"
+            ]
+          },
+          {
+            "source": "macro",
+            "target": "bull",
+            "sources": [
+              "input"
+            ],
+            "paths": [
+              "$.workflows.research.nodes.bull.inputMapping.object.macro.ref"
+            ]
+          },
+          {
+            "source": "macro",
+            "target": "bull_reply",
+            "sources": [
+              "input"
+            ],
+            "paths": [
+              "$.workflows.research.nodes.bull_reply.inputMapping.object.macro.ref"
+            ]
+          },
+          {
+            "source": "macro",
+            "target": "decision",
+            "sources": [
+              "input"
+            ],
+            "paths": [
+              "$.workflows.research.nodes.decision.inputMapping.object.macro.ref"
+            ]
+          },
+          {
+            "source": "macro",
+            "target": "risk",
+            "sources": [
+              "input"
+            ],
+            "paths": [
+              "$.workflows.research.nodes.risk.inputMapping.object.macro.ref"
+            ]
+          },
+          {
+            "source": "market",
+            "target": "bear",
+            "sources": [
+              "input"
+            ],
+            "paths": [
+              "$.workflows.research.nodes.bear.inputMapping.object.market.ref"
+            ]
+          },
+          {
+            "source": "market",
+            "target": "bear_reply",
+            "sources": [
+              "input"
+            ],
+            "paths": [
+              "$.workflows.research.nodes.bear_reply.inputMapping.object.market.ref"
+            ]
+          },
+          {
+            "source": "market",
+            "target": "bull",
+            "sources": [
+              "input"
+            ],
+            "paths": [
+              "$.workflows.research.nodes.bull.inputMapping.object.market.ref"
+            ]
+          },
+          {
+            "source": "market",
+            "target": "bull_reply",
+            "sources": [
+              "input"
+            ],
+            "paths": [
+              "$.workflows.research.nodes.bull_reply.inputMapping.object.market.ref"
+            ]
+          },
+          {
+            "source": "market",
+            "target": "decision",
+            "sources": [
+              "input"
+            ],
+            "paths": [
+              "$.workflows.research.nodes.decision.inputMapping.object.market.ref"
+            ]
+          },
+          {
+            "source": "market",
+            "target": "risk",
+            "sources": [
+              "input"
+            ],
+            "paths": [
+              "$.workflows.research.nodes.risk.inputMapping.object.market.ref"
+            ]
+          },
+          {
+            "source": "news",
+            "target": "bear",
+            "sources": [
+              "input"
+            ],
+            "paths": [
+              "$.workflows.research.nodes.bear.inputMapping.object.news.ref"
+            ]
+          },
+          {
+            "source": "news",
+            "target": "bear_reply",
+            "sources": [
+              "input"
+            ],
+            "paths": [
+              "$.workflows.research.nodes.bear_reply.inputMapping.object.news.ref"
+            ]
+          },
+          {
+            "source": "news",
+            "target": "bull",
+            "sources": [
+              "input"
+            ],
+            "paths": [
+              "$.workflows.research.nodes.bull.inputMapping.object.news.ref"
+            ]
+          },
+          {
+            "source": "news",
+            "target": "bull_reply",
+            "sources": [
+              "input"
+            ],
+            "paths": [
+              "$.workflows.research.nodes.bull_reply.inputMapping.object.news.ref"
+            ]
+          },
+          {
+            "source": "news",
+            "target": "decision",
+            "sources": [
+              "input"
+            ],
+            "paths": [
+              "$.workflows.research.nodes.decision.inputMapping.object.news.ref"
+            ]
+          },
+          {
+            "source": "news",
+            "target": "risk",
+            "sources": [
+              "input"
+            ],
+            "paths": [
+              "$.workflows.research.nodes.risk.inputMapping.object.news.ref"
+            ]
+          },
+          {
+            "source": "risk",
+            "target": "decision",
+            "sources": [
+              "input"
+            ],
+            "paths": [
+              "$.workflows.research.nodes.decision.inputMapping.object.riskReview.ref"
             ]
           }
         ]

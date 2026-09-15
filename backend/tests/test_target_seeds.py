@@ -22,6 +22,12 @@ from app.infrastructure.platform_store import PlatformStore
 
 ROOT = Path(__file__).resolve().parents[2]
 DEMO = ROOT / "demo"
+EXPECTED_PACKAGE_KEYS = {
+    "digital_oracle_researcher",
+    "research_notes",
+    "tradingagents_advisory_research",
+    "us_equity_research",
+}
 
 
 @pytest.fixture()
@@ -36,7 +42,8 @@ def store(database_url: str):
 def test_bundled_sources_hashes_and_plans_match_importable_examples() -> None:
     contracts = json.loads((DEMO / "contracts.json").read_text())
     seeds = load_seed_packages(DEMO)
-    assert len(seeds) == 3
+    assert len(seeds) == len(EXPECTED_PACKAGE_KEYS)
+    assert set(contracts) == EXPECTED_PACKAGE_KEYS
     assert set(contracts) == {seed.compiled.package.metadata.key for seed in seeds}
     for seed in seeds:
         compiled = seed.compiled
@@ -79,8 +86,10 @@ def test_seed_loading_has_no_plugin_or_network_dependency(monkeypatch) -> None:
 def test_seed_install_is_atomic_and_preserves_operator_revisions(store: PlatformStore) -> None:
     with ThreadPoolExecutor(max_workers=2) as pool:
         results = list(pool.map(lambda _: seed_packages(store, DEMO), range(2)))
-    assert sum(item["status"] == "created" for items in results for item in items) == 3
-    assert len(store.list_packages()) == 3
+    assert sum(item["status"] == "created" for items in results for item in items) == len(
+        EXPECTED_PACKAGE_KEYS
+    )
+    assert len(store.list_packages()) == len(EXPECTED_PACKAGE_KEYS)
     seed = load_seed_packages(DEMO)[0]
     key = seed.compiled.package.metadata.key
     initial = store.get_package(key)
@@ -141,8 +150,8 @@ def test_examples_preserve_parallelism_reuse_and_explicit_missing_semantics() ->
     finance = packages["tradingagents_advisory_research"]
     workflow = finance.package.workflows["research"]
     plan = finance.plans["research"]
-    assert plan.dependencies["opportunity"] == ["collect"]
-    assert plan.dependencies["risk"] == ["collect"]
+    assert plan.dependencies["opportunity"] == ["collect", "evidence"]
+    assert plan.dependencies["risk"] == ["collect", "evidence"]
     assert workflow.nodes["opportunity"].uses == workflow.nodes["risk"].uses == "analyst"
     assert {source for edge in plan.edges for source in edge.sources} == {
         "control",
@@ -160,7 +169,10 @@ def test_examples_preserve_parallelism_reuse_and_explicit_missing_semantics() ->
     }
     assert evaluate_condition(condition, namespace) is False
     summary_input = resolve_mapping(workflow.nodes["summary"].input_mapping, namespace)
-    assert summary_input["risk"]["text"] == "Risk review was not requested and was skipped."
+    assert summary_input["riskReviewRequested"] is False
+    assert summary_input["risk"]["text"] == (
+        "独立风险复核结果不可用；未请求与已请求但未完成须按 riskReviewRequested 区分。"
+    )
     assert "risk" not in namespace["nodes"]
     notes = packages["research_notes"].package
     assert (
