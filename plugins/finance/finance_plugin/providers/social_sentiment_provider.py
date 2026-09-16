@@ -165,6 +165,8 @@ class RedditSocialSentimentAdapter:
                 rss_blocks = self._fetch_subreddit_rss_blocks(
                     normalized_symbol,
                     subreddit=subreddit,
+                    start_date=start_date,
+                    end_date=end_date,
                     limit=limit_per_subreddit,
                 )
                 if rss_blocks:
@@ -264,6 +266,8 @@ class RedditSocialSentimentAdapter:
         symbol: str,
         *,
         subreddit: str,
+        start_date: datetime | None,
+        end_date: datetime | None,
         limit: int,
     ) -> list[ProviderSocialSentimentSourceBlock]:
         params: dict[str, str | int] = {
@@ -279,6 +283,8 @@ class RedditSocialSentimentAdapter:
             symbol=symbol,
             source=self.source,
             provider=self.provider_name,
+            start_date=start_date,
+            end_date=end_date,
             limit=limit,
         )
 
@@ -659,6 +665,8 @@ def _parse_reddit_rss_blocks(
     symbol: str,
     source: SocialSentimentSource,
     provider: str,
+    start_date: datetime | None,
+    end_date: datetime | None,
     limit: int,
 ) -> list[ProviderSocialSentimentSourceBlock]:
     try:
@@ -669,15 +677,17 @@ def _parse_reddit_rss_blocks(
             details={"provider": provider, "source": source},
         ) from exc
     entries = [element for element in root.iter() if _local_name(element.tag) in {"entry", "item"}]
-    return [
-        _parse_reddit_rss_entry(
+    blocks: list[ProviderSocialSentimentSourceBlock] = []
+    for entry in entries:
+        block = _parse_reddit_rss_entry(
             entry,
             symbol=symbol,
             source=source,
             provider=provider,
         )
-        for entry in entries[:limit]
-    ]
+        if _within_bounds(block.as_of, start_date=start_date, end_date=end_date):
+            blocks.append(block)
+    return blocks[:limit]
 
 
 def _parse_reddit_rss_entry(
@@ -834,7 +844,10 @@ def _unix_datetime(value: object) -> datetime | None:
     if isinstance(value, bool):
         return None
     if isinstance(value, int | float):
-        return datetime.fromtimestamp(float(value), tz=UTC)
+        try:
+            return datetime.fromtimestamp(float(value), tz=UTC)
+        except (OverflowError, OSError, ValueError):
+            return None
     return None
 
 
@@ -855,7 +868,7 @@ def _within_bounds(
     end_date: datetime | None,
 ) -> bool:
     if value is None:
-        return True
+        return start_date is None and end_date is None
     normalized = to_utc(value)
     if start_date is not None and normalized < to_utc(start_date):
         return False
