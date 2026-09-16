@@ -37,7 +37,6 @@ test("generic navigation owns one route shell without statically compiled busine
     exact: true,
   });
   await expect(expertEntry).toHaveCount(0);
-  for (const href of taskHrefs) await expect(page.locator(`a[href="${href}"]`)).toBeVisible();
   await page.getByRole("switch", { name: "专家模式", exact: true }).check();
   await expect(expertEntry).toBeVisible();
   await expertEntry.click();

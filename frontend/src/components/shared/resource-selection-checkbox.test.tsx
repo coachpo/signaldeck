@@ -44,20 +44,6 @@ describe("ResourceSelectionCheckbox", () => {
     ).toHaveAttribute("aria-checked", "false");
   });
 
-  it("renders an accessible checkbox label", () => {
-    render(
-      <ResourceSelectionCheckbox
-        ariaLabel="Select report Alpha"
-        selected={false}
-        onSelectedChange={() => {}}
-      />,
-    );
-
-    expect(
-      screen.getByRole("checkbox", { name: "Select report Alpha" }),
-    ).toBeInTheDocument();
-  });
-
   it("converts checked-state changes back to booleans for callers", () => {
     const onSelectedChange = vi.fn();
 

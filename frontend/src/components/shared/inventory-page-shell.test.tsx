@@ -43,16 +43,40 @@ describe("InventoryPageShell", () => {
   it("leaves the filter region empty when callers have no active filter bar", () => {
     render(
       <InventoryPageShell
-        pageContext={{ title: "Reports" }}
+        pageContext={{
+          actions: <button type="button">Create</button>,
+          title: "Reports",
+        }}
         testId="inventory-shell"
         toolbar={{ resultSummary: "No reports loaded" }}
       >
-        <div>Report rows</div>
+        <section data-testid="inventory-results">Report rows</section>
       </InventoryPageShell>,
     );
 
     expect(shellRegions()).toEqual(["context", "toolbar", "content"]);
     expect(screen.queryByTestId("inventory-filters")).not.toBeInTheDocument();
+
+    const shell = screen.getByTestId("inventory-shell");
+    const toolbar = shell.querySelector(
+      '[data-inventory-shell-region="toolbar"]',
+    );
+    const content = shell.querySelector(
+      '[data-inventory-shell-region="content"]',
+    );
+
+    if (!toolbar || !content) {
+      throw new Error("Expected inventory toolbar and content regions.");
+    }
+
+    expect(toolbar).not.toContainElement(
+      screen.getByTestId("inventory-results"),
+    );
+    expect(content).toContainElement(screen.getByTestId("inventory-results"));
+    expect(
+      toolbar.compareDocumentPosition(content) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 
   it("leaves the toolbar region empty when callers move summary into compact route context", () => {
@@ -70,42 +94,5 @@ describe("InventoryPageShell", () => {
     expect(
       screen.queryByText(/bundled extension returned/i),
     ).not.toBeInTheDocument();
-  });
-
-  it("keeps route-owned content after shared controls instead of nesting controls in results", () => {
-    render(
-      <InventoryPageShell
-        pageContext={{
-          actions: <button type="button">Create</button>,
-          title: "Runs",
-        }}
-        testId="inventory-shell"
-        toolbar={{ resultSummary: "4 runs shown" }}
-      >
-        <section data-testid="inventory-results">Run rows</section>
-      </InventoryPageShell>,
-    );
-
-    const shell = screen.getByTestId("inventory-shell");
-    const toolbar = shell.querySelector(
-      '[data-inventory-shell-region="toolbar"]',
-    );
-    const content = shell.querySelector(
-      '[data-inventory-shell-region="content"]',
-    );
-
-    if (!toolbar || !content) {
-      throw new Error("Expected inventory toolbar and content regions.");
-    }
-
-    expect(shellRegions()).toEqual(["context", "toolbar", "content"]);
-    expect(toolbar).not.toContainElement(
-      screen.getByTestId("inventory-results"),
-    );
-    expect(content).toContainElement(screen.getByTestId("inventory-results"));
-    expect(
-      toolbar.compareDocumentPosition(content) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
   });
 });

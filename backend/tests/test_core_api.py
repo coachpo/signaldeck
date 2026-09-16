@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from app.core.errors import ApiError
+from app.main import create_app
 
 
 def test_browser_safe_error_details_preserve_public_scalars_and_drop_unsafe_values() -> None:
@@ -76,8 +77,9 @@ def test_browser_safe_error_details_preserve_public_scalars_and_drop_unsafe_valu
     assert text_detail_error.details == []
 
 
-def test_removed_workflow_memory_api_is_not_registered(client: TestClient) -> None:
-    response = client.get("/api/memory/proposals")
+def test_removed_workflow_memory_api_is_not_registered() -> None:
+    with TestClient(create_app(init_database=False)) as client:
+        response = client.get("/api/memory/proposals")
 
     assert response.status_code == 404
 
@@ -95,7 +97,9 @@ def test_run_catalog_is_get_only_with_logfire_instrumentation(
     assert response.headers["allow"] == "GET"
 
 
-def test_api_error_envelope_details_are_browser_safe(app: FastAPI) -> None:
+def test_api_error_envelope_details_are_browser_safe() -> None:
+    app = create_app(init_database=False)
+
     def api_error_details_probe() -> None:
         raise ApiError(
             status_code=400,

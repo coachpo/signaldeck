@@ -1,0 +1,17 @@
+[
+  {
+    "command": "pnpm lint",
+    "seconds": 14.455,
+    "exit": 0
+  },
+  {
+    "command": "pnpm typecheck",
+    "seconds": 11.158,
+    "exit": 0
+  },
+  {
+    "command": "pnpm build",
+    "seconds": 12.12,
+    "exit": 0
+  }
+]

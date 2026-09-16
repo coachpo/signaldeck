@@ -1,0 +1,56 @@
+{
+  "http_junit_total": {
+    "full": 1.7189999999999999,
+    "reduced": 1.292
+  },
+  "largest_unchanged_test_time_differences": [
+    {
+      "node": "tests.test_durable_runtime::test_worker_sigkill_reuses_confirmed_model_tool_and_sibling_across_readme_publication",
+      "full_seconds": 45.654,
+      "reduced_seconds": 42.178,
+      "difference_seconds": 3.476000000000006
+    },
+    {
+      "node": "tests.test_agent_deadline_classification::test_retried_model_activity_uses_agent_deadline_not_cancellation",
+      "full_seconds": 10.255,
+      "reduced_seconds": 6.868,
+      "difference_seconds": 3.3870000000000005
+    },
+    {
+      "node": "tests.test_durable_runtime_plugin_stop::test_independent_plugin_receives_cancellation_without_false_effect_confirmation[True-cancel]",
+      "full_seconds": 4.29,
+      "reduced_seconds": 3.685,
+      "difference_seconds": 0.605
+    },
+    {
+      "node": "tests.test_demo_workflow_dataflow::test_equity_report_keeps_comparison_in_saved_content_and_public_output",
+      "full_seconds": 0.553,
+      "reduced_seconds": 0.269,
+      "difference_seconds": 0.28400000000000003
+    },
+    {
+      "node": "tests.test_independent_plugins::test_notes_1_1_schema_remains_live_beside_1_2",
+      "full_seconds": 1.915,
+      "reduced_seconds": 1.639,
+      "difference_seconds": 0.276
+    },
+    {
+      "node": "tests.test_durable_runtime_injection::test_two_workers_in_one_process_keep_distinct_store_gateway_and_credentials",
+      "full_seconds": 1.922,
+      "reduced_seconds": 2.184,
+      "difference_seconds": -0.26200000000000023
+    },
+    {
+      "node": "tests.test_durable_runtime_boundaries::test_missing_join_failure_and_large_model_tool_outputs",
+      "full_seconds": 5.641,
+      "reduced_seconds": 5.882,
+      "difference_seconds": -0.24099999999999966
+    },
+    {
+      "node": "tests.test_durable_runtime_plugin_stop::test_independent_plugin_receives_cancellation_without_false_effect_confirmation[True-deadline]",
+      "full_seconds": 6.183,
+      "reduced_seconds": 5.948,
+      "difference_seconds": 0.23499999999999943
+    }
+  ]
+}

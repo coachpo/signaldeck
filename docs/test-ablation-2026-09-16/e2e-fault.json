@@ -1,0 +1,25 @@
+{
+  "stats": {
+    "startTime": "2026-09-16T02:30:00.480Z",
+    "duration": 33182.752,
+    "expected": 1,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "tests": [
+    {
+      "file": "faults.spec.ts",
+      "title": "actual independent write remains unknown after cancellation and history survives plugin shutdown",
+      "project": "chromium",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "duration": 19959
+        }
+      ]
+    }
+  ]
+}

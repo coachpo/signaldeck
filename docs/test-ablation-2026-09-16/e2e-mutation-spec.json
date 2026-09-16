@@ -1,0 +1,57 @@
+{
+  "revision": "7c4bcbcf87adce626fcf6fe7dc1ef23e98538a02",
+  "entry": "frontend/e2e/shell.spec.ts",
+  "original_sha256": "940e27cbff2576341f85ee4e57f782d9478aa9a7218c35498e8bed50ec696e64",
+  "execution": "Chromium, workers=1, retries=0, common production build and owned harness; all groups separate browser contexts",
+  "groups": {
+    "full": "original 5 shell tests",
+    "reduced": "same 5 tests; remove initial duplicated href visibility loop directly after expertEntry count=0; helper retains exact href checks and mode-roundtrip retains later checks",
+    "no-tablet": "combined removal: reduced plus 768 width test (4 tests); candidate only, not applied"
+  },
+  "faults": [
+    {
+      "id": "tablet",
+      "injection": "DOMContentLoaded style @media (min-width: 768px) and (max-width: 768px) { body { min-width: 1800px !important; } }",
+      "risk": "tablet breakpoint overflow",
+      "groups": [
+        "full",
+        "reduced",
+        "no-tablet"
+      ]
+    },
+    {
+      "id": "mobile",
+      "injection": "same min-width fault restricted to 375px",
+      "risk": "mobile breakpoint overflow",
+      "groups": [
+        "full",
+        "reduced",
+        "no-tablet"
+      ]
+    },
+    {
+      "id": "hidden",
+      "injection": "MutationObserver childList/subtree applies visibility:hidden to a[href^=\"/tasks/new?\"]",
+      "risk": "task discovery links become inaccessible",
+      "groups": [
+        "full",
+        "reduced"
+      ]
+    },
+    {
+      "id": "href",
+      "injection": "MutationObserver childList/subtree rewrites a[href^=\"/tasks/new?\"] href to /tasks/broken",
+      "risk": "task entries route to wrong destination",
+      "groups": [
+        "full",
+        "reduced"
+      ]
+    }
+  ],
+  "control": "clean tests run without injected scripts",
+  "limitations": "Fault samples are finite; injected CSS/DOM reflects browser-observable effects, not underlying implementation mutation. No conclusions about unrelated behavior or complete accessibility.",
+  "beforeEach_source": "test.beforeEach(async ({ page }, testInfo) => {\n  const fault = testInfo.project.metadata.fault as string;\n  if (fault === \"tablet\" || fault === \"mobile\") {\n    await page.addInitScript((faultWidth) => {\n      document.addEventListener(\"DOMContentLoaded\", () => {\n        const style = document.createElement(\"style\");\n        style.textContent = `@media (min-width: ${faultWidth}px) and (max-width: ${faultWidth}px) { body { min-width: 1800px !important; } }`;\n        document.head.append(style);\n      });\n    }, fault === \"tablet\" ? 768 : 375);\n  } else if (fault === \"hidden\" || fault === \"href\") {\n    await page.addInitScript((kind) => {\n      new MutationObserver(() => {\n        for (const link of document.querySelectorAll<HTMLAnchorElement>('a[href^=\"/tasks/new?\"]')) {\n          if (kind === \"hidden\") link.style.visibility = \"hidden\";\n          else link.setAttribute(\"href\", \"/tasks/broken\");\n        }\n      }).observe(document, { childList: true, subtree: true });\n    }, fault);\n  }\n});\n",
+  "candidate_patch": "--- full\n+++ reduced\n@@ -38,7 +38,6 @@\n     exact: true,\n   });\n   await expect(expertEntry).toHaveCount(0);\n-  for (const href of taskHrefs) await expect(page.locator(`a[href=\"${href}\"]`)).toBeVisible();\n   await page.getByRole(\"switch\", { name: \"专家模式\", exact: true }).check();\n   await expect(expertEntry).toBeVisible();\n   await expertEntry.click();\n",
+  "rejected_combined_patch": "--- full\n+++ no-tablet\n@@ -38,7 +38,6 @@\n     exact: true,\n   });\n   await expect(expertEntry).toHaveCount(0);\n-  for (const href of taskHrefs) await expect(page.locator(`a[href=\"${href}\"]`)).toBeVisible();\n   await page.getByRole(\"switch\", { name: \"专家模式\", exact: true }).check();\n   await expect(expertEntry).toBeVisible();\n   await expertEntry.click();\n@@ -63,7 +62,7 @@\n     page.getByRole(\"heading\", { name: \"找不到页面\" }),\n   ).toBeVisible();\n });\n-for (const width of [375, 768, 1024, 1440])\n+for (const width of [375, 1024, 1440])\n   test(`definition workspace and resources fit width ${width}`, async ({\n     page,\n   }, testInfo) => {\n",
+  "playwright_experiment_config_source": "import { defineConfig, devices } from \"@playwright/test\";\nimport base from \"/Users/qingli/Documents/ChatGPT/signaldeck-test-ablation-20260916/frontend/playwright.config\";\nconst projects = [\"clean\", \"tablet\", \"mobile\", \"hidden\", \"href\"].flatMap(fault => (fault === \"tablet\" || fault === \"mobile\" || fault === \"clean\" ? [\"full\", \"reduced\", \"no-tablet\"] : [\"full\", \"reduced\"]).map(group => ({\nname: `${fault}-${group}`, testMatch: `shell-${group}.spec.ts`, metadata: { fault },\ngrep: fault === \"tablet\" || fault === \"mobile\" ? /fit width/ : fault === \"hidden\" || fault === \"href\" ? /generic navigation/ : undefined,\nuse: { ...devices[\"Desktop Chrome\"] },\n})));\nexport default defineConfig({ ...base, testDir: \".\", projects, workers: 1, reporter: \"json\", outputDir: \"/tmp/signaldeck-e2e-experiment-results\", webServer: base.webServer!.map(server => ({ ...server, cwd: \"/Users/qingli/Documents/ChatGPT/signaldeck-test-ablation-20260916/frontend\" })) });\n"
+}

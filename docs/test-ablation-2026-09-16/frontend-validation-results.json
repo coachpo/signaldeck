@@ -1,0 +1,78 @@
+[
+  {
+    "label": "before-lint",
+    "command": "pnpm lint",
+    "seconds": 15.105,
+    "exit": 0
+  },
+  {
+    "label": "before-typecheck",
+    "command": "pnpm typecheck",
+    "seconds": 15.854,
+    "exit": 0
+  },
+  {
+    "label": "before-build",
+    "command": "pnpm build",
+    "seconds": 17.945,
+    "exit": 0
+  },
+  {
+    "label": "before-full-1",
+    "command": "pnpm test:run --maxWorkers=2 --reporter=json --outputFile=/tmp/signaldeck-frontend-measure.json",
+    "seconds": 87.974,
+    "exit": 0,
+    "total": 428,
+    "passed": 428,
+    "failed": 0,
+    "failedNodes": []
+  },
+  {
+    "label": "before-full-2",
+    "command": "pnpm test:run --maxWorkers=2 --reporter=json --outputFile=/tmp/signaldeck-frontend-measure.json",
+    "seconds": 57.503,
+    "exit": 0,
+    "total": 428,
+    "passed": 428,
+    "failed": 0,
+    "failedNodes": []
+  },
+  {
+    "label": "after-lint",
+    "command": "pnpm lint",
+    "seconds": 8.644,
+    "exit": 0
+  },
+  {
+    "label": "after-typecheck",
+    "command": "pnpm typecheck",
+    "seconds": 5.284,
+    "exit": 0
+  },
+  {
+    "label": "after-build",
+    "command": "pnpm build",
+    "seconds": 6.15,
+    "exit": 0
+  },
+  {
+    "label": "after-full-1",
+    "command": "pnpm test:run --maxWorkers=2 --reporter=json --outputFile=/tmp/signaldeck-frontend-measure.json",
+    "seconds": 69.808,
+    "exit": 0,
+    "total": 426,
+    "passed": 426,
+    "failed": 0,
+    "failedNodes": []
+  },
+  {
+    "label": "after-full-2",
+    "command": "pnpm test:run --maxWorkers=2 --reporter=json --outputFile=/tmp/signaldeck-frontend-measure.json",
+    "seconds": 85.388,
+    "exit": 0,
+    "total": 426,
+    "passed": 426,
+    "failed": 0,
+    "failedNodes": []
+  }
+]
