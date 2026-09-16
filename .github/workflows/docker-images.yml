@@ -7,6 +7,9 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - 'Dockerfile'
+      - 'docker/**'
+      - 'docker-compose*.yml'
       - 'backend'
       - 'backend/**'
       - 'frontend'
@@ -23,8 +26,7 @@ on:
         default: all
         options:
           - all
-          - backend
-          - frontend
+          - app
           - finance
           - notes
           - digital-oracle
@@ -48,7 +50,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        service: ${{ fromJSON(github.event_name == 'workflow_dispatch' && inputs.service != 'all' && format('["{0}"]', inputs.service) || '["backend","frontend","finance","notes","digital-oracle"]') }}
+        service: ${{ fromJSON(github.event_name == 'workflow_dispatch' && inputs.service != 'all' && format('["{0}"]', inputs.service) || '["app","finance","notes","digital-oracle"]') }}
 
     steps:
       - name: Checkout repository
@@ -62,17 +64,20 @@ jobs:
           SERVICE: ${{ matrix.service }}
         run: |
           case "$SERVICE" in
-            backend|frontend)
-              echo "context=./$SERVICE" >> "$GITHUB_OUTPUT"
-              echo "file=./$SERVICE/Dockerfile" >> "$GITHUB_OUTPUT"
+            app)
+              echo "context=." >> "$GITHUB_OUTPUT"
+              echo "file=./Dockerfile" >> "$GITHUB_OUTPUT"
+              echo "image=signaldeck" >> "$GITHUB_OUTPUT"
               ;;
             finance|notes)
               echo "context=." >> "$GITHUB_OUTPUT"
               echo "file=./plugins/$SERVICE/Dockerfile" >> "$GITHUB_OUTPUT"
+              echo "image=signaldeck-$SERVICE" >> "$GITHUB_OUTPUT"
               ;;
             digital-oracle)
               echo "context=./plugins" >> "$GITHUB_OUTPUT"
               echo "file=./plugins/digital_oracle/Dockerfile" >> "$GITHUB_OUTPUT"
+              echo "image=signaldeck-$SERVICE" >> "$GITHUB_OUTPUT"
               ;;
             *)
               echo "Unsupported service: $SERVICE" >&2
@@ -101,7 +106,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v6
         with:
-          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/signaldeck-${{ matrix.service }}
+          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ steps.target.outputs.image }}
           tags: |
             type=ref,event=branch
             type=ref,event=pr
@@ -113,7 +118,7 @@ jobs:
 
       - name: Resolve frontend build metadata
         id: frontend_build_metadata
-        if: matrix.service == 'frontend'
+        if: matrix.service == 'app'
         run: |
           echo "git_revision=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
           echo "git_run_number=${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"

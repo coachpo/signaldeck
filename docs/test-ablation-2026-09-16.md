@@ -37,7 +37,7 @@
 | `frontend/scripts/goal-verification-{browser,schedule}.mjs` | 消费本轮真实运行的证据，检查离线历史、用量、来源和浏览器关闭前后定时行为；不能用假造的输入冒充完成。 |
 | `docker/verify_target_stack.py`、`inspect_target_ui.mjs` | 隔离 Compose 中的运行、制品、插件及浏览器检查，需要本轮部署证据。 |
 
-Docker 镜像工作流构建拆分 backend/frontend 镜像，不执行上述镜像 smoke 或根组合镜像验收。清理工作流不提供额外测试覆盖。
+本次实测时的 Docker 镜像工作流构建拆分 backend/frontend 镜像，不执行上述镜像 smoke 或根组合镜像验收；当前镜像入口以[部署说明](../docker/deployment.md)为准。清理工作流不提供额外测试覆盖。
 
 公共 fixture 保持不变：backend 每项独立 PostgreSQL 库、settings/engine cache 清理和 API token 隔离；Temporal/插件 helper 保留真实进程边界；前端 setup 的 ResizeObserver、IntersectionObserver、matchMedia 和固定几何值是 jsdom mock，不能证明真实响应布局。E2E fixture 使用独立库、服务端口、受控模型及插件，保留真实浏览器和跨进程边界。未删除测试依赖或修改锁文件。
 

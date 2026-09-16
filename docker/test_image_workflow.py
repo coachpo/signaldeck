@@ -38,16 +38,16 @@ class ImageWorkflowTests(unittest.TestCase):
         return result, values
 
     def test_all_targets_resolve_dockerfile_copy_sources(self):
-        for service, context in (
-            ("backend", "backend"),
-            ("frontend", "frontend"),
-            ("finance", "."),
-            ("notes", "."),
-            ("digital-oracle", "plugins"),
+        for service, context, image in (
+            ("app", ".", "signaldeck"),
+            ("finance", ".", "signaldeck-finance"),
+            ("notes", ".", "signaldeck-notes"),
+            ("digital-oracle", "plugins", "signaldeck-digital-oracle"),
         ):
             with self.subTest(service=service):
                 result, values = self.resolve(service)
                 self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(values["image"], image)
                 self.assertEqual(
                     (ROOT / values["context"]).resolve(), (ROOT / context).resolve()
                 )
@@ -64,9 +64,11 @@ class ImageWorkflowTests(unittest.TestCase):
                         )
 
     def test_unknown_service_fails_before_build(self):
-        result, values = self.resolve("unknown")
-        self.assertNotEqual(result.returncode, 0)
-        self.assertEqual(values, {})
+        for service in ("unknown", "backend", "frontend"):
+            with self.subTest(service=service):
+                result, values = self.resolve(service)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertEqual(values, {})
 
 
 if __name__ == "__main__":

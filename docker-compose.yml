@@ -90,7 +90,6 @@ services:
         condition: service_healthy
     environment:
       <<: *core-environment
-      SIGNALDECK_ROOT_IMAGE_SCOPE: local-demo-only
       SIGNALDECK_PLUGIN_MOUNTS_REVISION: ${SIGNALDECK_PLUGIN_MOUNTS_REVISION:-}
       SIGNALDECK_WORKFLOW_DATA_DIR: ${SIGNALDECK_WORKFLOW_DATA_DIR-/opt/signaldeck/workflows}
       PUBLIC_BASE_URL: http://localhost:${APP_PORT:-8080}
@@ -181,6 +180,6 @@ services:
       app:
         condition: service_healthy
     environment:
-      SIGNALDECK_API_URL: http://app:8000/api
+      SIGNALDECK_API_URL: http://app:8080/api
       SIGNALDECK_API_TOKEN: ${SIGNALDECK_API_TOKEN:-}
       SIGNALDECK_PLUGINS: ${SIGNALDECK_PLUGINS-finance,digital-oracle,notes}

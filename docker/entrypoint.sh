@@ -1,23 +1,46 @@
-#!/bin/sh
-set -eu
+#!/bin/bash
+set -euo pipefail
 
 export PORT="${PORT:-8080}"
 export BACKEND_PORT="${BACKEND_PORT:-8000}"
-export SIGNALDECK_RUNTIME_MODE="${SIGNALDECK_RUNTIME_MODE:-local}"
-case "$SIGNALDECK_RUNTIME_MODE" in
-  production|prod|staging)
-    echo 'Use the split backend/frontend images for production.' >&2
-    exit 1
+export SIGNALDECK_RUNTIME_MODE="${SIGNALDECK_RUNTIME_MODE:-production}"
+role="${1:-app}"
+if [ "$#" -gt 0 ]; then shift; fi
+case "$role" in
+  app|dispatcher|worker)
+    # Reuse the API configuration contract before starting any long-lived process.
+    python -c 'from app.core.config import get_settings; get_settings()'
     ;;
+  *) exec "$role" "$@" ;;
+esac
+
+case "$role" in
+  dispatcher) exec python -m app.workers.command_dispatcher "$@" ;;
+  worker) exec python -m app.workers.artifact_worker --serve "$@" ;;
 esac
 
 mkdir -p /run/nginx
 export BACKEND_UPSTREAM="127.0.0.1:${BACKEND_PORT}"
 python /opt/signaldeck/gateway/generate.py
-# This image contains the API and web surface. Durable workers and command
-# delivery run as separate Compose services from the same Core source closure.
 envsubst '${PORT} ${BACKEND_PORT}' \
   </etc/nginx/templates/default.conf.template \
   >/etc/nginx/conf.d/default.conf
 nginx -t
-exec supervisord -n -c /etc/supervisor/supervisord.conf
+
+pids=()
+shutdown() {
+  trap '' TERM INT
+  kill -TERM "${pids[@]}" 2>/dev/null || true
+  wait "${pids[@]}" 2>/dev/null || true
+}
+trap 'shutdown; exit 0' TERM INT
+
+uvicorn app.main:app --host 127.0.0.1 --port "$BACKEND_PORT" --no-access-log "$@" &
+pids+=("$!")
+nginx -g 'daemon off;' &
+pids+=("$!")
+
+# Losing either half makes the app unavailable; let the container policy restart it.
+if wait -n; then status=1; else status=$?; fi
+shutdown
+exit "$status"

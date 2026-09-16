@@ -54,7 +54,7 @@ SIGNALDECK_CONNECTION_PRESETS_FILE=/absolute/path/connections.json ./start.sh --
 
 此变量在宿主机表示文件路径；Compose 将它挂载到容器固定路径 `/etc/signaldeck/connection-presets.json`。文件只包含非敏感配置，密钥由操作者在任务页输入。预设不会自动部署、登记或替换服务；普通用户仍需选择并确认账户、范围和保存位置。文件格式及部署方配置说明见 [插件接入](docs/writing-extensions.md#普通模式的连接选择)。
 
-栈中的 API、命令 dispatcher、固定制品 worker 和 Temporal 分别运行；浏览器关闭不停止后台执行。根 `Dockerfile` 仅将前端 Nginx 和 API 合并为本地/演示镜像，Temporal 使用持久 SQLite 的 `start-dev` 服务。[拆分镜像部署说明](docker/deployment.md)提供构建、配置、持久化和健康验证命令，对应 [`docker/compose.production.example.yml`](docker/compose.production.example.yml)，需要另行提供 PostgreSQL 和 Temporal 服务；本地组合栈不代表生产部署验收。
+栈中的 API、命令 dispatcher、固定制品 worker 和 Temporal 分别运行；浏览器关闭不停止后台执行。根 `Dockerfile` 构建正式应用镜像 `ghcr.io/coachpo/signaldeck`，包含前端静态资源、Nginx 和 Core 后端；dispatcher、worker 以不同角色复用该镜像。上面的源码启动方式明确使用 local 模式和持久 SQLite 的 Temporal `start-dev` 服务。服务器部署使用独立入口 [`docker/compose.production.yml`](docker/compose.production.yml)，统一启动应用、独立 PostgreSQL、持久化 Temporal 和插件，无需在服务器编译源码。[部署说明](docker/deployment.md)包含首次配置、拉取启动、日常 `pull` / `up -d`、持久化及健康验证命令；本地验证不代表目标服务器已通过验收。
 
 ## 主要能力
 

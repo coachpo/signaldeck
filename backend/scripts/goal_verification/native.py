@@ -82,7 +82,12 @@ def _owned_stop(process: subprocess.Popen) -> None:
 
 
 def _run(
-    argv: list[str], cwd: Path, output: Path, env: dict[str, str], timeout: int, index: int
+    argv: list[str],
+    cwd: Path,
+    output: Path,
+    env: dict[str, str],
+    timeout: int,
+    index: int,
 ) -> dict:
     log = output / f"{index:02d}-{Path(argv[0]).name}.log"
     record = {
@@ -209,8 +214,17 @@ def _commands(group: str, workspace: Path, output: Path, env: dict[str, str]) ->
                 "TEMPORAL_ADDRESS": "temporal:7233",
                 "AGENT_PLATFORM_ENCRYPTION_KEY": "acceptance-example-only",
                 "SIGNALDECK_API_TOKEN": "acceptance-example-only",
-                "SIGNALDECK_BACKEND_IMAGE": "signaldeck-backend:acceptance-example-only",
-                "SIGNALDECK_FRONTEND_IMAGE": "signaldeck-frontend:acceptance-example-only",
+                "SIGNALDECK_IMAGE": "signaldeck:acceptance-example-only",
+                **{
+                    key: "acceptance-example-only"
+                    for key in (
+                        "POSTGRES_PASSWORD",
+                        "CORE_DB_PASSWORD",
+                        "FINANCE_DB_PASSWORD",
+                        "NOTES_DB_PASSWORD",
+                        "TEMPORAL_DB_PASSWORD",
+                    )
+                },
             }
         )
         commands = [
@@ -238,7 +252,7 @@ def _commands(group: str, workspace: Path, output: Path, env: dict[str, str]) ->
                 ],
                 120,
             )
-            for filename in ("docker-compose.yml", "docker/compose.production.example.yml")
+            for filename in ("docker-compose.yml", "docker/compose.production.yml")
         )
         return commands
     if group == "runner-check":
@@ -286,9 +300,11 @@ def run_group(group: str, workspace: Path, output: Path, env: dict[str, str]) ->
         if group in {"backend", "finance", "e2e", "fault"}:
             for key in ("TEST_DATABASE_URL", "DATABASE_URL"):
                 parsed = urlsplit(environment[key])
-                if parsed.scheme not in {"postgresql", "postgresql+psycopg", "postgres"} or (
-                    parsed.hostname not in {"localhost", "127.0.0.1", "::1"}
-                ):
+                if parsed.scheme not in {
+                    "postgresql",
+                    "postgresql+psycopg",
+                    "postgres",
+                } or (parsed.hostname not in {"localhost", "127.0.0.1", "::1"}):
                     raise ValueError(f"{key} must refer to the caller-owned local PostgreSQL")
         environment["PATH"] = str(Path(environment["UV_PROJECT_ENVIRONMENT"]) / "bin") + (
             os.pathsep + environment.get("PATH", os.defpath)

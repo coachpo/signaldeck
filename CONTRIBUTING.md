@@ -4,7 +4,7 @@
 
 ## 开发环境与依赖
 
-- Backend：`backend/pyproject.toml` 要求 Python >=3.13；CI、根镜像、backend 镜像及固定 Core 执行环境使用 Python 3.13.13，CI 与镜像使用 uv 0.11.7。
+- Backend：`backend/pyproject.toml` 要求 Python >=3.13；CI、应用镜像及固定 Core 执行环境使用 Python 3.13.13，CI 与镜像使用 uv 0.11.7。
 - Frontend：`frontend/package.json` 要求 Node >=24，并固定 pnpm 10.30.1；CI 使用 Node 24，镜像构建使用 Node 26。
 - 依赖以 `backend/uv.lock` 和 `frontend/pnpm-lock.yaml` 为准；按现有锁文件安装，不在普通环境准备中升级依赖。
 - 完整本地栈需要 Docker Compose v2，使用 PostgreSQL 16 和 Temporal；普通安装与启动见 [`README.md`](README.md#快速开始)。
@@ -46,7 +46,7 @@ temporal server start-dev --ip 127.0.0.1 --port 7233 --db-filename "$PWD/.signal
 
 Vite 默认使用 5173 端口，开发 API client 默认访问 `http://127.0.0.1:8000/api`；改用其他 backend 地址时设置 `VITE_API_BASE_URL`。API 原子保存 Run、快照和启动命令，dispatcher 投递命令并同步投影，Temporal 与固定制品 worker 执行工作流。API 重载发布新 Core 制品，已有运行继续使用其绑定制品；保留的制品和产物目录是恢复所需数据，不应随源码更新清空。
 
-根镜像运行 Nginx 和 FastAPI；本地 Compose 另启 dispatcher、worker、Temporal 和可选插件。拆分部署的 dispatcher/worker 复用 backend 镜像；环境变量与边界见 [`docs/架构说明.md`](docs/架构说明.md) 和 [`docker/compose.production.example.yml`](docker/compose.production.example.yml)。插件应使用从对应调用进程可达的 endpoint；宿主机开发不会自动注册 Compose 内网地址的插件。
+根 Dockerfile 构建正式应用镜像，app 角色运行 Nginx 和 FastAPI；dispatcher、worker 在独立容器中复用该镜像。正式入口 [`docker/compose.production.yml`](docker/compose.production.yml) 统一启动独立 PostgreSQL、Temporal 和业务插件；根 Compose 明确使用 local 模式和 Temporal 开发服务。环境变量与边界见 [`docs/架构说明.md`](docs/架构说明.md) 和[部署说明](docker/deployment.md)。插件应使用从对应调用进程可达的 endpoint；宿主机开发不会自动注册 Compose 内网地址的插件。
 
 ### 测试数据库与 E2E 环境
 
@@ -100,9 +100,9 @@ python3 -m unittest discover -s docker -p 'test_*.py'
 python3 docker/test_plugin_gateway.py
 ```
 
-拆分镜像加独立 PostgreSQL/Temporal 的单机部署验证使用 `docker/verify_capy_stack.py`；镜像参数、隔离存储和清理范围见[部署说明](docker/deployment.md#capy-专用基础设施)。
+正式应用镜像加独立 PostgreSQL/Temporal 的单机部署验证使用 `docker/verify_deployment.py`；镜像参数、隔离存储和清理范围见[部署说明](docker/deployment.md)。
 
-该配置沿用上面的隔离数据库与端口约定，可用 `SIGNALDECK_E2E_BUILD_DIR` 选择独立构建目录。其 Vite 代理验证页面流程；`docker/test_plugin_gateway.py` 用自己的临时 Docker 容器和网络验证实际 Nginx 的口令、凭据剥离、编码路径、内部接口隔离与离线上游。修改组合或拆分镜像时，仍执行相应真实镜像构建和隔离 Compose 验证。
+该配置沿用上面的隔离数据库与端口约定，可用 `SIGNALDECK_E2E_BUILD_DIR` 选择独立构建目录。其 Vite 代理验证页面流程；`docker/test_plugin_gateway.py` 用自己的临时 Docker 容器和网络验证实际 Nginx 的口令、凭据剥离、编码路径、内部接口隔离与离线上游。修改应用或插件镜像时，仍执行相应真实镜像构建和隔离 Compose 验证。
 
 涉及取消后的未知写效果、插件离线或执行服务停止后的历史读取时，补充独立故障配置：
 

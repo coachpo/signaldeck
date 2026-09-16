@@ -85,4 +85,4 @@ PY
 
 ## 已完成的镜像调整
 
-[`Dockerfile`](../Dockerfile) 和 [`frontend/Dockerfile`](../frontend/Dockerfile) 的 Node 26 构建阶段均使用 `npm install -g pnpm@10.30.1`。镜像依赖规则见 [`开发规范.md`](开发规范.md#依赖与镜像规则)；根组合镜像的额外构建检查见 [`CONTRIBUTING.md`](../CONTRIBUTING.md#检查测试与构建)。
+[`Dockerfile`](../Dockerfile) 的 Node 26 前端构建阶段使用 `npm install -g pnpm@10.30.1`。镜像依赖规则见 [`开发规范.md`](开发规范.md#依赖与镜像规则)；正式应用镜像的本地构建检查见 [`CONTRIBUTING.md`](../CONTRIBUTING.md#检查测试与构建)。

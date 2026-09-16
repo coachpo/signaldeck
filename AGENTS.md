@@ -19,7 +19,7 @@ SignalDeck is a trusted single-user Agent workflow platform: YAML Workflow Packa
 | Workflow Package examples | [demo/AGENTS.md](demo/AGENTS.md); check external YAML imports and package contract tests. |
 | Documentation | [docs/AGENTS.md](docs/AGENTS.md) and the canonical navigation below. |
 | Product behavior and architecture | [Product specification](docs/产品说明.md), [architecture](docs/架构说明.md) and [development rules](docs/开发规范.md); completed iteration history is in [STATUS.md](STATUS.md#已完成迭代). |
-| Local launch and container images | `start.sh`, root Compose/Dockerfile for local/demo; `backend/Dockerfile`, `frontend/Dockerfile`, and `.github/workflows/docker-images.yml` for split images. |
+| Local launch and container images | `start.sh` and root Compose for local/demo; root `Dockerfile`, `docker/compose.production.yml`, and `.github/workflows/docker-images.yml` for the application image and independent plugin images. |
 
 ## Cross-Cutting Boundaries
 
@@ -38,7 +38,7 @@ SignalDeck is a trusted single-user Agent workflow platform: YAML Workflow Packa
 
 Use the verified setup, checks, and completion rules in [CONTRIBUTING.md](CONTRIBUTING.md), then run `git diff --check`. Follow the nearest subtree guide for focused checks.
 
-`./start.sh` is the local/demo launcher; the default application URL is `http://localhost:${APP_PORT:-8080}`. The root combined image is local/demo only; production image wiring uses the split backend and frontend images. A root Dockerfile change requires local `docker build .` validation because the image workflow builds only the split images. Before exposing SignalDeck outside a trusted network, configure the API token on the backend or use an authenticated reverse proxy.
+`./start.sh` is the local/demo launcher; the default application URL is `http://localhost:${APP_PORT:-8080}`. The root Dockerfile builds the supported `ghcr.io/coachpo/signaldeck` application image: frontend assets, Nginx, and Core API run as the app role; dispatcher and worker use the same image in separate containers. PostgreSQL, Temporal, and business plugins remain independent. Production wiring is owned by `docker/compose.production.yml`; root Compose explicitly selects local mode and the development Temporal service. A root Dockerfile change requires local `docker build .` validation. Before exposing SignalDeck outside a trusted network, configure the API token on the backend or use an authenticated reverse proxy.
 
 For dependency changes, inspect the manifests, lockfiles, and [dependency follow-up](docs/handover-deps-follow-up.md). Do not lift FastAPI `<0.137` until Logfire allows `opentelemetry-sdk>=1.43` and FastAPI instrumentation resolves to `>=0.64b0`. Node 26 Dockerfiles use pinned global pnpm installation; do not reintroduce `corepack enable`.
 

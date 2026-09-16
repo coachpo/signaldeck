@@ -56,6 +56,8 @@ HTTPServer(('0.0.0.0',8000),Handler).serve_forever()
                 name,
                 "--network-alias",
                 "mock",
+                "--network-alias",
+                "core-original",
                 "-v",
                 f"{root}:/test:ro",
                 "python:3.13.13-slim",
@@ -81,10 +83,12 @@ HTTPServer(('0.0.0.0',8000),Handler).serve_forever()
                 ],
             }
             (root / "default.conf").write_text(
-                (Path(__file__).parents[1] / "frontend/nginx.conf")
+                (Path(__file__).parents[1] / "docker/nginx.conf.template")
                 .read_text()
                 .replace("${PORT}", "8080")
-                .replace("${BACKEND_UPSTREAM}", "mock:8000")
+                # Core is loopback in the app image. This external test double
+                # uses a separate name so it cannot pin the dynamic plugin DNS pool.
+                .replace("127.0.0.1:${BACKEND_PORT}", "core-original:8000")
             )
             (root / "plugin-locations.conf").write_text(
                 gateway.render(registry, "mock:8000")
@@ -227,18 +231,8 @@ HTTPServer(('0.0.0.0',8000),Handler).serve_forever()
                 "/_plugins/third_v1/api/notes",
                 {"Authorization": "Bearer test-token"},
             )[0] == 401
-            status, body = request(
-                "/api/probe?item=replacement",
-                {"Authorization": "Bearer replacement-token"},
-            )
-            assert status == 200, (status, body)
-            assert json.loads(body) == {
-                "path": "/api/probe?item=replacement",
-                "authorization": "Bearer replacement-token",
-                "cookie": None,
-            }
             print(
-                "Gateway integration passed: Core API, auth, credential stripping, paths, absent plugin, shell isolation and backend DNS refresh."
+                "Gateway integration passed: Core API, auth, credential stripping, paths, absent plugin, shell isolation and plugin/auth DNS refresh."
             )
     finally:
         for container in reversed(containers):

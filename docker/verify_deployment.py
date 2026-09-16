@@ -1,4 +1,4 @@
-"""Verify the capy topology on a local Docker daemon using disposable owned storage."""
+"""Verify the single-image deployment on a local Docker daemon using disposable owned storage."""
 
 import argparse
 import json
@@ -6,11 +6,11 @@ import os
 import secrets
 import socket
 import subprocess
-import tempfile
 import time
 from pathlib import Path
 from uuid import uuid4
 
+import httpx
 from verify_target_stack import Check, notes_package, references
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -48,21 +48,27 @@ done
 """
 
 
-def verify(args, directory):
+def verify(args):
     env = {key: os.environ[key] for key in ("PATH", "HOME")}
     env.update({name: secrets.token_hex(24) for name in PASSWORDS})
+    plugins = {"notes": args.notes_image}
+    if args.finance_image:
+        plugins["finance"] = args.finance_image
+        env["SIGNALDECK_FINANCE_IMAGE"] = args.finance_image
+    if args.oracle_image:
+        plugins["digital-oracle"] = args.oracle_image
+        env["SIGNALDECK_ORACLE_IMAGE"] = args.oracle_image
     with socket.socket() as probe:
         probe.bind(("127.0.0.1", 0))
         port = probe.getsockname()[1]
     env.update(
-        SIGNALDECK_BACKEND_IMAGE=args.backend_image,
-        SIGNALDECK_FRONTEND_IMAGE=args.frontend_image,
+        SIGNALDECK_IMAGE=args.app_image,
         SIGNALDECK_NOTES_IMAGE=args.notes_image,
         DATABASE_URL=f"postgresql+psycopg://signaldeck_core:{env['CORE_DB_PASSWORD']}@db:5432/signaldeck_core",
+        FINANCE_DATABASE_URL=f"postgresql+psycopg://signaldeck_finance:{env['FINANCE_DB_PASSWORD']}@db:5432/signaldeck_finance",
         NOTES_DATABASE_URL=f"postgresql+psycopg://signaldeck_notes:{env['NOTES_DB_PASSWORD']}@db:5432/signaldeck_notes",
         TEMPORAL_ADDRESS="temporal:7233",
-        SIGNALDECK_PLUGINS="notes",
-        SIGNALDECK_PLUGIN_MOUNTS_FILE=str(directory / "mounts.json"),
+        SIGNALDECK_PLUGINS=",".join(plugins),
         APP_PORT=str(port),
     )
 
@@ -80,47 +86,9 @@ def verify(args, directory):
     context = json.loads(run(["docker", "context", "inspect"]))[0]
     if not context["Endpoints"]["docker"]["Host"].startswith("unix://"):
         raise RuntimeError("Select a local Unix-socket Docker context for this test")
-    for image in (args.backend_image, args.frontend_image, args.notes_image):
+    for image in (args.app_image, *plugins.values()):
         run(["docker", "image", "inspect", image])
-    release = json.loads(
-        run(
-            [
-                "docker",
-                "run",
-                "--rm",
-                "--network",
-                "none",
-                "-e",
-                "PLUGIN_DATABASE_URL=postgresql+psycopg://test:test@invalid:5432/test",
-                "-e",
-                "PLUGIN_ENDPOINT=http://notes:8000/mcp/",
-                "-e",
-                "PLUGIN_PAGE_URL=/apps/{artifactDigest}/",
-                args.notes_image,
-                "python",
-                "-m",
-                "plugin_runtime.describe",
-                "notes_plugin.main:create_app",
-            ]
-        )
-    )
-    mount_key = release["artifactDigest"].removeprefix("sha256:")
-    (directory / "mounts.json").write_text(
-        json.dumps(
-            {
-                "version": "signaldeck.pluginMounts/1",
-                "mounts": [
-                    {
-                        "mountKey": mount_key,
-                        "pluginId": release["pluginId"],
-                        "artifactDigest": release["artifactDigest"],
-                        "upstream": "http://notes:8000",
-                    }
-                ],
-            }
-        )
-    )
-    project = "sd-capy-check-" + uuid4().hex[:12]
+    project = "sd-deployment-check-" + uuid4().hex[:12]
     compose = [
         "docker",
         "compose",
@@ -129,23 +97,40 @@ def verify(args, directory):
         "-p",
         project,
         "-f",
-        str(ROOT / "docker/compose.production.example.yml"),
-        "-f",
-        str(ROOT / "docker/compose.capy.yml"),
-        "--profile",
-        "notes",
+        str(ROOT / "docker/compose.production.yml"),
     ]
+    for profile in plugins:
+        compose.extend(["--profile", profile])
     check = Check(f"http://127.0.0.1:{port}", f"http://127.0.0.1:{port}")
     check.client.headers["Authorization"] = "Bearer " + env["SIGNALDECK_API_TOKEN"]
     completed = []
     try:
-        run(compose + ["up", "-d", "--wait", "--wait-timeout", "180"])
+        run(compose + ["up", "-d"])
+        run(compose + ["wait", "bootstrap"])
         run(compose + ["exec", "-T", "db", "sh", "-c", DATABASE_ISOLATION])
         completed.append(
             "fresh databases, four isolated roles, SQL schemas and default namespace"
         )
-        run(compose + ["run", "--rm", "bootstrap"])
-        assert len(check.request("/api/plugins")["items"]) == 1
+        assert len(check.request("/api/plugins")["items"]) == len(plugins)
+        pages = check.request("/api/plugin-pages")
+        mount_key = next(
+            page["mountKey"] for page in pages if page["pluginId"] == "example/notes"
+        )
+        for page in pages:
+            assert (
+                check.client.get(
+                    check.base + f"/_plugins/{page['mountKey']}/"
+                ).status_code
+                == 200
+            )
+        assert check.client.get(check.base + "/ready").json()["database"] == "ok"
+        assert check.client.get(check.base + "/").status_code == 200
+        assert (
+            check.client.get(
+                check.base + "/api/workflow-packages", headers={"Authorization": ""}
+            ).status_code
+            == 401
+        )
         assert (
             check.client.get(
                 check.base + f"/_plugins/{mount_key}/api/collections"
@@ -187,8 +172,21 @@ def verify(args, directory):
             },
             "POST",
         )
+        logs = run(compose + ["logs", "--no-color"])
+        assert not any(
+            env[name] in logs for name in PASSWORDS
+        ), "Startup secret leaked to logs"
+        run(compose + ["stop", "--timeout", "30", "app", "dispatcher", "worker"])
+        for role in ("app", "dispatcher", "worker"):
+            container = run(compose + ["ps", "--all", "--quiet", role]).strip()
+            state = json.loads(run(["docker", "inspect", container]))[0]["State"]
+            assert state["ExitCode"] == 0, f"{role} did not stop gracefully"
+        completed.append(
+            "application, dispatcher and pinned workers stop gracefully on SIGTERM"
+        )
         run(compose + ["down", "--timeout", "30"])
-        run(compose + ["up", "-d", "--wait", "--wait-timeout", "180"])
+        run(compose + ["up", "-d"])
+        run(compose + ["wait", "bootstrap"])
         assert check.request("/api/runs/" + result["id"])["status"] == "succeeded"
         for ref in refs:
             check.artifact(ref)
@@ -234,12 +232,24 @@ def verify(args, directory):
         assert not any(
             env[name] in logs for name in PASSWORDS
         ), "Runtime secret leaked to logs"
-        run(compose + ["stop", "worker", "dispatcher", "temporal", "notes"])
+        run(compose + ["stop", "worker", "dispatcher", "temporal", *plugins])
+        run(compose + ["restart", "app"])
+        deadline = time.monotonic() + 60
+        while time.monotonic() < deadline:
+            try:
+                if (
+                    check.client.get(check.base + "/ready", timeout=3).status_code
+                    == 200
+                ):
+                    break
+            except httpx.HTTPError:
+                pass
+            time.sleep(0.5)
         assert check.request("/api/runs/" + result["id"])["status"] == "succeeded"
         for ref in refs:
             check.artifact(ref)
         completed.append(
-            "offline history remains readable; runtime secrets absent from logs"
+            "cold-start offline history remains readable; startup/runtime secrets absent from logs"
         )
     except Exception:
         for service in (
@@ -248,6 +258,9 @@ def verify(args, directory):
             "temporal",
             "temporal-namespace",
             "worker",
+            "app",
+            "plugin-mounts",
+            "bootstrap",
         ):
             logs = run(compose + ["logs", "--tail", "15", "--no-color", service])
             for name in PASSWORDS:
@@ -264,15 +277,18 @@ def verify(args, directory):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--backend-image", default="signaldeck-backend:local")
-    parser.add_argument("--frontend-image", default="signaldeck-frontend:local")
+    parser.add_argument("--app-image", default="signaldeck:local")
     parser.add_argument("--notes-image", default="signaldeck-notes:1.3.0")
+    parser.add_argument(
+        "--finance-image",
+        help="Also verify Finance startup, registration and page mount",
+    )
+    parser.add_argument(
+        "--oracle-image",
+        help="Also verify Oracle startup and registration without provider calls",
+    )
     args = parser.parse_args()
-    (ROOT / ".tmp").mkdir(exist_ok=True)
-    with tempfile.TemporaryDirectory(
-        prefix="capy-check-", dir=ROOT / ".tmp"
-    ) as directory:
-        verify(args, Path(directory).resolve())
+    verify(args)
 
 
 if __name__ == "__main__":
