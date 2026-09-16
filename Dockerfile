@@ -17,7 +17,7 @@ RUN VITE_API_BASE_URL="$VITE_API_BASE_URL" \
     VITE_GIT_RUN_NUMBER="$VITE_GIT_RUN_NUMBER" \
     VITE_GIT_REVISION="$VITE_GIT_REVISION" pnpm run build
 
-FROM python:3.13.13-slim@sha256:aa938a849bcb82dce8f49480f056ab82bf5c1c3ebc294f0430f37b6820e7f286 AS runtime
+FROM python:3.14.7-slim@sha256:cad9a2c871761c413caa6fdd6441c783451e740a48aaeba60ae62a8b53525ef6 AS runtime
 
 LABEL org.opencontainers.image.title="SignalDeck" \
       org.opencontainers.image.description="SignalDeck application, dispatcher and immutable Core worker"
