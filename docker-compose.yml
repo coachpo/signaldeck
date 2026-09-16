@@ -143,6 +143,7 @@ services:
       PLUGIN_DATABASE_URL: postgresql+psycopg://signaldeck_finance:${FINANCE_DB_PASSWORD:-finance-local-password}@db:5432/signaldeck_finance
       PLUGIN_ENDPOINT: http://finance:8000/mcp/
       PLUGIN_PAGE_URL: /apps/{artifactDigest}/
+      EDGAR_CONTACT_EMAIL: ${EDGAR_CONTACT_EMAIL:-}
 
   digital-oracle:
     restart: unless-stopped

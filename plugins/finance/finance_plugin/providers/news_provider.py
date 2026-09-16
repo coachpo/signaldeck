@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
 from importlib import import_module
 from typing import TYPE_CHECKING, Literal, Protocol
@@ -67,9 +67,17 @@ class ProviderNewsItem:
 
 
 @dataclass(frozen=True, slots=True)
+class ProviderNewsWarning:
+    code: str
+    message: str
+    details: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass(frozen=True, slots=True)
 class ProviderNewsResult:
     provider: str
     items: list[ProviderNewsItem]
+    warnings: list[ProviderNewsWarning] = field(default_factory=list)
 
 
 class NewsProvider(Protocol):

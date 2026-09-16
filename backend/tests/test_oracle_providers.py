@@ -747,6 +747,9 @@ def test_digital_oracle_edgar_missing_config_returns_structured_failure() -> Non
     assert isinstance(result, DigitalOracleProviderFailure)
     assert result.code == EDGAR_CONTACT_EMAIL_MISSING_CODE
     assert result.message == EDGAR_CONTACT_EMAIL_MISSING_MESSAGE
+    assert "EDGAR_CONTACT_EMAIL" in result.message
+    assert "plugin deployment environment" in result.message
+    assert "workflow package secret" not in result.message
     assert result.details == {"provider": "edgar", "secret": EDGAR_CONTACT_EMAIL_SECRET}
 
 
@@ -4483,10 +4486,10 @@ def test_macro_rates_providers_map_public_payloads_to_normalized_series() -> Non
             "treasury.gov": {
                 "data": [
                     {
-                        "record_date": "2026-01-02",
-                        "security_desc": "10-Year Treasury Constant Maturity",
+                        "record_date": "2026-01-31",
+                        "security_type_desc": "Marketable",
+                        "security_desc": "Treasury Bills",
                         "avg_interest_rate_amt": "4.15",
-                        "security_term": "10 Yr",
                     }
                 ]
             },
@@ -4517,7 +4520,11 @@ def test_macro_rates_providers_map_public_payloads_to_normalized_series() -> Non
         fred_api_key="fred-key",
     )
     treasury_query = replace(
-        fred_query, source="treasury", families=("yield_curve",), fred_api_key=None
+        fred_query,
+        source="treasury",
+        families=("macro_indicators",),
+        series_ids=None,
+        fred_api_key=None,
     )
     bis_query = replace(fred_query, source="bis", families=("policy_rates",), fred_api_key=None)
     fred_result = FredMacroRatesProvider(client).lookup_macro_rates(fred_query)
@@ -4529,8 +4536,9 @@ def test_macro_rates_providers_map_public_payloads_to_normalized_series() -> Non
     assert fred_result.series[0].date == date(2026, 1, 2)
     assert fred_result.series[0].value == Decimal("4.33")
     assert [warning.code for warning in fred_result.warnings] == ["macro_rates_malformed_payload"]
-    assert treasury_result.series[0].tenor == "10Y"
-    assert treasury_result.series[0].family == "yield_curve"
+    assert treasury_result.series[0].tenor is None
+    assert treasury_result.series[0].family == "macro_indicators"
+    assert treasury_result.series[0].label == "Average interest rate: Marketable / Treasury Bills"
     assert bis_result.series[0].family == "policy_rates"
     assert bis_result.series[0].country == "US"
     non_fred_calls = [call for call in client.calls if call["provider"] != "fred"]
@@ -4734,6 +4742,9 @@ def test_macro_rates_runtime_executor_preserves_partial_warnings_without_fred_ke
         "macro_rates_partial_result",
     ]
     assert warnings[0]["message"] == FRED_API_KEY_MISSING_MESSAGE
+    assert "FRED_API_KEY" in warnings[0]["message"]
+    assert "plugin deployment environment" in warnings[0]["message"]
+    assert "workflow package secret" not in warnings[0]["message"]
     assert warnings[0]["details"] == [
         {"key": "operation", "value": "macro_rates"},
         {"key": "provider", "value": "fred"},

@@ -104,6 +104,7 @@ class ReportMetadata(CamelModel):
 
 class ReportReadMetadata(ReportMetadata):
     created_by: ReportCreatedByMetadata | None = None
+    research_snapshot_id: str | None = None
 
 
 class ReportCompileCreate(CamelModel):
@@ -144,7 +145,7 @@ class ReportCreate(CamelModel):
 
 
 class ReportRead(CamelModel):
-    id: int
+    id: int = Field(ge=1)
     name: str
     slug: str
     source: ReportSource
@@ -173,6 +174,8 @@ class ReportRead(CamelModel):
             _ = payload.pop("createdBy", None)
         else:
             payload["createdBy"] = created_by.model_dump(by_alias=True, exclude_none=True)
+        if value.research_snapshot_id is None:
+            _ = payload.pop("researchSnapshotId", None)
         return payload
 
 

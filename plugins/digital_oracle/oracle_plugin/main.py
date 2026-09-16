@@ -6,6 +6,9 @@ from plugin_runtime.server import application, obj, release, tool
 
 from . import runtime_types
 from .contracts import RuntimeToolContext
+from .research_documents import DocumentQuery, DocumentsResult, lookup_documents
+from .research_macro import MacroEvidenceQuery, MacroEvidenceResult, lookup_macro_evidence
+from .research_prediction import PredictionQuery, PredictionResult, lookup_prediction
 from .runtime_executors import DIGITAL_ORACLE_RUNTIME_TOOL_SPECS
 from .settings import get_digital_oracle_settings
 
@@ -42,6 +45,34 @@ def create_app():
             DIGITAL_ORACLE_RUNTIME_TOOL_SPECS, MODELS, titles, strict=True
         )
     ]
+    research_tools = {
+        "signaldeck/digital-oracle/research_macro_evidence": (
+            MacroEvidenceQuery,
+            MacroEvidenceResult,
+            lookup_macro_evidence,
+        ),
+        "signaldeck/digital-oracle/source_documents_lookup": (
+            DocumentQuery,
+            DocumentsResult,
+            lookup_documents,
+        ),
+        "signaldeck/digital-oracle/prediction_events_lookup": (
+            PredictionQuery,
+            PredictionResult,
+            lookup_prediction,
+        ),
+    }
+    for key, (query, result, _) in research_tools.items():
+        tools.append(
+            tool(
+                "signaldeck/digital-oracle",
+                key.rsplit("/", 1)[1],
+                model_wire_schema(query),
+                model_wire_schema(result),
+                "Read bounded original research sources with explicit time and coverage "
+                "limitations.",
+            )
+        )
     # Secrets are local deployment inputs and never part of the release or invocation context.
     secrets = {
         k: os.environ[k.upper()]
@@ -54,6 +85,10 @@ def create_app():
     def execute(name, arguments, invocation):
         import json
 
+        if name in research_tools:
+            return research_tools[name][2](arguments).model_dump(
+                mode="json", by_alias=True, exclude_none=True
+            )
         spec = specs[name]
         return project(spec.executor(context, spec.parser(json.dumps(arguments))))
 

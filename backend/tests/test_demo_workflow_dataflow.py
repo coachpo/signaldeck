@@ -87,7 +87,8 @@ def test_equity_research_keeps_prior_judgment_out_of_new_evidence(previous, unav
         agent_input = resolve_mapping(node.input_mapping, namespace)
         validate_value(definition.agents[node.uses].input_schema, agent_input)
         assert "previousReport" not in agent_input
-        assert agent_input["supportingMaterials"] == []
+        assert "supportingMaterials" not in agent_input
+        assert agent_input["evidence"] == []
         if node_id not in unavailable:
             namespace["nodes"][node_id] = {"output": {"content": f"{node_id}：已取得有限资料。"}}
 
@@ -97,8 +98,8 @@ def test_equity_research_keeps_prior_judgment_out_of_new_evidence(previous, unav
         validate_value(definition.agents[node.uses].input_schema, agent_input)
         for missing in unavailable:
             assert "未取得确认结果" in agent_input[missing]
-        if node_id in ("risk", "decision"):
-            assert agent_input["supportingMaterials"] == []
+        assert "supportingMaterials" not in agent_input
+        assert agent_input["evidence"] == []
         if node_id == "decision":
             assert agent_input["previousReport"] == (previous or "")
         else:
@@ -107,7 +108,14 @@ def test_equity_research_keeps_prior_judgment_out_of_new_evidence(previous, unav
     assert set(namespace["nodes"]).isdisjoint(unavailable)
 
 
-def test_equity_review_preserves_original_materials_beside_incorrect_analysis():
+def test_equity_review_preserves_original_materials_beside_incorrect_analysis(monkeypatch):
+    from datetime import UTC, datetime
+
+    for directory in ("runtime", "finance"):
+        monkeypatch.syspath_prepend(str(DEMO.parent / "plugins" / directory))
+    from finance_plugin.research_collection import ResearchMergeInput, merge_evidence
+    from finance_plugin.research_report import compile_research_report
+
     definition = package("us_equity_research")
     workflow = definition.workflows["research"]
     materials = [
@@ -126,6 +134,15 @@ def test_equity_review_preserves_original_materials_beside_incorrect_analysis():
             "content": "许可逐案审查；不等于已实现销售。\n本期收入指引未计入相关市场。",
         },
     ]
+    materials.append(
+        {
+            "category": "其他",
+            "title": "长原文",
+            "publishedDate": "2026-07-01",
+            "source": "完整公开原文，附录",
+            "content": "需要保留的原始说明。" * 200 + "正文末尾的完整性凭据。",
+        }
+    )
     previous = "上一次报告：证据不完整，等待公司披露。"
     parameters = {
         "symbol": "ACME",
@@ -148,12 +165,33 @@ def test_equity_review_preserves_original_materials_beside_incorrect_analysis():
     namespace["nodes"]["company"] = {"output": {"content": incorrect_company}}
     namespace["nodes"]["news"] = {"output": {"content": incorrect_news}}
     validate_value(workflow.input_schema, parameters)
+    namespace["nodes"]["scope"] = {"output": {"cutoffAt": "2026-09-16T04:00:00Z"}}
+    collection_input = resolve_mapping(workflow.nodes["collection"].input_mapping, namespace)
+    collection = merge_evidence(
+        ResearchMergeInput.model_validate(collection_input),
+        now=datetime(2026, 9, 16, 20, tzinfo=UTC),
+    ).model_dump(mode="json", by_alias=True, exclude_none=True)
+    namespace["nodes"]["collection"] = {"output": collection}
+    originals = {item["title"]: item for item in collection["evidence"]}
+    assert {title: item["text"] for title, item in originals.items()} == {
+        item["title"]: item["content"] for item in materials
+    }
 
     for node_id in ("risk", "decision"):
         node = workflow.nodes[node_id]
         agent_input = resolve_mapping(node.input_mapping, namespace)
         validate_value(definition.agents[node.uses].input_schema, agent_input)
-        assert agent_input["supportingMaterials"] == materials
+        assert "supportingMaterials" not in agent_input
+        projected = {item["title"]: item for item in agent_input["evidence"]}
+        for material in materials[:2]:
+            item = projected[material["title"]]
+            assert item["text"] == material["content"]
+            assert item["locator"] == material["source"]
+            assert item["evidenceId"] == originals[material["title"]]["evidenceId"]
+            assert item["verified"] is False
+        assert agent_input["analysisContextTruncated"] is True
+        assert projected["长原文"]["excerptTruncated"] is True
+        assert projected["长原文"]["text"] == materials[2]["content"][:800]
         assert agent_input["company"] == incorrect_company
         assert agent_input["news"] == incorrect_news
         if node_id == "risk":
@@ -162,13 +200,25 @@ def test_equity_review_preserves_original_materials_beside_incorrect_analysis():
         else:
             assert agent_input["previousReport"] == previous
             assert agent_input["riskReview"] == "分析稿一致，无须更正。"
+    compile_input = resolve_mapping(workflow.nodes["compile"].input_mapping, namespace)
+    assert compile_input["evidence"] == collection["evidence"]
+    canonical = compile_research_report(compile_input, now=datetime(2026, 9, 16, 20, tzinfo=UTC))
+    assert "正文末尾的完整性凭据。" in canonical["content"]
+    assert "费用为USD2.7十亿" in canonical["content"]
     assert parameters == unchanged
 
 
-def test_equity_report_keeps_comparison_in_saved_content_and_public_output():
+def test_equity_report_keeps_comparison_in_saved_content_and_public_output(monkeypatch):
+    from datetime import UTC, datetime
+
+    plugins = DEMO.parent / "plugins"
+    for directory in ("runtime", "finance"):
+        monkeypatch.syspath_prepend(str(plugins / directory))
+    from finance_plugin.research_report import compile_research_report
+
     definition = package("us_equity_research")
     workflow = definition.workflows["research"]
-    changes = "未提供上一份报告，本次建立比较基线。"
+    changes = "未提供上一份报告，本次只形成定性研究，尚无可核实的历史比较。"
     decision = {
         "name": "NVDA 三个月研究",
         "symbol": "NVDA",
@@ -182,10 +232,25 @@ def test_equity_report_keeps_comparison_in_saved_content_and_public_output():
         "evidenceConfidence": "low",
         "sources": [],
         "changes": changes,
-        "content": f"# NVDA 三个月研究\n证据不足。\n## 较上次的变化\n{changes}",
+        "content": "证据不足，暂不能判断方向。",
+        "claims": [],
+        "thresholds": [],
     }
     validate_value(definition.agents["adjudicate"].output_schema, decision)
-    namespace = {"nodes": {"decision": {"output": decision}}}
+    parameters = {"symbol": "NVDA", "asOfDate": "2026-09-15", "horizonMonths": 3}
+    decision.update(symbol="MSFT", asOfDate="2026-08-01", horizonMonths=6)
+    namespace = {
+        "workflow": {"input": parameters},
+        "nodes": {
+            "scope": {"output": {"cutoffAt": "2026-09-16T04:00:00Z"}},
+            "collection": {"output": {"evidence": [], "gaps": ["公司财务事实缺失。"]}},
+            "decision": {"output": decision},
+        },
+    }
+    compile_input = resolve_mapping(workflow.nodes["compile"].input_mapping, namespace)
+    assert compile_input["comparison"] == changes
+    canonical = compile_research_report(compile_input, now=datetime(2026, 9, 16, 20, tzinfo=UTC))
+    namespace["nodes"]["compile"] = {"output": canonical}
     save = workflow.nodes["save"]
     save_agent = definition.agents[save.uses]
     save_input = resolve_mapping(save.input_mapping, namespace)
@@ -193,16 +258,32 @@ def test_equity_report_keeps_comparison_in_saved_content_and_public_output():
     tool_input = resolve_mapping(
         save_agent.strategy.input_mapping, {"agent": {"input": save_input}}
     )
-    assert tool_input == {"name": decision["name"], "content": decision["content"]}
+    assert tool_input == {"name": canonical["name"], "content": canonical["content"]}
+    assert changes in tool_input["content"]
+    assert tool_input["content"] != decision["content"]
     saved = resolve_mapping(
         save_agent.strategy.output_mapping,
-        {"tool": {"output": {"id": 7, "name": decision["name"]}}},
+        {"tool": {"output": {"id": 7, "name": canonical["name"]}}},
     )
     namespace["nodes"]["save"] = {"output": saved}
     output = resolve_mapping(workflow.output_mapping, namespace)
     validate_value(workflow.output_schema, output)
-    assert output == {**decision, "reportId": 7}
-    section = next(item for item in workflow.presentation.sections if item.label == "较上次的变化")
+    assert output["content"] == tool_input["content"]
+    assert output["changes"] == changes
+    assert output["reportId"] == 7
+    assert output["modelAssessmentStatus"] == "unverified"
+    assert {key: output[key] for key in parameters} == parameters
+    for field in (
+        "stance",
+        "reasons",
+        "counterevidence",
+        "invalidation",
+        "evidenceConfidence",
+        "sources",
+    ):
+        assert output[field] == decision[field]
+    assert "未核实" in workflow.output_schema["properties"]["changes"]["title"]
+    section = next(item for item in workflow.presentation.sections if "较上次的变化" in item.label)
     assert section.ref == "nodes.decision.output.changes"
 
 

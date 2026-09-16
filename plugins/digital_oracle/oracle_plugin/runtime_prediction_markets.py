@@ -646,8 +646,10 @@ def _map_kalshi_market(
         probability=probability,
         yes_price=yes_ask if yes_ask is not None else probability,
         no_price=no_ask,
-        volume=_decimal(raw_market.get("volume")),
-        open_interest=_first_decimal(raw_market, ("open_interest", "openInterest")),
+        volume=_first_decimal(raw_market, ("volume_fp", "volume")),
+        open_interest=_first_decimal(
+            raw_market, ("open_interest_fp", "open_interest", "openInterest")
+        ),
         order_book=order_book,
     )
     close_time = _first_text(
@@ -955,22 +957,38 @@ def _map_kalshi_direct_order_book(
     warnings: list[RuntimeToolWarning],
 ) -> DigitalOraclePredictionMarketOrderBook | None:
     source = _nested_order_book_payload(payload)
-    bids = _order_book_levels(
-        _first_value(source, ("bids", "yesBids", "yes_bids")),
-        depth_limit=depth_limit,
-    ) or _kalshi_cent_order_book_levels(
-        _first_value(source, ("yes", "yes_bid", "yesBids", "yes_bids")),
-        depth_limit=depth_limit,
-        invert_price=False,
-    )
-    asks = _order_book_levels(
-        _first_value(source, ("asks", "yesAsks", "yes_asks")),
-        depth_limit=depth_limit,
-    ) or _kalshi_cent_order_book_levels(
-        _first_value(source, ("no", "no_bid", "noBids", "no_bids")),
-        depth_limit=depth_limit,
-        invert_price=True,
-    )
+    if "yes_dollars" in source or "no_dollars" in source:
+        bids = _kalshi_order_book_levels(
+            source.get("yes_dollars"),
+            depth_limit=depth_limit,
+            invert_price=False,
+            prices_in_cents=False,
+        )
+        asks = _kalshi_order_book_levels(
+            source.get("no_dollars"),
+            depth_limit=depth_limit,
+            invert_price=True,
+            prices_in_cents=False,
+        )
+    else:
+        bids = _order_book_levels(
+            _first_value(source, ("bids", "yesBids", "yes_bids")),
+            depth_limit=depth_limit,
+            descending=True,
+        ) or _kalshi_order_book_levels(
+            _first_value(source, ("yes", "yes_bid", "yesBids", "yes_bids")),
+            depth_limit=depth_limit,
+            invert_price=False,
+        )
+        asks = _order_book_levels(
+            _first_value(source, ("asks", "yesAsks", "yes_asks")),
+            depth_limit=depth_limit,
+            descending=False,
+        ) or _kalshi_order_book_levels(
+            _first_value(source, ("no", "no_bid", "noBids", "no_bids")),
+            depth_limit=depth_limit,
+            invert_price=True,
+        )
     if not bids and not asks:
         warnings.append(
             _order_book_warning(
@@ -1079,7 +1097,7 @@ def _order_book_source(raw_market: Mapping[str, object]) -> Mapping[str, object]
 
 
 def _nested_order_book_payload(payload: Mapping[str, object]) -> Mapping[str, object]:
-    for key in ("orderbook", "orderBook", "order_book", "book"):
+    for key in ("orderbook_fp", "orderbook", "orderBook", "order_book", "book"):
         value = payload.get(key)
         if isinstance(value, Mapping):
             return cast(Mapping[str, object], value)
@@ -1090,14 +1108,21 @@ def _order_book_levels(
     value: object,
     *,
     depth_limit: int,
+    descending: bool | None = None,
 ) -> tuple[DigitalOraclePredictionMarketOrderBookLevel, ...]:
     levels: list[DigitalOraclePredictionMarketOrderBookLevel] = []
     for raw_level in _object_list(value):
         level = _order_book_level(raw_level)
         if level is not None:
             levels.append(level)
-        if len(levels) == depth_limit:
+        if descending is None and len(levels) == depth_limit:
             break
+    if descending is not None:
+        levels = sorted(
+            (level for level in levels if level.price.is_finite()),
+            key=lambda level: level.price,
+            reverse=descending,
+        )[:depth_limit]
     return tuple(levels)
 
 
@@ -1117,42 +1142,25 @@ def _order_book_level(value: object) -> DigitalOraclePredictionMarketOrderBookLe
     return DigitalOraclePredictionMarketOrderBookLevel(price=price, size=size)
 
 
-def _kalshi_cent_order_book_levels(
+def _kalshi_order_book_levels(
     value: object,
     *,
     depth_limit: int,
     invert_price: bool,
+    prices_in_cents: bool = True,
 ) -> tuple[DigitalOraclePredictionMarketOrderBookLevel, ...]:
     levels: list[DigitalOraclePredictionMarketOrderBookLevel] = []
     for raw_level in _object_list(value):
-        level = _kalshi_cent_order_book_level(raw_level, invert_price=invert_price)
-        if level is not None:
-            levels.append(level)
-        if len(levels) == depth_limit:
-            break
-    return tuple(levels)
-
-
-def _kalshi_cent_order_book_level(
-    value: object,
-    *,
-    invert_price: bool,
-) -> DigitalOraclePredictionMarketOrderBookLevel | None:
-    if isinstance(value, Mapping):
-        payload = cast(Mapping[str, object], value)
-        price = _cent_decimal(_first_value(payload, ("price", "p", "yesPrice", "yes_price")))
-        size = _decimal(_first_value(payload, ("size", "quantity", "qty", "volume")))
-    elif isinstance(value, (list, tuple)) and value:
-        raw_values = list(cast(tuple[object, ...] | list[object], value))
-        price = _cent_decimal(raw_values[0])
-        size = _decimal(raw_values[1]) if len(raw_values) > 1 else None
-    else:
-        return None
-    if price is None:
-        return None
-    if invert_price:
-        price = Decimal("1") - price
-    return DigitalOraclePredictionMarketOrderBookLevel(price=price, size=size)
+        level = _order_book_level(raw_level)
+        if level is None or not level.price.is_finite():
+            continue
+        price = level.price / Decimal("100") if prices_in_cents else level.price
+        if invert_price:
+            price = Decimal("1") - price
+        levels.append(DigitalOraclePredictionMarketOrderBookLevel(price=price, size=level.size))
+    return tuple(
+        sorted(levels, key=lambda level: level.price, reverse=not invert_price)[:depth_limit]
+    )
 
 
 def _fallback_order_book_levels(

@@ -6,7 +6,7 @@ from dataclasses import replace
 from datetime import UTC, date, datetime
 from decimal import Decimal, InvalidOperation
 from typing import Protocol, cast
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlsplit, urlunsplit
 from xml.etree import ElementTree
 
 import httpx
@@ -54,12 +54,14 @@ _SEARCH_INDEX_URL = "https://efts.sec.gov/LATEST/search-index"
 _SUBMISSIONS_URL_TEMPLATE = "https://data.sec.gov/submissions/CIK{cik}.json"
 _ARCHIVES_DOCUMENT_URL_TEMPLATE = "https://www.sec.gov/Archives/edgar/data/{cik}/{accession}"
 _SEC_FILINGS_LOOKUP_DESCRIPTION = (
-    "Read normalized SEC EDGAR filing summaries, search hits, and Form 4 summaries."
+    "Read normalized SEC EDGAR filing summaries, search hits, and Form 4 non-derivative "
+    "transaction summaries. Derivative transactions and full financial statements are not read."
 )
 _SEC_FILINGS_LOOKUP_GUIDANCE = (
     "When you need SEC filing facts, call signaldeck_digital_oracle_sec_filings_lookup "
     "with a ticker or CIK and optional form/date/query filters. Use only returned "
-    "filing summaries, search hits, and Form 4 ownership summaries; disclose warnings "
+    "filing summaries, search hits, and Form 4 non-derivative transaction summaries; "
+    "do not infer derivative activity from their absence; disclose warnings "
     "for empty, stale, partial, or config-blocked EDGAR coverage; never invent filing "
     "facts or ask for the configured EDGAR contact email."
 )
@@ -894,11 +896,11 @@ def _ownership_transactions_from_filings(
             continue
         try:
             xml_payload = http_client.get_text(
-                filing.url,
+                _ownership_document_url(filing.url),
                 timeout=timeout,
                 contact_email=contact_email,
             )
-            transactions.extend(_parse_form4_ownership_transactions(filing, xml_payload))
+            transactions.extend(_parse_form4_ownership_transactions(filing, xml_payload, warnings))
             if len(transactions) >= transaction_limit:
                 return transactions[:transaction_limit]
         except DigitalOracleProviderError as exc:
@@ -911,8 +913,19 @@ def _ownership_transactions_from_filings(
         except ElementTree.ParseError:
             warnings.append(_malformed_warning("ownership document"))
     if not transactions:
-        warnings.append(_ownership_unavailable_warning("No Form 4 transactions were parsed."))
+        warnings.append(
+            _ownership_unavailable_warning("No Form 4 non-derivative transactions were parsed.")
+        )
     return transactions
+
+
+def _ownership_document_url(url: str) -> str:
+    parts = urlsplit(url)
+    path = parts.path.split("/")
+    # EDGAR's xsl directory serves a rendered page; the adjacent file is the source XML.
+    if len(path) >= 2 and path[-2].lower().startswith("xsl"):
+        del path[-2]
+    return urlunsplit(parts._replace(path="/".join(path)))
 
 
 def _ownership_candidate_filings(
@@ -942,8 +955,24 @@ def _should_warn_for_missing_ownership_forms(query: DigitalOracleSecFilingsProvi
 def _parse_form4_ownership_transactions(
     filing: DigitalOracleSecFiling,
     xml_payload: str,
+    warnings: list[RuntimeToolWarning],
 ) -> list[DigitalOracleSecOwnershipTransaction]:
     root = ElementTree.fromstring(xml_payload)
+    if _xml_descendants(root, "derivativeTransaction"):
+        warnings.append(
+            RuntimeToolWarning(
+                code="sec_filings_ownership_partial",
+                message=(
+                    "Form 4 derivative transactions are not included; "
+                    "only non-derivative transactions are parsed."
+                ),
+                details={
+                    "operation": "sec_filings",
+                    "provider": "edgar",
+                    "accessionNumber": filing.accession_number,
+                },
+            )
+        )
     issuer_name = _first_xml_text(root, ("issuer", "issuerName"))
     issuer_ticker = _first_xml_text(root, ("issuer", "issuerTradingSymbol"))
     owner_name = _first_xml_text(root, ("reportingOwner", "reportingOwnerId", "rptOwnerName"))
@@ -952,17 +981,6 @@ def _parse_form4_ownership_transactions(
         ("ownershipNature", "directOrIndirectOwnership", "value"),
     )
     transaction_nodes = _xml_descendants(root, "nonDerivativeTransaction")
-    if not transaction_nodes:
-        return [
-            DigitalOracleSecOwnershipTransaction(
-                accession_number=filing.accession_number,
-                filing_date=filing.filing_date,
-                issuer_name=issuer_name,
-                issuer_ticker=issuer_ticker,
-                reporting_owner_name=owner_name,
-                ownership_nature=root_ownership_nature,
-            )
-        ]
     return [
         DigitalOracleSecOwnershipTransaction(
             accession_number=filing.accession_number,

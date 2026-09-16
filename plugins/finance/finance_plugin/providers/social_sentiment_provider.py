@@ -340,6 +340,14 @@ class RedditSocialSentimentAdapter:
         as_of = _unix_datetime(post.get("created_utc"))
         if not _within_bounds(as_of, start_date=start_date, end_date=end_date):
             return None
+        if (
+            end_date is not None
+            and post.get("edited")
+            and not _within_bounds(
+                _unix_datetime(post.get("edited")), start_date=None, end_date=end_date
+            )
+        ):
+            return None
         title = _text(post.get("title"))
         summary = _truncate(_text(post.get("selftext")), limit=280)
         permalink = _text(post.get("permalink"))
@@ -685,9 +693,20 @@ def _parse_reddit_rss_blocks(
             source=source,
             provider=provider,
         )
-        if _within_bounds(block.as_of, start_date=start_date, end_date=end_date):
-            blocks.append(block)
-    return blocks[:limit]
+        if not _within_bounds(block.as_of, start_date=start_date, end_date=end_date):
+            continue
+        updated = _child_text_by_local(entry, "updated")
+        # A pre-cutoff publication does not establish when the returned revision existed.
+        if (
+            end_date is not None
+            and updated is not None
+            and not _within_bounds(_iso_datetime(updated), start_date=None, end_date=end_date)
+        ):
+            continue
+        blocks.append(block)
+        if len(blocks) >= limit:
+            break
+    return blocks
 
 
 def _parse_reddit_rss_entry(

@@ -73,6 +73,7 @@ services:
       PLUGIN_DATABASE_URL: ${FINANCE_DATABASE_URL:-}
       PLUGIN_ENDPOINT: http://finance:8000/mcp/
       PLUGIN_PAGE_URL: /apps/{artifactDigest}/
+      EDGAR_CONTACT_EMAIL: ${EDGAR_CONTACT_EMAIL:-}
     restart: unless-stopped
 
     depends_on:

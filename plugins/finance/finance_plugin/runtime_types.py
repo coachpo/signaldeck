@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import re
-from datetime import datetime
+from datetime import date, datetime
 from typing import Literal, Self
 
 from finance_plugin.contracts import RuntimeToolWarning
@@ -25,7 +25,9 @@ from finance_plugin.providers.market_data_snapshots import (
 from finance_plugin.providers.market_data_snapshots import (
     MarketDataIndicatorValue as RuntimeIndicatorValue,
 )
-from finance_plugin.providers.market_data_snapshots import MarketDataInsiderDataLookupResult
+from finance_plugin.providers.market_data_snapshots import (
+    MarketDataInsiderDataLookupResult,
+)
 from finance_plugin.providers.market_data_snapshots import (
     MarketDataInsiderTransaction as RuntimeInsiderTransaction,
 )
@@ -38,13 +40,17 @@ from finance_plugin.providers.market_data_snapshots import MarketDataOhlcvRow as
 from finance_plugin.providers.market_data_snapshots import (
     MarketDataOhlcvSeries as RuntimeOhlcvSeries,
 )
-from finance_plugin.providers.social_sentiment_snapshots import SocialSentimentLookupResult
+from finance_plugin.providers.social_sentiment_snapshots import (
+    SocialSentimentLookupResult,
+)
 from finance_plugin.providers.social_sentiment_snapshots import (
     SocialSentimentMetric as RuntimeSocialSentimentMetric,
 )
 from finance_plugin.providers.social_sentiment_snapshots import (
     SocialSentimentSourceBlock as RuntimeSocialSentimentSourceBlock,
 )
+from finance_plugin.research_evidence import ResearchEvidence
+from finance_plugin.research_financials_models import FinancialCoverage, FinancialFact, FinancialGap
 from finance_plugin.schemas.market_data import MarketHistorySeriesRead, MarketQuoteRead
 from plugin_runtime.common import CamelModel, ensure_timezone
 from pydantic import Field, field_validator, model_validator
@@ -144,6 +150,14 @@ class RuntimeIndicatorLookupResult(MarketDataIndicatorLookupResult):
 
 
 class RuntimeFundamentalsLookupResult(MarketDataFundamentalsLookupResult):
+    cik: str | None = None
+    as_of_date: date | None = None
+    cutoff_at: datetime | None = None
+    coverage: list[FinancialCoverage] = Field(default_factory=list, max_length=30)
+    financial_facts: list[FinancialFact] = Field(default_factory=list)
+    evidence: list[ResearchEvidence] = Field(default_factory=list, max_length=300)
+    gaps: list[FinancialGap] = Field(default_factory=list)
+    gap_messages: list[str] = Field(default_factory=list, max_length=300)
     tool_key: Literal["signaldeck/finance/fundamentals_lookup"] = (
         "signaldeck/finance/fundamentals_lookup"
     )

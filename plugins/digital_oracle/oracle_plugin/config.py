@@ -87,15 +87,15 @@ DIGITAL_ORACLE_PHASE1_PROVIDER_BOUNDARY = (
 EDGAR_CONTACT_EMAIL_SECRET = "edgar_contact_email"
 EDGAR_CONTACT_EMAIL_MISSING_CODE = "digital_oracle_edgar_contact_secret_missing"
 EDGAR_CONTACT_EMAIL_MISSING_MESSAGE = (
-    "SEC EDGAR provider is not configured. Bind workflow package secret "
-    f"{EDGAR_CONTACT_EMAIL_SECRET} before using "
+    "SEC EDGAR provider is not configured. Set EDGAR_CONTACT_EMAIL in the Digital Oracle "
+    "plugin deployment environment before using "
     "signaldeck/digital-oracle/sec_filings_lookup."
 )
 FRED_API_KEY_SECRET = "fred_api_key"
 FRED_API_KEY_MISSING_CODE = "digital_oracle_fred_secret_missing"
 FRED_API_KEY_MISSING_MESSAGE = (
-    "FRED macro rates source is not configured. Bind workflow package secret "
-    f"{FRED_API_KEY_SECRET} before using the FRED source."
+    "FRED macro rates source is not configured. Set FRED_API_KEY in the Digital Oracle "
+    "plugin deployment environment before using the FRED source."
 )
 YFINANCE_OPTIONAL_DEPENDENCY = "yfinance"
 YFINANCE_OPTIONAL_DEPENDENCY_MISSING_CODE = "digital_oracle_yfinance_missing"

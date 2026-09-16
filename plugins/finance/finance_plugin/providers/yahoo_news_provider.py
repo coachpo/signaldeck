@@ -14,10 +14,11 @@ from finance_plugin.providers.news_provider import (
     NewsScope,
     ProviderNewsItem,
     ProviderNewsResult,
+    ProviderNewsWarning,
     _normalize_symbols,
 )
 from finance_plugin.providers.yahoo_news_parsing import (
-    article_has_provider_date,
+    article_published_at,
     dedupe_global_news,
     default_start_date,
     extract_yahoo_news_items,
@@ -71,18 +72,20 @@ class YahooFinanceNewsProvider:
         )
         client = self.search_client or _YahooFinanceNewsHttpSearchClient(timeout=self.timeout)
         items: list[ProviderNewsItem] = []
+        undated_count = 0
         for search_query in queries:
             articles = client.search_news(query=search_query, limit=limit)
             for article in articles:
+                if article_published_at(article) is None:
+                    undated_count += 1
+                    continue
                 parsed_item = parse_yahoo_article(
                     article,
                     symbols=normalized_symbols,
-                    fallback_published_at=effective_end,
                     provider_name=self.provider_name,
                 )
                 if parsed_item is None or not in_news_window(
                     parsed_item.published_at,
-                    has_provider_date=article_has_provider_date(article),
                     start_date=effective_start,
                     end_date=effective_end,
                 ):
@@ -92,7 +95,20 @@ class YahooFinanceNewsProvider:
         if scope == "global":
             items = dedupe_global_news(items)
         items.sort(key=lambda item: to_utc(item.published_at), reverse=True)
-        return ProviderNewsResult(provider=self.provider_name, items=items[:limit])
+        warnings = (
+            [
+                ProviderNewsWarning(
+                    code="publication_date_unavailable",
+                    message="News items without a valid publication date were excluded",
+                    details={"excludedItemCount": str(undated_count)},
+                )
+            ]
+            if undated_count
+            else []
+        )
+        return ProviderNewsResult(
+            provider=self.provider_name, items=items[:limit], warnings=warnings
+        )
 
     def _search_queries(
         self,

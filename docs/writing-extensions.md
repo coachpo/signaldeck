@@ -158,6 +158,16 @@ Notes 1.2.0 的闭合 create 输入可选 `sourceKind: original|derived` 和 `so
 
 新版本通过独立制品和新 endpoint 发布；旧 Run 保留原 release/contract 与回执，不把当前新增字段补入旧冻结输出。`note_provenance` 的新增表初始化不修改旧笔记，具体存储见[数据模型](data-model.md#插件业务数据)。更新示例包形成新修订，missing-only 导入不覆盖既有操作者版本；旧包/hash 和旧 Run 不自动获得新检索策略。
 
+## Finance/Oracle 研究合同
+
+研究证据使用闭合 `schemaVersion: "1"` 值对象。必需身份为 `evidenceId`、`sourceId`、`kind`、`title`、`retrievedAt`；数值以十进制字符串和值单位表达，事实期间、来源 URL/定位、申报与派生引用分别保留。`publishedAt` 和日精度 `publicationDate` 互斥；FRED 的 `availableByDate` 单独表达已知版本可用上界，不能填充成发布时间。`verified` 不代表独立审计，用户材料不能自行提升为已核实来源。两个插件各自实现同一公开值合同，不相互导入业务实现。
+
+Finance 在 `fundamentals_lookup` 增加可选 `asOfDate`、`cutoffAt` 及财务事实、证据、缺口、覆盖记录。真实默认来源为 SEC，旧显式 deterministic 测试配置保持；新字段不回填旧 Run。Oracle 的 `source_documents_lookup`、`prediction_events_lookup`、`research_macro_evidence` 分别读取有定位原文、指定预测合约及显式宏观序列。证券代码与同时提供的 CIK 必须匹配，否则不采用其他发行人的申报。来源限制见[插件说明](../plugins/README.md#research-source-boundaries)。
+
+Finance 的 `research_evidence_merge` 保存完整证据和来源覆盖，同时提供最多 64 条、24,000 JSON 字符的 `analysisEvidence` 投影及截断标志；每条截短文字有独立标记，数字、单位、期间和原编号保持不变。模型不能用投影覆盖完整集合。`research_report_compile` 接收完整证据与模型提出的 claims/thresholds，只按有限公式、相容单位/期间和明确阈值来源校验；结构合法但语义非法的单条模型论断被排除并显示缺口，不修补原值，不取消对外层、来源、数组上限的校验。narrative/comparison 分别为未经事实校验的解释与历史文字对比，规范正文由插件生成。去重来源记录数不是独立事实数、印证强度或置信度。
+
+`research_reports_create` 接收规范 `name/content` 和可选 `snapshotId`，以调用身份和完整 resource scope 写入 Journal；与普通报告一样不可覆盖。只读 `ReportRead.metadata.researchSnapshotId` 不能由普通创建/上传请求伪造。`monitor_begin`、`monitor_observe`、`monitor_report_attach` 均声明 write，其原子性、基线、精确报告绑定和新增表由[数据模型](data-model.md#插件业务数据)维护；它们不授权读取 Core 私有状态。`research_scope_freeze`、市场采集、合并与报告编译为 read，市场采集仍要求 `finance-market-data` 并校验允许的证券。
+
 ## 独立接入与升级
 
 1. 构建独立服务，发布上述身份与工具合同，在插件端完成 schema、scope 和 effect 校验。

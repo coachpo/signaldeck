@@ -28,6 +28,10 @@ from .provider_factory import (
     create_quote_provider,
     create_social_sentiment_adapters,
 )
+from .research_financials_sec import SecFinancialsProvider
+from .research_tools import definitions as research_definitions
+from .research_tools import execute as execute_research
+from .research_tools import handles as handles_research
 from .runtime_reports import REPORT_LOOKUP_TOOL_SPEC
 from .schemas.report import ReportRead
 
@@ -129,6 +133,7 @@ def create_app(database_url=None, quote_provider=None, *, settings: FinanceSetti
         )
     )
     definitions[-1]["inputSchema"]["title"] = "保存报告"
+    definitions.extend(research_definitions())
     context = RuntimeToolContext(
         sessions,
         (
@@ -138,10 +143,18 @@ def create_app(database_url=None, quote_provider=None, *, settings: FinanceSetti
         ),
         create_news_providers(provider_settings),
         create_social_sentiment_adapters(provider_settings),
+        fundamentals_provider=(
+            SecFinancialsProvider(timeout=provider_settings.quote_provider_timeout_seconds)
+            if quote_provider is None
+            and provider_settings.quote_provider_backend != "deterministic"
+            else None
+        ),
     )
     handlers = {s.key: s for s in specs + [REPORT_LOOKUP_TOOL_SPEC]}
 
     def execute(name, arguments, invocation):
+        if handles_research(name):
+            return execute_research(name, arguments, invocation, context, journal)
         if name == "signaldeck/finance/reports_create":
 
             def effect(session):

@@ -792,7 +792,7 @@ def test_yahoo_news_provider_excludes_future_and_undated_historical_articles() -
     assert [item.title for item in result.items] == ["Past event"]
 
 
-def test_yahoo_news_provider_keeps_undated_article_when_window_reaches_today() -> None:
+def test_yahoo_news_provider_excludes_undated_article_when_window_reaches_today() -> None:
     client = yahoo__FakeYahooSearchClient(
         {
             "NVDA": [
@@ -814,8 +814,7 @@ def test_yahoo_news_provider_keeps_undated_article_when_window_reaches_today() -
         end_date=today,
         limit=10,
     )
-    assert [item.title for item in result.items] == ["Live undated article"]
-    assert result.items[0].published_at == today
+    assert result.items == []
 
 
 def test_yahoo_news_provider_malformed_payload_uses_typed_error() -> None:
@@ -2952,6 +2951,8 @@ def test_market_data_history_lookup_parser_preserves_validation_messages(
                 "statement_types": ("income_statement", "cash_flow"),
                 "periods": ("annual", "trailing_twelve_months"),
                 "statement_limit": 2,
+                "as_of_date": None,
+                "cutoff_at": None,
             },
         ),
         (
@@ -3049,7 +3050,15 @@ def test_generic_platform_market_data_runtime_tool_parsers_normalize_happy_paths
             FUNDAMENTALS_LOOKUP_OPENAI_FUNCTION_NAME,
             parse_fundamentals_lookup_arguments,
             ["symbol", "metricNames", "statementTypes", "periods", "statementLimit"],
-            {"symbol", "metricNames", "statementTypes", "periods", "statementLimit"},
+            {
+                "symbol",
+                "metricNames",
+                "statementTypes",
+                "periods",
+                "statementLimit",
+                "asOfDate",
+                "cutoffAt",
+            },
             (
                 ("metricNames",),
                 [

@@ -533,6 +533,15 @@ class MarketDataService:
             start_date=normalized_start,
             end_date=normalized_end,
         )
+        if provider_result is not None:
+            warnings.extend(
+                self._runtime_warning(
+                    code=f"news_{warning.code}",
+                    message=warning.message,
+                    details={**warning.details, "provider": provider_result.provider},
+                )
+                for warning in provider_result.warnings
+            )
         if len(items) > effective_limit:
             items = items[:effective_limit]
             warnings.append(

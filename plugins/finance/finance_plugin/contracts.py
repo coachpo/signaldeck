@@ -20,6 +20,7 @@ class RuntimeToolContext:
     news_providers: tuple = ()
     social_sentiment_adapters: tuple = ()
     secrets: dict[str, str] = field(default_factory=dict)
+    fundamentals_provider: object | None = None
 
     def resolve_secret_value(self, key: str):
         return self.secrets.get(key)

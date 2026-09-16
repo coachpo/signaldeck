@@ -315,6 +315,8 @@ _FUNDAMENTALS_LOOKUP_PARAMETERS_SCHEMA: dict[str, object] = {
     "type": "object",
     "properties": {
         "symbol": {"type": "string"},
+        "asOfDate": {"type": "string"},
+        "cutoffAt": {"type": "string"},
         "metricNames": {
             "type": ["array", "null"],
             "items": {
@@ -611,6 +613,8 @@ def parse_fundamentals_lookup_arguments(arguments_json: str) -> dict[str, object
         raw_arguments,
         allowed_keys={
             "symbol",
+            "asOfDate",
+            "cutoffAt",
             "metricNames",
             "statementTypes",
             "periods",
@@ -618,7 +622,29 @@ def parse_fundamentals_lookup_arguments(arguments_json: str) -> dict[str, object
         },
         function_name=FUNDAMENTALS_LOOKUP_OPENAI_FUNCTION_NAME,
     )
+    as_of_date = raw_arguments.get("asOfDate")
+    if as_of_date is not None:
+        try:
+            as_of_date = date.fromisoformat(str(as_of_date))
+        except ValueError as exc:
+            raise RuntimeToolError(
+                code="agent_tool_call_invalid", message="asOfDate must be an ISO date"
+            ) from exc
+    cutoff_at = raw_arguments.get("cutoffAt")
+    if cutoff_at is not None:
+        try:
+            cutoff_at = datetime.fromisoformat(str(cutoff_at).replace("Z", "+00:00"))
+            if cutoff_at.tzinfo is None:
+                raise ValueError("Timezone required")
+            cutoff_at = cutoff_at.astimezone(UTC)
+        except ValueError as exc:
+            raise RuntimeToolError(
+                code="agent_tool_call_invalid",
+                message="cutoffAt must be an ISO datetime with timezone",
+            ) from exc
     return {
+        "as_of_date": as_of_date,
+        "cutoff_at": cutoff_at,
         "symbol": _parse_required_symbol_argument(
             raw_arguments.get("symbol"),
             function_name=FUNDAMENTALS_LOOKUP_OPENAI_FUNCTION_NAME,
@@ -926,6 +952,10 @@ def execute_fundamentals_lookup(
     context: RuntimeToolContext,
     arguments: dict[str, object],
 ) -> dict[str, object]:
+    if context.fundamentals_provider is not None:
+        from .research_financials import lookup_financials
+
+        return lookup_financials(context.fundamentals_provider, arguments)
     quote_provider = _require_quote_provider(
         context,
         function_name=FUNDAMENTALS_LOOKUP_OPENAI_FUNCTION_NAME,

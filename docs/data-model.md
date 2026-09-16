@@ -95,7 +95,11 @@ Core closure 使用另一目录，manifest 固定文件字节、锁文件和 Pyt
 
 ## 插件业务数据
 
-Finance 自己定义 `text_templates`、`reports`、`market_quotes` 和 `plugin_operations`；Notes 自己定义 `notes`、`note_provenance` 与 `plugin_operations`。Digital Oracle 当前无业务持久化要求。插件 PostgreSQL 用户不能读取 Core 私有表；Core metadata 不包含这些业务表。
+Finance 自己定义 `text_templates`、`reports`、`market_quotes`、`research_monitor_snapshots`、`research_monitor_heads` 和 `plugin_operations`；Notes 自己定义 `notes`、`note_provenance` 与 `plugin_operations`。Digital Oracle 当前无业务持久化要求。插件 PostgreSQL 用户不能读取 Core 私有表；Core metadata 不包含这些业务表。
+
+`research_monitor_snapshots` 保存显式 monitor key、scope hash、截止时刻、冻结范围、所属 Run、证据及覆盖记录、四状态观察、前一基线和报告结果。`research_monitor_heads` 以 monitor key/scope hash 为复合主键，保存最新有效观察的快照与截止。首次成功事务冻结截止；相同 operation 的提交后重放返回原值，提交前已确认回滚允许重新取得时间。同一范围的观察/报告更新持有事务 advisory lock，较旧截止完成时不倒退头指针，无效观察不推进基线。比较只针对范围选定的来源，额外采集资料可留存但不影响该范围的新鲜度或变化判断。
+
+观察与报告状态分开：完整有效的观察不因后续模型或报告失败而变成无效；无变化可以推进观察基线并跳过报告。新报告的只读 `metadata.researchSnapshotId` 只能由研究写工具随调用身份保存，绑定同 Run、已判定需要研究且尚未完成报告的精确观察。绑定工具再次检查报告和快照身份，并保存正文摘要；普通上传/编辑 API 不能伪造此字段。写效果和操作回执沿用同一插件 Journal 事务。新表由 `create_all` 创建，不修改旧表或回填历史报告。
 
 Finance 的普通 report API 与 Agent report 写入有不同生命周期：Agent 来源报告禁止覆盖或删除。Notes 记录不可变。Notes 1.2.0 新增旁表 `note_provenance`，以 `note_id` 外键关联 `notes.id`，保存 `source_kind` 和 JSON `source_ids`；新笔记、来源与操作回执同事务提交。初始化只创建缺失表，不 ALTER 或回填原 notes。无旁表记录时读投影为 `unclassified` 和空引用，不按内容猜测或改写历史。引用只能指向授权集合中已存在的笔记，详细输入及检索规则见[插件接入](writing-extensions.md#notes-来源与检索合同)。两种写路径在同一插件事务提交业务效果与 operation result，并通过 operation lock 和输入/工具/scope 身份核验去重。详情见 [`writing-extensions.md`](writing-extensions.md)。
 

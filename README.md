@@ -68,6 +68,7 @@ SIGNALDECK_CONNECTION_PRESETS_FILE=/absolute/path/connections.json ./start.sh --
 
 ## 文档
 
+- [投研升级实现与验证](docs/planning/research-upgrade-readiness.md)：可信证据、可选信号、显式监测及本地验收记录。
 - [自动化测试消融与精简实测](docs/test-ablation-2026-09-16.md)：测试入口、故障对照、精简依据与验证边界。
 - [三项实测优化验证](docs/planning/observed-gaps-verification.md)：输出上限、只读/写入不确定性与Notes来源过滤的本地交付记录。
 

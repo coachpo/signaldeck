@@ -9,7 +9,7 @@ from finance_plugin.providers.news_provider import (
     NewsScope,
     ProviderNewsItem,
 )
-from plugin_runtime.formatting import to_utc, utcnow
+from plugin_runtime.formatting import to_utc
 
 _TITLE_SPACE_RE: Final = re.compile(r"\s+")
 
@@ -55,26 +55,22 @@ def parse_yahoo_article(
     article: dict[str, object],
     *,
     symbols: list[str],
-    fallback_published_at: datetime,
     provider_name: str,
 ) -> ProviderNewsItem | None:
     content = article.get("content")
     payload = cast(dict[str, object], content) if isinstance(content, dict) else article
     title = _clean_string(payload.get("title"))
-    if title is None:
+    published_at = article_published_at(article)
+    if title is None or published_at is None:
         return None
     return ProviderNewsItem(
         title=title,
         source=_article_source(article) or provider_name,
-        published_at=article_published_at(article) or fallback_published_at,
+        published_at=published_at,
         url=_article_url(article),
         summary=_clean_string(payload.get("summary")),
         symbols=list(symbols),
     )
-
-
-def article_has_provider_date(article: dict[str, object]) -> bool:
-    return article_published_at(article) is not None
 
 
 def article_published_at(article: dict[str, object]) -> datetime | None:
@@ -98,12 +94,9 @@ def article_published_at(article: dict[str, object]) -> datetime | None:
 def in_news_window(
     published_at: datetime,
     *,
-    has_provider_date: bool,
     start_date: datetime | None,
     end_date: datetime,
 ) -> bool:
-    if not has_provider_date:
-        return _window_reaches_current_day(end_date)
     normalized_published_at = to_utc(published_at)
     if start_date is not None and normalized_published_at < start_date:
         return False
@@ -154,13 +147,19 @@ def _parse_yahoo_datetime(value: object) -> datetime | None:
     if isinstance(value, bool) or value is None:
         return None
     if isinstance(value, int | float):
-        return datetime.fromtimestamp(value, tz=UTC)
+        try:
+            return datetime.fromtimestamp(value, tz=UTC)
+        except (OverflowError, OSError, ValueError):
+            return None
     if isinstance(value, str):
         normalized = value.strip()
         if not normalized:
             return None
         if normalized.isdigit():
-            return datetime.fromtimestamp(int(normalized), tz=UTC)
+            try:
+                return datetime.fromtimestamp(int(normalized), tz=UTC)
+            except (OverflowError, OSError, ValueError):
+                return None
         try:
             parsed = datetime.fromisoformat(normalized.replace("Z", "+00:00"))
         except ValueError:
@@ -169,11 +168,6 @@ def _parse_yahoo_datetime(value: object) -> datetime | None:
             return parsed.replace(tzinfo=UTC)
         return to_utc(parsed)
     return None
-
-
-def _window_reaches_current_day(end_date: datetime) -> bool:
-    current_day_start = datetime.combine(utcnow().date(), datetime.min.time(), tzinfo=UTC)
-    return end_date >= current_day_start
 
 
 def _normalized_title(title: str) -> str:
