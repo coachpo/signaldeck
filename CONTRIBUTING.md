@@ -18,7 +18,7 @@
 
 ## 开发启动
 
-完整本地/演示栈使用 [`start.sh`](start.sh)，启动、插件选择和停止命令见 [`README.md`](README.md#快速开始)。默认目标数据放在 `.signaldeck-target/`，独立于旧实例。Compose 不向宿主机发布 PostgreSQL 或 Temporal RPC 端口，不能直接将 `db:5432` 或 `temporal:7233` 用于宿主机进程。
+完整本地开发栈使用 [`start.sh`](start.sh)，启动、插件选择和停止命令见 [`README.md`](README.md#快速开始)。默认目标数据放在 `.signaldeck-target/`，独立于旧实例。Compose 不向宿主机发布 PostgreSQL 或 Temporal RPC 端口，不能直接将 `db:5432` 或 `temporal:7233` 用于宿主机进程。
 
 需要热更新时，准备独立且可从宿主机访问的 PostgreSQL，以及 Temporal CLI **1.8.3（内含 Server 1.31.2）**。API、dispatcher 和 worker 的终端必须设置相同的 `DATABASE_URL`、`AGENT_PLATFORM_ENCRYPTION_KEY`、`TEMPORAL_ADDRESS` 和下列绝对目录；worker 还需可用的 uv 和 Python 3.13.13。目录应属于本次开发实例，不指向旧版或不可丢弃数据。
 
@@ -32,7 +32,7 @@ export SIGNALDECK_CORE_PYTHON_VERSION=3.13.13
 mkdir -p "$PWD/.signaldeck-dev/temporal"
 ```
 
-直接运行 API 默认不安装示例。需要本地示例时，另设 `SIGNALDECK_WORKFLOW_DATA_DIR="$PWD/demo"`；留空或选择空目录仍可正常运行。导入只创建缺失 key，已有工作流通过普通编辑或显式 update 导入更新。
+平台默认不安装任何工作流。需要启动时导入外部数据时，可显式设置 `SIGNALDECK_WORKFLOW_DATA_DIR=/absolute/path/workflows`；留空或选择空目录仍可正常运行。该目录由开发者自行提供，不引用仓库中的示例。导入只创建缺失 key，已有工作流通过普通编辑或显式 update 导入更新。示例工作流可由用户经公开导入 API 手工导入，不能成为开发、测试或启动的前置条件。
 
 在仓库根目录分别打开终端执行（Temporal 已在运行时复用其地址）：
 
@@ -128,7 +128,7 @@ git diff --check
 
 1. 先读取与任务相关的 `STATUS.md`、下方当前开发策略、产品说明、架构说明、开发规范和适用的子目录 `AGENTS.md`。按 [`产品说明`](docs/产品说明.md#验收标准) 确认受影响的产品合同和验收编号；需要追溯已完成迭代时查阅 [`STATUS.md`](STATUS.md#已完成迭代)。开发档位只选择执行默认值，不改变产品范围和已有硬约束。
 2. 搜索已有实现、接口和测试，确认变更所属模块、产品行为和架构依赖方向。维护当前 v2 定义、Temporal 单一执行权威与独立插件边界，依据已验证事实作出设计选择。
-3. 先运行与改动直接相关的最小检查；完成后按影响范围运行 backend/frontend 质量门禁，并保持 demo、API contract、snapshot/provenance 和文档同步。
+3. 先运行与改动直接相关的最小检查；完成后按影响范围运行 backend/frontend 质量门禁，并保持 API contract、snapshot/provenance 和文档同步。测试使用独立的最小 fixture；平台检查不得读取、引用或同步 `demo/` 内容，示例变更不要求修改平台测试。
 4. 修改 secret、错误详情、包导出、运行读取或日志路径时，检查现有加密、脱敏和安全投影约束。
 5. 检查精确 diff、未纳入无关文件，并按下方共享完成定义交付。交付时报告受影响的验收编号、变更、验证结果和实际限制；只把已验证完成的行为写入产品和架构说明。
 

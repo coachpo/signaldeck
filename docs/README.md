@@ -38,7 +38,7 @@
 - [`handover-deps-follow-up.md`](handover-deps-follow-up.md)：依赖升级遗留问题的当前状态、解锁条件和验证命令。
 - [`../frontend/DESIGN.md`](../frontend/DESIGN.md)：前端设计系统和界面实现规则。
 - [`../backend/README.md`](../backend/README.md)：backend 配置与 API 路由入口；开发命令统一见贡献指南。
-- [`../demo/README.md`](../demo/README.md)：独立 YAML 示例的资源、输入、可选导入与数据合同维护。
+- [`../demo/README.md`](../demo/README.md)：示例工作流的资源、输入与用户手工导入说明；示例不属于平台组件，也不作为平台测试或分发依赖。
 
 [`../README_CN.md`](../README_CN.md) 保留为中文入口，安装和普通启动以根 `README.md` 为准。
 

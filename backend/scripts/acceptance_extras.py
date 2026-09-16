@@ -221,9 +221,9 @@ def _quality(workspace, evidence, env, run_command):
     assert (backend / "VERSION").read_text().strip() == backend_version
     assert (frontend / "VERSION").read_text().strip() == frontend_version
     run_command(
-        ["uv", "run", "--frozen", "pytest", "tests/test_target_seeds.py"],
+        ["uv", "run", "--frozen", "pytest", "tests/test_platform_api.py", "-k", "import"],
         backend,
-        name="demo-contracts",
+        name="package-import-contracts",
     )
     dependencies = _domain_imports(workspace)
     review = [

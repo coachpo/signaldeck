@@ -445,9 +445,7 @@ def test_history_title_fallback_preserves_non_string_and_whitespace_inputs(platf
 
 
 @pytest.mark.parametrize("large_tool_output", [False, True])
-def test_finance_receipt_owner_follows_frozen_deterministic_mapping(platform, large_tool_output):
-    from pathlib import Path
-
+def test_receipt_owner_follows_frozen_deterministic_mapping(platform, large_tool_output):
     from app.application.result_projection import project_result
     from app.domain.definition_parser import parse_package_source
 
@@ -462,14 +460,28 @@ def test_finance_receipt_owner_follows_frozen_deterministic_mapping(platform, la
         },
     ).json()
     detail = store.get_run(record["id"])
-    definition = parse_package_source(
-        (Path(__file__).parents[2] / "demo/digital_oracle_researcher.yaml").read_text()
-    ).package
-    detail.spec.definition = definition.model_dump(mode="json", by_alias=True)
-    detail.workflow_key = "research"
+    definition = json.loads(source())
+    receipt = {
+        "type": "object",
+        "properties": {"storedId": {"type": "integer"}, "name": {"type": "string"}},
+        "required": ["storedId", "name"],
+    }
+    agent = definition["agents"]["echo"]
+    agent["outputSchema"] = receipt
+    agent["strategy"]["outputMapping"] = {
+        "object": {"storedId": {"ref": "tool.output.id"}, "name": {"ref": "tool.output.name"}}
+    }
+    workflow = definition["workflows"]["main"]
+    workflow["outputSchema"] = receipt
+    workflow["presentation"] = {
+        "version": "signaldeck.presentation/1",
+        "sections": [{"kind": "receipt", "ref": "nodes.echo.output", "label": "Saved receipt"}],
+    }
+    compiled = parse_package_source(json.dumps(definition))
+    detail.spec.definition = compiled.package.model_dump(mode="json", by_alias=True)
     detail.status = "succeeded"
-    detail.output = {"reportId": 7, "name": "保存后的报告"}
-    tool_output = {"id": 7, "slug": "report-7", "name": "保存后的报告", "content": "正文"}
+    detail.output = {"storedId": 7, "name": "Saved item"}
+    tool_output = {"id": 7, "name": "Saved item", "content": "Body"}
     if large_tool_output:
         from app.infrastructure.evidence_payloads import persist_value
 
@@ -478,26 +490,26 @@ def test_finance_receipt_owner_follows_frozen_deterministic_mapping(platform, la
         assert "$artifact" in tool_output
     detail.evidence = [
         ExecutionEvidence(
-            id="report-tool",
+            id="storage-tool",
             run_id=detail.id,
-            node_id="save",
+            node_id="echo",
             kind="tool",
-            tool_id="signaldeck/finance/reports_create",
+            tool_id="example/echo/copy",
             status="succeeded",
             output=tool_output,
         ),
         ExecutionEvidence(
-            id="save-node",
+            id="echo-node",
             run_id=detail.id,
-            node_id="save",
+            node_id="echo",
             kind="node",
             status="succeeded",
             output=detail.output,
         ),
     ]
-    report = next(item for item in project_result(detail).sections if item.kind == "receipt")
-    assert report.value["reportId"] == 7
-    assert report.plugin_id == "signaldeck/finance" and report.evidence_id == "save-node"
+    receipt = next(item for item in project_result(detail).sections if item.kind == "receipt")
+    assert receipt.value["storedId"] == 7
+    assert receipt.plugin_id == "example/echo" and receipt.evidence_id == "echo-node"
 
 
 @pytest.mark.parametrize("effect", ["read", "write"])

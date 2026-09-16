@@ -3,10 +3,12 @@
 import json
 from copy import deepcopy
 from io import StringIO
+from pathlib import Path
 
 import pytest
 from ruamel.yaml import YAML
 
+from app.application.definitions import canonical_source
 from app.domain.compiler import compile_package
 from app.domain.definition_parser import parse_package_source
 from app.domain.schema_contract import DomainValidationError, validate_schema, validate_value
@@ -218,3 +220,30 @@ def test_extra_field_named_like_union_tag_retains_exact_source_path(target: str)
     assert diagnostic.path == expected
     assert diagnostic.line is not None
     assert "unsupported field" in output.getvalue().splitlines()[diagnostic.line - 1]
+
+
+def test_unrelated_workflow_and_renamed_fields_keep_explicit_presentation():
+    source = (Path(__file__).parent / "fixtures/dispatch_brief.yaml").read_text()
+    original = parse_package_source(source)
+    renamed = parse_package_source(
+        source.replace("dispatch_brief", "harbor_update")
+        .replace("briefing", "dispatch")
+        .replace("headline", "subject")
+        .replace("bulletin", "message")
+        .replace("reportId", "reference")
+        .replace("collection", "group")
+        .replace("includeRisk", "appendix")
+    )
+    assert original.content_hash != renamed.content_hash
+    for compiled in (original, renamed):
+        definition = compiled.package.model_dump(mode="json", by_alias=True)
+        assert (
+            parse_package_source(canonical_source(definition)).content_hash == compiled.content_hash
+        )
+    workflow = original.package.workflows["briefing"]
+    assert workflow.input_schema["properties"]["includeRisk"]["default"] is False
+    assert [section.kind for section in workflow.presentation.sections] == [
+        "markdown",
+        "value",
+        "value",
+    ]

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import copy
 import hashlib
 import json
 import time
@@ -13,7 +12,7 @@ from urllib.parse import urlsplit
 from uuid import uuid4
 
 import httpx
-from ruamel.yaml import YAML
+from verification_packages import finance_package, notes_package
 
 
 class Check:
@@ -84,60 +83,6 @@ def references(value):
     return found
 
 
-def notes_package(suffix: str) -> dict:
-    notes = YAML(typ="safe").load(
-        (Path(__file__).resolve().parents[1] / "demo/research_notes.yaml").read_text()
-    )
-    notes["metadata"]["key"] = "compose-notes-" + suffix
-    notes["agents"]["summarize"]["strategy"]["modelRef"] = "compose-model-" + suffix
-    return notes
-
-
-def finance_package(notes: dict, suffix: str) -> dict:
-    finance = copy.deepcopy(notes)
-    finance["metadata"]["key"] = "compose-finance-" + suffix
-    report = finance["agents"].pop("write_note")
-    report["tools"] = ["signaldeck/finance/reports_create"]
-    report["resources"] = []
-    report["inputSchema"] = {
-        "type": "object",
-        "properties": {
-            "name": {"type": "string", "minLength": 1, "maxLength": 160},
-            "content": {"type": "string", "minLength": 1},
-        },
-        "required": ["name", "content"],
-    }
-    report["outputSchema"] = {
-        "type": "object",
-        "properties": {"slug": {"type": "string"}},
-        "required": ["slug"],
-    }
-    report["strategy"] = {
-        "kind": "deterministic",
-        "toolId": "signaldeck/finance/reports_create",
-        "inputMapping": {"ref": "agent.input"},
-        "outputMapping": {"object": {"slug": {"ref": "tool.output.slug"}}},
-    }
-    finance["agents"]["write_report"] = report
-    finance["agents"]["summarize"]["outputSchema"]["properties"]["text"]["minLength"] = 1
-    workflow = finance["workflows"]["research"]
-    workflow["inputSchema"]["properties"]["title"]["maxLength"] = 160
-    workflow["inputSchema"]["properties"]["text"]["minLength"] = 1
-    workflow["outputSchema"] = report["outputSchema"]
-    workflow["nodes"]["save"]["uses"] = "write_report"
-    workflow["nodes"]["save"]["inputMapping"] = {
-        "object": {
-            "name": {"ref": "workflow.input.title"},
-            "content": {
-                "ref": "nodes.edit.output.text",
-                "onMissing": {"ref": "workflow.input.text"},
-            },
-        }
-    }
-    finance["workflows"] = {"report": workflow}
-    return finance
-
-
 def execute(check: Check) -> dict:
     assert check.client.get(check.base + "/").status_code == 200
     assert check.client.get(check.finance + "/").status_code == 200
@@ -184,12 +129,11 @@ def execute(check: Check) -> dict:
         check.artifact(ref)
     model_run = check.launch(
         notes["metadata"]["key"],
-        "research",
+        "process",
         {
             "title": "Compose edited " + suffix,
             "text": "A controlled test excerpt.",
-            "query": "absent-" + suffix,
-            "summarize": True,
+            "useModel": True,
         },
         "model-" + suffix,
     )
@@ -197,7 +141,7 @@ def execute(check: Check) -> dict:
     assert "fake" in check.value(model_run["output"])["text"]
     assert "compose-fake-credential" not in json.dumps(model_run)
 
-    finance = finance_package(notes, suffix)
+    finance = finance_package(suffix)
     check.request("/api/workflow-packages", {"manifestSource": json.dumps(finance)}, "POST")
     report_run = check.launch(
         finance["metadata"]["key"],
@@ -205,8 +149,7 @@ def execute(check: Check) -> dict:
         {
             "title": "Compose report " + suffix,
             "text": "Controlled research content.",
-            "query": "absent-" + suffix,
-            "summarize": True,
+            "useModel": True,
         },
         "report-" + suffix,
     )

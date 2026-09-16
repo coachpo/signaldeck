@@ -1,6 +1,7 @@
 import { expect, test, type APIRequestContext } from "@playwright/test";
 import { apiBase } from "./platform-fixtures";
 import { connectTaskServices } from "./task-fixtures";
+import { seedNoteTask } from "./task-package-fixtures";
 
 // Select a real timezone whose local calendar day differs from UTC. This exposes
 // date-only filters accidentally interpreted as UTC without changing stored runs.
@@ -8,20 +9,20 @@ const timezoneId =
   new Date().getUTCHours() >= 10 ? "Pacific/Kiritimati" : "Pacific/Pago_Pago";
 test.use({ timezoneId });
 
-async function capture(request: APIRequestContext, title: string) {
+async function capture(request: APIRequestContext, packageKey: string, title: string) {
   const parameters = { title, text: `Immutable original for ${title}` };
   const prepared = await request.post(
-    `${apiBase}/workflow-packages/research_notes/prepare`,
-    { data: { workflowKey: "capture", parameters } },
+    `${apiBase}/workflow-packages/${packageKey}/prepare`,
+    { data: { workflowKey: "retain", parameters } },
   );
   expect(prepared.ok(), await prepared.text()).toBeTruthy();
   const preparation = await prepared.json();
   expect(preparation.ready).toBe(true);
   const launched = await request.post(
-    `${apiBase}/workflow-packages/research_notes/launches`,
+    `${apiBase}/workflow-packages/${packageKey}/launches`,
     {
       data: {
-        workflowKey: "capture",
+        workflowKey: "retain",
         parameters,
         launchId: crypto.randomUUID(),
         bindingToken: preparation.bindingToken,
@@ -38,11 +39,12 @@ test("UX03: complete history preserves filters, respects local dates and refresh
 }, testInfo) => {
   test.setTimeout(240_000);
   await connectTaskServices(request, false);
+  const packageKey = await seedNoteTask(request);
   const prefix = `history-${crypto.randomUUID().slice(0, 8)}`;
   const runs = [];
   for (let i = 0; i < 27; i++)
     runs.push(
-      await capture(request, `${prefix} ${String(i).padStart(2, "0")}`),
+      await capture(request, packageKey, `${prefix} ${String(i).padStart(2, "0")}`),
     );
   await expect
     .poll(
@@ -87,7 +89,7 @@ test("UX03: complete history preserves filters, respects local dates and refresh
     page.getByRole("link", { name: `${prefix} 26`, exact: true }),
   ).toBeVisible();
 
-  const fresh = await capture(request, `${prefix} 00-new`);
+  const fresh = await capture(request, packageKey, `${prefix} 00-new`);
   await page.getByRole("button", { name: "刷新", exact: true }).click();
   await expect(page.getByText("共 28 条记录", { exact: true })).toBeVisible();
   await expect(

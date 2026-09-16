@@ -495,7 +495,7 @@
     ],
     "requiredTestPatterns": [
       "notes_workspace",
-      "target_seeds"
+      "platform_api"
     ],
     "observedArtifacts": [
       "real:source-sets.json",

@@ -1,5 +1,7 @@
 # 个人使用优化 PU-S3 阶段验证
 
+本页保留原版本验证事实；示例合同及已删除测试文件名仅用于历史追溯，不构成当前平台测试要求或执行指引。现行边界见[产品解耦原则](../产品说明.md#工作流与平台解耦原则)。
+
 日期：2026-09-10。范围为 `pu-usage-projection`、`pu-budget-contract`、`pu-model-controls` 与本阶段联合验证；上游为 [Sprint Backlog](personal-use-sprint-backlog.md#pu-s3--用量可见输出上限可控)。交付在当前未提交工作区，不能仅凭 HEAD 重现。
 
 ## 已实现范围

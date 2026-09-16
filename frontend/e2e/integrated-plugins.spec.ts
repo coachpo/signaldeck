@@ -2,6 +2,7 @@ import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { expect, test } from "@playwright/test";
 import { connectTaskServices } from "./task-fixtures";
+import { seedNoteTask } from "./task-package-fixtures";
 import { apiBase, seed } from "./platform-fixtures";
 
 test.skip(process.env.SIGNALDECK_E2E_INTEGRATED !== "1", "Requires the owned integrated plugin harness");
@@ -53,8 +54,9 @@ test("real Finance draft and Core task draft survive cross-workspace navigation"
   await expect(page.getByLabel("助手任务说明", { exact: true })).toHaveValue(instructions);
 });
 
-test("ordinary task inputs survive navigation into and out of a plugin", async ({ page }) => {
-  await page.goto("/tasks/new?packageKey=research_notes&workflowKey=capture");
+test("ordinary task inputs survive navigation into and out of a plugin", async ({ page, request }) => {
+  const packageKey = await seedNoteTask(request);
+  await page.goto(`/tasks/new?packageKey=${packageKey}&workflowKey=retain`);
   await page.getByLabel("标题", { exact: true }).fill("Unfinished ordinary task");
   await page.getByLabel("原文", { exact: true }).fill("Keep original business input in memory.");
   await page.getByTestId(`nav-plugin-${plugin("example/notes").mountKey}`).click();
@@ -141,7 +143,8 @@ test("a confirmed Notes result opens its workspace and retains its source naviga
     });
   });
   await connectTaskServices(request, false);
-  await page.goto("/tasks/new?packageKey=research_notes&workflowKey=capture");
+  const packageKey = await seedNoteTask(request);
+  await page.goto(`/tasks/new?packageKey=${packageKey}&workflowKey=retain`);
   const title = `Integrated original ${crypto.randomUUID()}`;
   await page.getByLabel("标题", { exact: true }).fill(title);
   await page.getByLabel("原文", { exact: true }).fill("Original evidence from the real durable Notes operation.");

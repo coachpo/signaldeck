@@ -1,5 +1,7 @@
 # 后端全范围盘点与保留决策
 
+本页是 2026-09-16 实验的历史盘点，“保留”和路径不构成当前回归要求；后续示例测试删除不改写原结论。当前边界见[产品解耦原则](../产品说明.md#工作流与平台解耦原则)。
+
 CI backend-quality 执行 `uv run pytest`，不分层过滤；同一入口包含纯单元、真实PostgreSQL集成、Temporal/独立进程、provider合约及Notes Chromium UI。未配置coverage或变异测试依赖/命令。本轮无需引入新基础设施。
 
 共 69 个 test_*.py 文件，532 个静态测试函数，877 个收集节点；test_durable_runtime_support.py 为零节点的共享协议服务器模块。所有节点见 sd-backend-collect.log；全部函数/行号/参数/直接导入/fixture/断言计数见 sd-backend-inventory.json。

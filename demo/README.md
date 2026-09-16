@@ -1,6 +1,6 @@
 # Workflow Packages
 
-These packages use `signaldeck.workflowPackage/v2`. Import a YAML file through Workflow Packages, configure its resources, then choose a workflow and supply its input JSON. Each run records the selected package revision and plugin release. The same definition is used by the editor and YAML import.
+These standalone examples use `signaldeck.workflowPackage/v2`. They are not platform components, bundled defaults or test fixtures. Import a selected YAML file through Workflow Packages, configure its resources, then choose a workflow and fill in its inputs. Each run records the selected package revision and plugin release. The same public definition contract is used by the editor and YAML import.
 
 | Package | Workflow | Result | Resources |
 | --- | --- | --- | --- |
@@ -152,13 +152,6 @@ The [cache policy contract](../backend/app/domain/tool_contracts.py) permits a T
 
 ## Maintaining the examples
 
-The YAML files are optional workflow data distributed outside the Core executable artifact. The local Compose stack mounts them read-only; a direct API process imports them only when `SIGNALDECK_WORKFLOW_DATA_DIR` selects a directory. Startup and API `missing_only` imports atomically preserve existing package keys, while explicit `update` imports may advance the current revision. Imported records use the same parser, canonical source and immutable revision checks as editor saves. Reading saved definitions does not require the source directory or a running business plugin. Startup options are documented in the [project entry](../README.md#快速开始); the batch API is specified in the [independent import contract](../docs/工作流解耦方案.md#独立数据导入与分发).
+The platform's code, tests, verification scripts, builds and startup configuration do not reference this directory or its contents. Examples are not included in the application image or installed by the local Compose stack. Changing or removing an example does not require platform changes or synchronized fixtures, hashes or test expectations.
 
-After editing a YAML example, regenerate only the [machine contracts](contracts.json) from `backend/`:
-
-```sh
-uv run python ../demo/sync_seeds.py
-uv run pytest tests/test_target_seeds.py tests/test_dag_compiler.py tests/test_demo_presentation.py tests/test_demo_workflow_dataflow.py -q
-```
-
-The contracts lock content hashes, tool and resource identities, node order, merged dependencies and edge origins. The tests also validate each deterministic Agent transformation and presentation binding against the independently published tool schema, and verify atomic, non-overwriting missing-only imports in PostgreSQL. The generator never embeds workflow sources into Core Python or app resources.
+Users may import a chosen example through the public package interface, just like any independently supplied workflow. `missing_only` imports preserve existing package keys; explicit `update` imports may advance the current revision. Imported records use the same parsing, normalization and immutable revision contract as editor saves. Reading saved definitions does not require this source directory or a running business plugin. The public batch API is specified in the [independent import contract](../docs/工作流解耦方案.md#独立数据导入与分发).

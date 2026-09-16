@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import { expect, test } from "@playwright/test";
 import { apiBase } from "./platform-fixtures";
 import { connectTaskServices } from "./task-fixtures";
+import { seedTaskScenarios } from "./task-package-fixtures";
 import type { RunResult } from "../src/lib/types/result";
 import {
   captureResponsiveEvidence,
@@ -16,20 +17,7 @@ test("UX01/03/06: four ordinary tasks execute with real plugins and retain reusa
   test.setTimeout(360_000);
   const observationId = testInfo.testId.slice(-6);
   await connectTaskServices(request, false);
-  const cases = [
-    { title: "保存原文", key: "research_notes", workflow: "capture" },
-    { title: "整理笔记", key: "research_notes", workflow: "research" },
-    {
-      title: "市场研究",
-      key: "tradingagents_advisory_research",
-      workflow: "research",
-    },
-    {
-      title: "综合资料研究",
-      key: "digital_oracle_researcher",
-      workflow: "research",
-    },
-  ];
+  const cases = await seedTaskScenarios(request);
   const originalText = [
     "# Original evidence",
     "",
@@ -66,26 +54,26 @@ test("UX01/03/06: four ordinary tasks execute with real plugins and retain reusa
     await expect(
       page.getByRole("heading", { name: scenario.title, exact: true }),
     ).toBeVisible();
-    if (scenario.key === "research_notes") {
+    if (scenario.kind === "capture" || scenario.kind === "summary") {
       await page
         .getByLabel("标题", { exact: true })
         .fill(`${scenario.title} ${observationId}`);
       await page
-        .getByLabel(scenario.workflow === "research" ? "本次资料" : "原文", { exact: true })
+        .getByLabel(scenario.kind === "summary" ? "本次资料" : "原文", { exact: true })
         .fill(originalText);
-      if (scenario.workflow === "research") {
+      if (scenario.kind === "summary") {
         await page.getByLabel("查找已有笔记", { exact: true }).fill("Original");
-        await page.getByLabel("整理事实、变化与待核实问题", { exact: true }).check();
+        await page.getByLabel("保留详细信息", { exact: true }).check();
       }
     } else {
       await page
         .getByLabel("想了解什么", { exact: true })
         .fill("Which changes and missing evidence should be considered?");
-      if (scenario.key === "tradingagents_advisory_research") {
+      if (scenario.kind === "finance") {
         await page.getByRole("button", { name: "添加项目", exact: true }).click();
-        await page.getByLabel("研究对象", { exact: true }).fill("MSFT");
+        await page.getByRole("textbox", { name: "第 1 项", exact: true }).fill("MSFT");
         await expect(
-          page.getByLabel("包含独立风险复核", { exact: true }),
+          page.getByLabel("包含详细信息", { exact: true }),
         ).toBeChecked();
       }
     }
@@ -106,7 +94,7 @@ test("UX01/03/06: four ordinary tasks execute with real plugins and retain reusa
         ],
       )),
     );
-    if (scenario.workflow === "capture") {
+    if (scenario.kind === "capture") {
       const mode = page.getByRole("switch", { name: "专家模式", exact: true });
       await mode.click();
       await mode.click();
@@ -126,7 +114,7 @@ test("UX01/03/06: four ordinary tasks execute with real plugins and retain reusa
       ).toBeVisible();
     }
     await expect(page.getByRole("region", { name: "本次有效设置" })).toBeVisible();
-    if (scenario.title === "整理笔记") {
+    if (scenario.kind === "summary") {
       const connection = page
         .locator("details")
         .filter({
@@ -171,9 +159,9 @@ test("UX01/03/06: four ordinary tasks execute with real plugins and retain reusa
       )),
     );
     const submissions: string[] = [];
-    if (scenario.workflow === "capture") {
+    if (scenario.kind === "capture") {
       await page.route(
-        "**/workflow-packages/research_notes/launches",
+        `**/workflow-packages/${scenario.key}/launches`,
         async (route) => {
           submissions.push(route.request().postDataJSON().launchId);
           if (submissions.length === 1) {
@@ -184,11 +172,11 @@ test("UX01/03/06: four ordinary tasks execute with real plugins and retain reusa
       );
     }
     await page.getByRole("button", { name: "开始任务", exact: true }).click();
-    if (scenario.workflow === "capture") {
+    if (scenario.kind === "capture") {
       await page.getByRole("button", { name: "使用同一请求重试" }).click();
       await expect.poll(() => submissions.length).toBe(2);
       expect(submissions[1]).toBe(submissions[0]);
-      await page.unroute("**/workflow-packages/research_notes/launches");
+      await page.unroute(`**/workflow-packages/${scenario.key}/launches`);
     }
     await expect(page).toHaveURL(/\/runs\/[^/?]+$/);
     const runId = new URL(page.url()).pathname.split("/").at(-1)!;
@@ -208,10 +196,10 @@ test("UX01/03/06: four ordinary tasks execute with real plugins and retain reusa
     ).json();
     const run = await (await request.get(`${apiBase}/runs/${runId}`)).json();
     expect(result.sections).toEqual(expect.arrayContaining([
-      expect.objectContaining({ kind: "markdown", label: scenario.key === "research_notes" ? "笔记正文" : "研究报告", value: expect.any(String) }),
+      expect.objectContaining({ kind: "markdown", label: scenario.section, value: expect.any(String) }),
       expect.objectContaining({ kind: "receipt", value: expect.any(Object), operationId: expect.any(String) }),
     ]));
-    if (scenario.key === "digital_oracle_researcher") {
+    if (scenario.kind === "oracle") {
       expect(
         run.evidence.some(
           (item: { kind: string; toolId: string; status: string }) =>
@@ -222,7 +210,7 @@ test("UX01/03/06: four ordinary tasks execute with real plugins and retain reusa
         ),
       ).toBe(true);
     }
-    if (scenario.workflow === "capture") {
+    if (scenario.kind === "capture") {
       expect(
         run.evidence.some((item: { kind: string }) => item.kind === "model"),
       ).toBe(false);
@@ -230,13 +218,13 @@ test("UX01/03/06: four ordinary tasks execute with real plugins and retain reusa
         await request.get(`${apiBase}/runs`, {
           params: {
             q: `${scenario.title} ${observationId}`,
-            workflowKey: "capture",
+            workflowKey: scenario.workflow,
           },
         })
       ).json();
       expect(history.total).toBe(1);
     }
-    if (scenario.workflow === "capture") {
+    if (scenario.kind === "capture") {
       const body = page.getByRole("region", { name: "笔记正文", exact: true });
       await expect(body.locator("ol")).toHaveCSS("list-style-type", "decimal");
       await expect(body.locator("ul")).toHaveCSS("list-style-type", "disc");
@@ -244,7 +232,7 @@ test("UX01/03/06: four ordinary tasks execute with real plugins and retain reusa
       await body.getByRole("link", { name: "Source documentation" }).focus();
       await expect(body.getByRole("link", { name: "Source documentation" })).toBeFocused();
     }
-    if (scenario.title === "整理笔记") {
+    if (scenario.kind === "summary") {
       const resources = await (await request.get(`${apiBase}/resources`)).json();
       const model = resources.items.find((item: { resourceId: string }) => item.resourceId === "research-model");
       expect(model.modelObservation).toMatchObject({ status: "succeeded", runId });
@@ -268,7 +256,7 @@ test("UX01/03/06: four ordinary tasks execute with real plugins and retain reusa
         page,
         evidenceDirectory,
         `${scenario.workflow}-${scenario.key}-result`,
-        page.getByRole("region", { name: scenario.key === "research_notes" ? "笔记正文" : "研究报告", exact: true }),
+        page.getByRole("region", { name: scenario.section, exact: true }),
         [
           {
             name: "再运行一次",
@@ -305,7 +293,7 @@ test("UX01/03/06: four ordinary tasks execute with real plugins and retain reusa
       resolve(evidenceDirectory, "responsive-control-evidence.json"),
       JSON.stringify(visualEvidence, null, 2),
     );
-    if (scenario.key !== "research_notes") {
+    if (scenario.kind === "finance" || scenario.kind === "oracle") {
       const resultUrl = page.url();
       const reportLink = result.sections?.find((section) => section.kind === "link" && section.label === "在 Finance 中查看报告");
       expect(reportLink?.href).toBeTruthy();
@@ -330,7 +318,7 @@ test("UX01/03/06: four ordinary tasks execute with real plugins and retain reusa
       await expect(page).toHaveURL(resultUrl);
       await expect(page.getByRole("link", { name: "查看执行过程", exact: true })).toBeVisible();
     }
-    if (scenario.workflow === "capture") {
+    if (scenario.kind === "capture") {
       expect(result.sections?.find((section) => section.kind === "markdown")?.value).toContain(
         originalText,
       );

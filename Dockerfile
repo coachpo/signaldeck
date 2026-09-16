@@ -41,7 +41,6 @@ COPY --from=ghcr.io/astral-sh/uv:0.11.7@sha256:240fb85ab0f263ef12f492d8476aa3a2e
 COPY backend/pyproject.toml backend/uv.lock backend/README.md backend/VERSION ./
 RUN UV_NO_CACHE=1 uv sync --frozen --no-dev --no-install-project
 COPY backend/app ./app
-COPY demo/*.yaml /opt/signaldeck/workflows/
 COPY --from=frontend-builder /app/dist /usr/share/nginx/html
 COPY docker/nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY docker/plugin-mounts.empty.json /etc/signaldeck/plugin-mounts.json

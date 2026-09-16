@@ -8,8 +8,9 @@ from probe import launch, request
 
 
 def run():
-    definition = request("/workflow-packages/research_notes")["definition"]
-    note_schema = deepcopy(definition["agents"]["write_note"]["outputSchema"])
+    release = request("http://127.0.0.1:21082/release", absolute=True)
+    create = next(tool for tool in release["tools"] if tool["toolId"] == "example/notes/create")
+    note_schema = deepcopy(create["outputSchema"])
     inputs = {
         "type": "object",
         "properties": {"query": {"type": "string"}, "title": {"type": "string"}},

@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 from collections.abc import Iterator
+from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -12,10 +13,13 @@ from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.api.platform_dependencies import get_artifacts, get_launch_service, get_platform_store
+from app.application.definitions import canonical_source, save_definition
 from app.application.launch import LaunchService
+from app.application.package_import import import_source
 from app.domain.execution import ApplicationError, ExecutionEvidence
 from app.domain.tool_contracts import PluginRelease, ToolDefinition, tool_contract_digest
 from app.infrastructure.artifact_store import ArtifactStore
+from app.infrastructure.package_seeds import load_seed_packages, seed_packages
 from app.infrastructure.platform_store import PlatformStore
 from app.infrastructure.temporal_services import FrozenSecretResolver
 from app.main import create_app
@@ -332,3 +336,118 @@ def test_plugin_health_is_a_saved_release_specific_observation(platform: tuple) 
     upgraded = {**descriptor, "artifactDigest": "sha256:" + "c" * 64, "releaseId": "2.0.0"}
     client.post("/api/plugins", json={"release": upgraded})
     assert client.get("/api/plugins").json()["items"][0]["health"]["status"] == "not_observed"
+
+
+def test_external_directory_import_is_optional_atomic_and_preserves_edits(platform, tmp_path):
+    _, store, _ = platform
+    assert load_seed_packages() == ()
+    assert seed_packages(store) == seed_packages(store, tmp_path / "absent") == []
+    directory = tmp_path / "external-packages"
+    directory.mkdir()
+    manifest = source("external-package")
+    (directory / "broken.yaml").write_text("not: [valid")
+    (directory / "valid.yml").write_text(manifest)
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        results = list(pool.map(lambda _: seed_packages(store, directory), range(2)))
+    assert all(items[0]["status"] == "error" for items in results)
+    assert sorted(items[1]["status"] for items in results) == ["created", "preserved"]
+    initial = store.get_package("external-package")
+    assert save_definition(store, initial["source"]) == initial
+    definition = json.loads(manifest)
+    definition["metadata"]["description"] = "Operator-owned revision"
+    updated = save_definition(store, canonical_source(definition))
+    assert updated["packageHash"] != initial["packageHash"]
+    assert seed_packages(store, directory)[1]["status"] == "preserved"
+    assert store.get_package("external-package") == updated
+    assert store.get_package("external-package", initial["packageHash"]) == initial
+
+
+def test_external_directory_compiles_without_contacting_plugins(tmp_path, monkeypatch):
+    import socket
+    import sys
+
+    from app.domain.definition_parser import parse_package_source
+
+    def forbidden(*args, **kwargs):
+        raise AssertionError("Package loading cannot contact external services")
+
+    monkeypatch.setattr(socket, "create_connection", forbidden)
+    manifest = source("uninstalled-package")
+    (tmp_path / "package.yaml").write_text(manifest)
+    before = set(sys.modules)
+    loaded = load_seed_packages(tmp_path)
+    assert len(loaded) == 1
+    assert loaded[0].source == manifest
+    assert loaded[0].compiled == parse_package_source(manifest)
+    assert not any(
+        name.startswith(("finance_plugin", "oracle_plugin", "notes_plugin"))
+        for name in set(sys.modules) - before
+    )
+
+
+def test_import_api_uses_ordinary_revisions_and_requires_explicit_update(platform):
+    client, store, _ = platform
+    response = client.post(
+        "/api/workflow-packages/import",
+        json={"sources": [{"manifestSource": "no: ["}, {"manifestSource": source()}]},
+    )
+    assert response.status_code == 200
+    assert [item["status"] for item in response.json()["items"]] == ["error", "created"]
+    initial = store.get_package("api-package")
+    assert save_definition(store, source()) == initial
+    changed = json.loads(source())
+    changed["metadata"]["description"] = "New external revision"
+    payload = {"sources": [{"manifestSource": canonical_source(changed)}]}
+    assert (
+        client.post("/api/workflow-packages/import", json=payload).json()["items"][0]["status"]
+        == "preserved"
+    )
+    assert store.get_package("api-package") == initial
+    payload["mode"] = "update"
+    assert (
+        client.post("/api/workflow-packages/import", json=payload).json()["items"][0]["status"]
+        == "updated"
+    )
+    assert store.get_package("api-package")["packageHash"] != initial["packageHash"]
+    assert store.get_package("api-package", initial["packageHash"]) == initial
+
+
+def test_missing_only_import_and_operator_save_share_atomic_identity_lock(platform):
+    _, store, _ = platform
+    definition = json.loads(source())
+    definition["metadata"]["description"] = "Concurrent operator revision"
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        imported = pool.submit(import_source, store, source(), missing_only=True)
+        saved = pool.submit(save_definition, store, canonical_source(definition))
+        assert imported.result()["status"] in {"created", "preserved"}
+        operator = saved.result()
+    assert store.get_package(operator["packageKey"]) == operator
+
+
+@pytest.mark.parametrize("invalid_data", [False, True])
+def test_api_starts_with_empty_or_invalid_external_directory(
+    platform, tmp_path, monkeypatch, invalid_data
+):
+    from types import SimpleNamespace
+
+    from app import main
+
+    _, store, _ = platform
+    if invalid_data:
+        (tmp_path / "invalid.yaml").write_text("invalid: [")
+    settings = main.get_settings().model_copy(update={"workflow_data_dir": str(tmp_path)})
+    monkeypatch.setattr(main, "get_settings", lambda: settings)
+    monkeypatch.setattr(main, "get_platform_store", lambda: store)
+    monkeypatch.setattr(main, "get_schedule_store", lambda: store)
+    monkeypatch.setattr(
+        main, "get_core_artifacts", lambda: SimpleNamespace(current_digest=lambda: "fixed-core")
+    )
+    app = main.create_app()
+    app.dependency_overrides[get_platform_store] = lambda: store
+    with TestClient(app) as client:
+        assert client.get("/api/workflow-packages").json() == {"items": []}
+        assert (
+            client.post("/api/workflow-packages", json={"manifestSource": source()}).status_code
+            == 201
+        )
+    assert len(app.state.workflow_imports) == int(invalid_data)

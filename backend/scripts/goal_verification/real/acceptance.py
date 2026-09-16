@@ -16,6 +16,7 @@ from urllib.parse import quote
 from zoneinfo import ZoneInfo
 
 from probe import OUT, configure, launch, record, request, wait_run
+from verification_package import PACKAGE_KEY, notes_package
 
 QUERY = "三项闭环预算候选"
 PARAMS = {
@@ -59,8 +60,11 @@ def configure_phase():
     configure(
         {"providerCapabilities": {"outputTokenLimitParameter": "max_tokens"}, "timeoutSeconds": 180}
     )
-    package = request("/workflow-packages/research_notes")
-    # Preserve the imported built-in definition and its immutable revision.
+    release = request("http://127.0.0.1:21082/release", absolute=True)
+    package = request(
+        "/workflow-packages",
+        {"manifestSource": json.dumps(notes_package(release), ensure_ascii=False)},
+    )
     save("package-baseline.json", package)
 
 
@@ -71,9 +75,9 @@ def require_success(row):
         row["status"],
         row.get("errorCode"),
     )
-    if row["packageKey"] == "research_notes":
+    if row["packageKey"] == PACKAGE_KEY:
         baseline = json.loads((OUT / "package-baseline.json").read_text())
-        assert row["packageHash"] == baseline["packageHash"], "Built-in package revision changed"
+        assert row["packageHash"] == baseline["packageHash"], "Acceptance package revision changed"
     return row
 
 
@@ -102,8 +106,8 @@ def natural_schedule():
         target += timedelta(minutes=1)
     body = {
         "name": "三项闭环自然定时",
-        "packageKey": "research_notes",
-        "workflowKey": "research",
+        "packageKey": PACKAGE_KEY,
+        "workflowKey": "summarize",
         "parameters": PARAMS,
         "cron": f"{target.minute} {target.hour} {target.day} {target.month} *",
         "timeZone": "Europe/Helsinki",
@@ -166,18 +170,18 @@ def series_phase(originals=None, manual_label="series-manual"):
         ]:
             row = require_success(
                 launch(
-                    "research_notes",
-                    "capture",
+                    PACKAGE_KEY,
+                    "record",
                     {"title": QUERY + suffix, "text": text},
                     "original-" + suffix.lower(),
                 )
             )
             originals.append(row["output"]["id"])
-    manual = require_success(launch("research_notes", "research", PARAMS, manual_label))
+    manual = require_success(launch(PACKAGE_KEY, "summarize", PARAMS, manual_label))
     prepared = request(
-        "/workflow-packages/research_notes/prepare",
+        f"/workflow-packages/{PACKAGE_KEY}/prepare",
         {
-            "workflowKey": "research",
+            "workflowKey": "summarize",
             "parameters": PARAMS,
             "revisionHash": manual["packageHash"],
             "sourceRunId": manual["id"],
@@ -216,8 +220,8 @@ def series_phase(originals=None, manual_label="series-manual"):
         assert row["output"]["sourceKind"] == "derived"
     fresh = require_success(
         launch(
-            "research_notes",
-            "capture",
+            PACKAGE_KEY,
+            "record",
             {
                 "title": QUERY + "C",
                 "text": "新原始记录C：14欧元为第三份候选，仍未作最终决定；不撤销记录A与B。",
@@ -226,7 +230,7 @@ def series_phase(originals=None, manual_label="series-manual"):
         )
     )
     originals.append(fresh["output"]["id"])
-    fourth = require_success(launch("research_notes", "research", PARAMS, "series-fresh-original"))
+    fourth = require_success(launch(PACKAGE_KEY, "summarize", PARAMS, "series-fresh-original"))
     matrix.append(
         {
             "label": fourth["label"],
@@ -249,8 +253,8 @@ def series_phase(originals=None, manual_label="series-manual"):
     assert sorted(fourth["output"]["sourceNoteIds"]) == sorted(originals)
     included = require_success(
         launch(
-            "research_notes",
-            "research",
+            PACKAGE_KEY,
+            "summarize",
             {**PARAMS, "summarize": False, "includeDerived": True},
             "series-include-derived",
         )
@@ -434,13 +438,13 @@ def faults_phase():
     try:
         save("notes-fault.json", {"mode": "read_error"})
         read = launch(
-            "research_notes", "research", {**PARAMS, "summarize": False}, "read-unknown-fault"
+            PACKAGE_KEY, "summarize", {**PARAMS, "summarize": False}, "read-unknown-fault"
         )
         save("notes-fault.json", {"mode": "write_reply_lost_recoverable"})
         recovered = require_success(
             launch(
-                "research_notes",
-                "capture",
+                PACKAGE_KEY,
+                "record",
                 {
                     "title": "真实回复丢失但回执恢复",
                     "text": "自有故障验证：真实已提交，查询回执可用，允许恢复成功。",
@@ -450,8 +454,8 @@ def faults_phase():
         )
         save("notes-fault.json", {"mode": "write_reply_lost"})
         write = launch(
-            "research_notes",
-            "capture",
+            PACKAGE_KEY,
+            "record",
             {
                 "title": "真实已提交但回复丢失",
                 "text": "自有故障验证：实际写入已完成，不能无核实重复。",

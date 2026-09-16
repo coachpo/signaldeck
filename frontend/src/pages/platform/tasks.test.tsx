@@ -33,10 +33,10 @@ vi.mock("@/hooks/use-workflow-platform", () => ({
     data: {
       items: [
         {
-          key: "research_notes",
+          key: "task-form-fixture",
           packageHash: `test-${mocks.hash}`,
           definition: {
-            metadata: { key: "research_notes", name: "Notes" },
+            metadata: { key: "task-form-fixture", name: "Notes" },
             workflows: {
               capture: {
                 name: "保存原文",
@@ -75,7 +75,7 @@ vi.mock("@/hooks/use-task-experience", async (importOriginal) => ({
   }),
 }));
 function CurrentPath() { const location = useLocation(); return <output aria-label="Current route">{location.pathname}{location.search}</output>; }
-function Page({ path = "/tasks/new?packageKey=research_notes&workflowKey=capture" }: { path?: string }) {
+function Page({ path = "/tasks/new?packageKey=task-form-fixture&workflowKey=capture" }: { path?: string }) {
   const [client] = useState(() => new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } }));
   return (
     <QueryClientProvider client={client}>
@@ -117,7 +117,7 @@ beforeEach(() => {
 });
 it("shows the catalog authoring entry only in expert mode while keeping ordinary tasks", () => {
   const view = render(<Page path="/tasks" />);
-  const taskHref = "/tasks/new?packageKey=research_notes&workflowKey=capture";
+  const taskHref = "/tasks/new?packageKey=task-form-fixture&workflowKey=capture";
   expect(screen.getByRole("link", { name: "选择任务" })).toHaveAttribute("href", taskHref);
   expect(screen.queryByRole("link", { name: "全部任务定义与专家制作" })).not.toBeInTheDocument();
   mocks.expert = true;
@@ -138,7 +138,7 @@ it("keeps a customized task discoverable in ordinary mode", () => {
     required: ["title", "text", "extra"],
   };
   render(<Page path="/tasks" />);
-  expect(screen.getByRole("link", { name: "选择任务" })).toHaveAttribute("href", "/tasks/new?packageKey=research_notes&workflowKey=capture");
+  expect(screen.getByRole("link", { name: "选择任务" })).toHaveAttribute("href", "/tasks/new?packageKey=task-form-fixture&workflowKey=capture");
   expect(screen.queryByRole("link", { name: "全部任务定义与专家制作" })).not.toBeInTheDocument();
 });
 it.each([
@@ -153,7 +153,7 @@ it.each([
   mocks.preset = {
     id: `preset-${mocks.hash}`,
     name: "可复用业务输入",
-    packageKey: "research_notes",
+    packageKey: "task-form-fixture",
     workflowKey: "capture",
     packageHash: `test-${mocks.hash}`,
     parameters: structuredClone(parameters),
@@ -333,7 +333,7 @@ it("lets an explicit binding rejection be repaired and prepared again", async ()
 
 it("preserves explicit false and omitted schema/2 defaults when editing and saving a preset", async () => {
   mocks.schema = {type:"object",properties:{title:{type:"string",title:"标题"},includeRisk:{type:"boolean","x-signaldeck-schema":"signaldeck.schema/2",default:true},reportId:{type:"string","x-signaldeck-schema":"signaldeck.schema/2",default:"suggestion"}},required:["title","includeRisk"]};
-  mocks.preset = {id:`exact-${mocks.hash}`,name:"Explicit inputs",executionOptions:{agentBudgets:{writer:{maxTokens:"unlimited",maxOutputTokens:"provider_default"}}},packageKey:"research_notes",workflowKey:"capture",packageHash:`test-${mocks.hash}`,parameters:{title:"old",includeRisk:false},hasParameters:true,isFavorite:false,isPinned:false,currentPackageHash:`test-${mocks.hash}`,needsRevalidation:false,validationStatus:"valid",validationErrors:[]};
+  mocks.preset = {id:`exact-${mocks.hash}`,name:"Explicit inputs",executionOptions:{agentBudgets:{writer:{maxTokens:"unlimited",maxOutputTokens:"provider_default"}}},packageKey:"task-form-fixture",workflowKey:"capture",packageHash:`test-${mocks.hash}`,parameters:{title:"old",includeRisk:false},hasParameters:true,isFavorite:false,isPinned:false,currentPackageHash:`test-${mocks.hash}`,needsRevalidation:false,validationStatus:"valid",validationErrors:[]};
   render(<Page path={`/tasks/new?presetId=${mocks.preset.id}`} />);
   fireEvent.change(screen.getByLabelText("标题"),{target:{value:"edited"}});
   fireEvent.click(screen.getByText("保存常用输入或收藏任务（可选）"));
@@ -348,7 +348,7 @@ it("preserves explicit false and omitted schema/2 defaults when editing and savi
 
 it("commits pending identity before launch and restores it after a lost response in a new editor", async () => {
   const executionOptions = { agentBudgets: { writer: { maxTokens: "unlimited" as const, maxOutputTokens: "provider_default" as const } } };
-  mocks.preset = { id: `pending-budget-${mocks.hash}`, name: "Budget", packageKey: "research_notes", workflowKey: "capture", packageHash: `test-${mocks.hash}`, parameters: { title: "标题", text: "原文" }, executionOptions, hasParameters: true, isFavorite: false, isPinned: false, currentPackageHash: `test-${mocks.hash}`, needsRevalidation: false, validationStatus: "valid", validationErrors: [] };
+  mocks.preset = { id: `pending-budget-${mocks.hash}`, name: "Budget", packageKey: "task-form-fixture", workflowKey: "capture", packageHash: `test-${mocks.hash}`, parameters: { title: "标题", text: "原文" }, executionOptions, hasParameters: true, isFavorite: false, isPinned: false, currentPackageHash: `test-${mocks.hash}`, needsRevalidation: false, validationStatus: "valid", validationErrors: [] };
   let stored: Record<string, unknown> | undefined;
   mocks.saveDraft.mockImplementation(async (input) => {
     stored = { ...input, revision: input.revision + 1, workflow: { name: "Recovered", inputSchema: { type: "object", properties: { title: { type: "string", title: "标题" }, text: { type: "string", title: "原文" } }, required: ["title", "text"] } } };
@@ -394,7 +394,7 @@ it("does not send a launch if the pending draft cannot be persisted", async () =
 
 it("restores an unfinished draft with its frozen schema and saves invalid text without launching", async () => {
   mocks.getDraft.mockResolvedValue({
-    id: `unfinished-${mocks.hash}`, revision: 3, name: "继续填写", packageKey: "research_notes", workflowKey: "capture", packageHash: "old-revision",
+    id: `unfinished-${mocks.hash}`, revision: 3, name: "继续填写", packageKey: "task-form-fixture", workflowKey: "capture", packageHash: "old-revision",
     hasParameters: true, parameters: { renamed: null }, jsonText: '{"renamed": [', launchId: "not-submitted", pending: false,
     needsRevalidation: true, workflow: { name: "Old definition", inputSchema: { type: "object", properties: { renamed: { type: ["string", "null"] } } } },
   });
@@ -462,7 +462,7 @@ it.each(["object", "array", "string", "integer", "number", "boolean", "null"])(
     render(<Page path="/tasks" />);
     expect(screen.getByRole("heading", { name: "保存原文" })).toBeVisible();
     expect(screen.getByRole("link", { name: "选择任务" })).toHaveAttribute(
-      "href", "/tasks/new?packageKey=research_notes&workflowKey=capture",
+      "href", "/tasks/new?packageKey=task-form-fixture&workflowKey=capture",
     );
   },
 );

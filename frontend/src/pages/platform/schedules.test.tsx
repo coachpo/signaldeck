@@ -10,7 +10,7 @@ it("inherits business input and keeps one creation identity after an uncertain r
   const packages = {
     items: [
       {
-        key: "research_notes",
+        key: "task-form-fixture",
         name: "Notes",
         definition: {
           agents: { writer: { name: "写作助手", inputSchema: {}, outputSchema: {}, strategy: { kind: "model", modelRef: "model", prompt: "write" } } },
@@ -62,7 +62,7 @@ it("inherits business input and keeps one creation identity after an uncertain r
             pathname: "/scheduled-tasks/new",
             state: {
               scheduleInput: {
-                packageKey: "research_notes",
+                packageKey: "task-form-fixture",
                 workflowKey: "capture",
                 name: "保存会议原文",
                 parameters: { title: "会议", text: "原文内容" },

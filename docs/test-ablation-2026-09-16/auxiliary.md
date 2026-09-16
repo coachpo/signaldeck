@@ -1,5 +1,7 @@
 # Supplemental acceptance automation inventory and baseline
 
+This records the 2026-09-16 experiment. Retention decisions and command paths describe that version, not current validation requirements; see the current [workflow boundary](../产品说明.md#工作流与平台解耦原则).
+
 No repository files changed in this lane. No supplemental entry point was removed. This is inventory, contract evaluation and baseline execution, **not a successful ablation experiment**: no full/reduced paired mutant campaign was run for these scripts.
 
 ## Inventory and retained contracts

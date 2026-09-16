@@ -1,5 +1,7 @@
 # E2E 消融实验与最终验证记录
 
+本页是 2026-09-16 实验的历史盘点，“保留”和路径不构成当前回归要求；后续示例测试删除不改写原结论。当前边界见[产品解耦原则](../产品说明.md#工作流与平台解耦原则)。
+
 ## 范围与原始基线
 - `frontend/playwright.config.ts`: Chromium，27 用例、14 spec，fullyParallel；CI workers=1、失败重试2次，本地默认无重试。本次用 --workers=1 固定工作数。
 - `frontend/playwright.fault.config.ts`: 同一个 faults.spec.ts，独立串行 invocation，额外停止 harness-owned Temporal。普通 CI 只跑默认配置；fault 配置不在 CI。

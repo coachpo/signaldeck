@@ -265,7 +265,7 @@ async function main() {
     ...process.env,
     GOAL_REAL_OUTPUT_DIR: outputDirectory,
     DATABASE_URL: e2eDatabaseUrl,
-    SIGNALDECK_WORKFLOW_DATA_DIR: resolve(backendDir, "..", "demo"),
+    SIGNALDECK_WORKFLOW_DATA_DIR: "",
     AGENT_PLATFORM_ENCRYPTION_KEY: crypto.randomUUID() + crypto.randomUUID(),
     OPENAI_API_KEY: "",
     OPENAI_BASE_URL: relayBaseUrl,

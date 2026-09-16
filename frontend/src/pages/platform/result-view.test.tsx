@@ -31,7 +31,7 @@ const result: RunResult = {
 };
 const reuse = {
   sourceRunId: "run-1",
-  packageKey: "research_notes",
+  packageKey: "task-form-fixture",
   workflowKey: "capture",
   packageHash: "hash",
   parameters: { title: "原文标题", text: "原始内容" },
