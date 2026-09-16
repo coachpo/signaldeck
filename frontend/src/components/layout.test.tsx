@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import { ThemeProvider } from "@/components/theme-provider";
 import { router } from "@/routes";
 import type { PluginPage } from "@/lib/api/plugin-pages";
+import { PLUGIN_UI_PROTOCOL } from "@/features/plugin-host/navigation";
 function renderRoute(path: string, pages: PluginPage[] = []) {
   vi.stubGlobal(
     "fetch",
@@ -36,7 +37,14 @@ describe("platform shell", () => {
     ]);
     expect(await screen.findByTestId("nav-plugin-interviews-v2")).toHaveTextContent("访谈");
     expect(screen.queryByTestId("nav-plugin-interviews-v1")).not.toBeInTheDocument();
-    expect(await screen.findByTitle("旧访谈")).toBeVisible();
+    const frame = await screen.findByTitle<HTMLIFrameElement>("旧访谈");
+    expect(frame).not.toBeVisible();
+    fireEvent(window, new MessageEvent("message", {
+      origin: window.location.origin,
+      source: frame.contentWindow,
+      data: { protocol: PLUGIN_UI_PROTOCOL, type: "ready" },
+    }));
+    expect(frame).toBeVisible();
     expect(screen.getByRole("main")).toHaveAttribute("data-route-shell-mode", "fullHeight");
   });
   it("owns generic navigation without statically compiling finance pages", async () => {
