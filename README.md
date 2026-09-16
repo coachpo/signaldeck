@@ -64,6 +64,7 @@ SIGNALDECK_CONNECTION_PRESETS_FILE=/absolute/path/connections.json ./start.sh --
 
 ## 文档
 
+- [自动化测试消融与精简实测](docs/test-ablation-2026-09-16.md)：测试入口、故障对照、精简依据与验证边界。
 - [三项实测优化验证](docs/planning/observed-gaps-verification.md)：输出上限、只读/写入不确定性与Notes来源过滤的本地交付记录。
 
 - [`docs/README.md`](docs/README.md)：文档索引与权威边界。

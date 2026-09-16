@@ -1,0 +1,16 @@
+{
+  "restoredSourceVerified": true,
+  "removedWorkspaces": [
+    "/tmp/signaldeck-front-frozen",
+    "/tmp/signaldeck-front-ablation-workspace"
+  ],
+  "removedScripts": [
+    "/tmp/signaldeck-frontend-experiment.py",
+    "/tmp/signaldeck-frontend-trim-probe.py",
+    "/tmp/signaldeck-frontend-final-api.py",
+    "/tmp/signaldeck-frontend-final-ui.py",
+    "/tmp/signaldeck-frontend-final-timing.py",
+    "/tmp/signaldeck-frontend-validate.py"
+  ],
+  "retained": "logs, JSON evidence, reports; new worktree dependencies untouched"
+}

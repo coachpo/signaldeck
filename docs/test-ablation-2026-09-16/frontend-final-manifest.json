@@ -1,0 +1,34 @@
+{
+  "revision": "7c4bcbcf87adce626fcf6fe7dc1ef23e98538a02",
+  "worktree": "/Users/qingli/Documents/ChatGPT/signaldeck-test-ablation-20260916",
+  "files": [
+    {
+      "file": "frontend/src/components/shared/inventory-page-shell.test.tsx",
+      "originalSha256": "7f662c1e727cd200fab0ef08ced13fdb9d4de20e4f3f9ff339fd476d1f79513b",
+      "finalSha256": "cc2bb3bdcab6b617d540f8adf955d0868fd354837eaeb1bf79a10f443d962e82",
+      "originalLines": 111,
+      "finalLines": 98
+    },
+    {
+      "file": "frontend/src/components/shared/resource-selection-checkbox.test.tsx",
+      "originalSha256": "9d5f1a0d639ed93fe719bc44004c5226ae80be108822f810cad3b8f90976d779",
+      "finalSha256": "15738b836a385ef3004ab271d64bad8e0084cd8a74d561b2d689073763b26cc2",
+      "originalLines": 76,
+      "finalLines": 62
+    },
+    {
+      "file": "frontend/src/components/shared/workspace-page-shell.test.tsx",
+      "originalSha256": "018fdfd1af30a4af6479e3cd326650b3010d6cb97ac265711236cc1d22f28bbf",
+      "finalSha256": "26079d6acecff755682f4b758e967b4b26656e616a9fc552080976b80ee74e3e",
+      "originalLines": 85,
+      "finalLines": 67
+    },
+    {
+      "file": "frontend/src/lib/api/workflow-platform.test.ts",
+      "originalSha256": "ffa94a65c6236abe931e98c05d30e4aca220f7e2c5184038cd2ef59313779421",
+      "finalSha256": "02635f4cde508727e47b70a149a11cda5fc92c472abf6aeb612252fa9b8f2717",
+      "originalLines": 124,
+      "finalLines": 132
+    }
+  ]
+}

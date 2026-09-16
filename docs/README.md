@@ -20,6 +20,7 @@
 
 ## 专项文档
 
+- [自动化测试消融与精简实测](test-ablation-2026-09-16.md)：全测试入口盘点、同故障对照、保留与精简依据、耗时及未验证范围。
 - [三项实测优化交付与验证](planning/observed-gaps-verification.md)：输出上限、读写不确定性与Notes来源过滤的C1–C8映射、同版本真实流程和数据/部署边界。
 
 - [个人使用优化实施计划](planning/personal-use-implementation-plan.md)与[Sprint Backlog](planning/personal-use-sprint-backlog.md)：PU-S1–S6 的24项主体任务、依赖及保留边界。

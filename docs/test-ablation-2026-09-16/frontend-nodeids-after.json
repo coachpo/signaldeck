@@ -1,0 +1,2558 @@
+[
+  {
+    "file": "frontend/src/App.test.tsx",
+    "node": "App mounts the sonner toaster in the top-right with rich colors",
+    "status": "passed",
+    "milliseconds": 108.16337500000009
+  },
+  {
+    "file": "frontend/src/routes.test.tsx",
+    "node": "router renders every registered route without crashing",
+    "status": "passed",
+    "milliseconds": 2014.8875830000002
+  },
+  {
+    "file": "frontend/src/components/layout.test.tsx",
+    "node": "platform shell owns generic navigation without statically compiling finance pages",
+    "status": "passed",
+    "milliseconds": 363.34783300000004
+  },
+  {
+    "file": "frontend/src/components/layout.test.tsx",
+    "node": "platform shell gives the definition editor a full-height route shell",
+    "status": "passed",
+    "milliseconds": 235.400167
+  },
+  {
+    "file": "frontend/src/components/layout.test.tsx",
+    "node": "platform shell does not restore historical product entry points",
+    "status": "passed",
+    "milliseconds": 49.698667000000114
+  },
+  {
+    "file": "frontend/src/components/theme-provider.test.tsx",
+    "node": "updates the visible theme when another tab changes its preference",
+    "status": "passed",
+    "milliseconds": 20.397583999999824
+  },
+  {
+    "file": "frontend/src/hooks/use-model-usage.test.tsx",
+    "node": "uses the selected IANA local date on each side of midnight and DST",
+    "status": "passed",
+    "milliseconds": 20.069500000000062
+  },
+  {
+    "file": "frontend/src/hooks/use-model-usage.test.tsx",
+    "node": "requests only the day summary when no run is selected",
+    "status": "passed",
+    "milliseconds": 71.63720799999999
+  },
+  {
+    "file": "frontend/src/hooks/use-resource-filter-state.test.ts",
+    "node": "useResourceFilterState filters caller-supplied items with normalized search text",
+    "status": "passed",
+    "milliseconds": 22.317375000000084
+  },
+  {
+    "file": "frontend/src/hooks/use-resource-filter-state.test.ts",
+    "node": "useResourceFilterState lets callers combine search and arbitrary filter predicates",
+    "status": "passed",
+    "milliseconds": 3.1337499999999636
+  },
+  {
+    "file": "frontend/src/hooks/use-resource-selection-state.test.ts",
+    "node": "useResourceSelectionState toggles selected ids, item batches, and reset state",
+    "status": "passed",
+    "milliseconds": 20.591416999999865
+  },
+  {
+    "file": "frontend/src/hooks/use-resource-selection-state.test.ts",
+    "node": "useResourceSelectionState derives selected counts from the caller-supplied visible items",
+    "status": "passed",
+    "milliseconds": 3.1887910000000375
+  },
+  {
+    "file": "frontend/src/hooks/use-unsaved-work.test.tsx",
+    "node": "protects unsaved edits from refresh and releases protection after saving",
+    "status": "passed",
+    "milliseconds": 40.27916700000014
+  },
+  {
+    "file": "frontend/src/hooks/use-workflow-platform.test.tsx",
+    "node": "platform query mutations invalidates run and schedule scopes after cancellation",
+    "status": "passed",
+    "milliseconds": 28.99466700000005
+  },
+  {
+    "file": "frontend/src/hooks/use-workflow-platform.test.tsx",
+    "node": "platform query mutations polls only known active states, including a cancellation that is still running",
+    "status": "passed",
+    "milliseconds": 0.5288750000001983
+  },
+  {
+    "file": "frontend/src/hooks/use-workflow-platform.test.tsx",
+    "node": "updates failed schedule synchronization automatically after recovery and stops polling",
+    "status": "passed",
+    "milliseconds": 9.819291000000021
+  },
+  {
+    "file": "frontend/src/lib/api.test.ts",
+    "node": "api client sends a successful GET request for listTemplates",
+    "status": "passed",
+    "milliseconds": 8.323624999999993
+  },
+  {
+    "file": "frontend/src/lib/api.test.ts",
+    "node": "api client sends the stored API token as a bearer token",
+    "status": "passed",
+    "milliseconds": 1.8701660000000402
+  },
+  {
+    "file": "frontend/src/lib/api.test.ts",
+    "node": "api client prompts once for an API token after a 401 and retries the request",
+    "status": "passed",
+    "milliseconds": 2.542459000000008
+  },
+  {
+    "file": "frontend/src/lib/api.test.ts",
+    "node": "api client sends a successful POST request for createTemplate",
+    "status": "passed",
+    "milliseconds": 0.9528750000000628
+  },
+  {
+    "file": "frontend/src/lib/api.test.ts",
+    "node": "api client preserves status, code, message, and validation details for 422 responses",
+    "status": "passed",
+    "milliseconds": 2.203041999999982
+  },
+  {
+    "file": "frontend/src/lib/api.test.ts",
+    "node": "api client drops malformed non-array details from JSON error envelopes",
+    "status": "passed",
+    "milliseconds": 1.0834579999999505
+  },
+  {
+    "file": "frontend/src/lib/api.test.ts",
+    "node": "api client falls back to a generic request_failed error for 500 text responses",
+    "status": "passed",
+    "milliseconds": 0.7023749999999609
+  },
+  {
+    "file": "frontend/src/lib/api.test.ts",
+    "node": "api client derives v1 and platform URLs from a configured versioned base",
+    "status": "passed",
+    "milliseconds": 0.34225000000003547
+  },
+  {
+    "file": "frontend/src/lib/api.test.ts",
+    "node": "api client routes platform modules through the unversioned api base",
+    "status": "passed",
+    "milliseconds": 0.5365419999999403
+  },
+  {
+    "file": "frontend/src/lib/api.test.ts",
+    "node": "api client encodes v1 path segments against the derived base URL",
+    "status": "passed",
+    "milliseconds": 0.5431249999999181
+  },
+  {
+    "file": "frontend/src/lib/api.test.ts",
+    "node": "api client downloads the original bytes with the requested name undefined and keeps the URL alive",
+    "status": "passed",
+    "milliseconds": 8.479166999999961
+  },
+  {
+    "file": "frontend/src/lib/api.test.ts",
+    "node": "api client downloads the original bytes with the requested name 访谈附件.txt and keeps the URL alive",
+    "status": "passed",
+    "milliseconds": 2.579250000000002
+  },
+  {
+    "file": "frontend/src/lib/api.test.ts",
+    "node": "api client defaults to same-origin /api/v1 outside dev when the env base is empty",
+    "status": "passed",
+    "milliseconds": 0.41583300000002055
+  },
+  {
+    "file": "frontend/src/lib/api.test.ts",
+    "node": "api client keeps explicit VITE_API_BASE_URL behavior unchanged",
+    "status": "passed",
+    "milliseconds": 0.2532089999999698
+  },
+  {
+    "file": "frontend/src/lib/display-preferences.test.ts",
+    "node": "display preference handoff round trips preferences while retaining business links and existing timezone",
+    "status": "passed",
+    "milliseconds": 14.257000000000062
+  },
+  {
+    "file": "frontend/src/lib/display-preferences.test.ts",
+    "node": "display preference handoff retains only the validated platform origin across plugin navigation and refresh",
+    "status": "passed",
+    "milliseconds": 1.72070900000017
+  },
+  {
+    "file": "frontend/src/lib/display-preferences.test.ts",
+    "node": "display preference handoff rejects credentials, non-http URLs and return locations containing business paths",
+    "status": "passed",
+    "milliseconds": 0.8568749999999454
+  },
+  {
+    "file": "frontend/src/lib/display-preferences.test.ts",
+    "node": "display preference handoff retains in-memory preferences if storage rejects writes",
+    "status": "passed",
+    "milliseconds": 1.8015829999999369
+  },
+  {
+    "file": "frontend/src/lib/display-preferences.test.ts",
+    "node": "display preference handoff updates mounted expert controls when another tab changes display preferences",
+    "status": "passed",
+    "milliseconds": 13.260457999999971
+  },
+  {
+    "file": "frontend/src/lib/format.test.ts",
+    "node": "format formats currency, decimals, and percentages across common inputs",
+    "status": "passed",
+    "milliseconds": 20.80370800000003
+  },
+  {
+    "file": "frontend/src/lib/format.test.ts",
+    "node": "format formats ISO date and datetime strings",
+    "status": "passed",
+    "milliseconds": 4.969583000000057
+  },
+  {
+    "file": "frontend/src/lib/format.test.ts",
+    "node": "format formats ISO instants in an explicit IANA timezone with a short zone suffix",
+    "status": "passed",
+    "milliseconds": 0.5889590000000453
+  },
+  {
+    "file": "frontend/src/lib/format.test.ts",
+    "node": "format formats compact numbers and preserves sign",
+    "status": "passed",
+    "milliseconds": 0.18762500000002547
+  },
+  {
+    "file": "frontend/src/lib/format.test.ts",
+    "node": "format returns safe fallbacks for invalid numeric input",
+    "status": "passed",
+    "milliseconds": 0.13891699999999219
+  },
+  {
+    "file": "frontend/src/lib/query-keys.test.ts",
+    "node": "query scopes isolates resource families and keeps detail/list under one invalidation scope",
+    "status": "passed",
+    "milliseconds": 3.1758749999999054
+  },
+  {
+    "file": "frontend/src/lib/query-keys.test.ts",
+    "node": "query scopes keeps usage windows and execution update filters distinct within their scopes",
+    "status": "passed",
+    "milliseconds": 0.40495899999996254
+  },
+  {
+    "file": "frontend/src/lib/schedule-calendar.test.ts",
+    "node": "calendar controls preserve existing timing round-trips 0 8,17 * * 1-5 without replacing untouched source",
+    "status": "passed",
+    "milliseconds": 2.540040999999974
+  },
+  {
+    "file": "frontend/src/lib/schedule-calendar.test.ts",
+    "node": "calendar controls preserve existing timing round-trips 0 9 1,15 JAN-MAR/2 MON,FRIDAY 2026-2032/2 without replacing untouched source",
+    "status": "passed",
+    "milliseconds": 0.29808299999990595
+  },
+  {
+    "file": "frontend/src/lib/schedule-calendar.test.ts",
+    "node": "calendar controls preserve existing timing round-trips 5,35 */10 8-17/3 1-20/2,25 JUL 1-7/2 2027 without replacing untouched source",
+    "status": "passed",
+    "milliseconds": 0.2196249999999509
+  },
+  {
+    "file": "frontend/src/lib/schedule-calendar.test.ts",
+    "node": "calendar controls preserve existing timing round-trips @weekly without replacing untouched source",
+    "status": "passed",
+    "milliseconds": 0.1569170000000213
+  },
+  {
+    "file": "frontend/src/lib/schedule-calendar.test.ts",
+    "node": "calendar controls preserve existing timing round-trips @annually without replacing untouched source",
+    "status": "passed",
+    "milliseconds": 0.2872090000000753
+  },
+  {
+    "file": "frontend/src/lib/schedule-calendar.test.ts",
+    "node": "calendar controls preserve existing timing round-trips   00 09 * * 7  # Keep the user's note without replacing untouched source",
+    "status": "passed",
+    "milliseconds": 0.19054199999982302
+  },
+  {
+    "file": "frontend/src/lib/schedule-calendar.test.ts",
+    "node": "calendar controls preserve existing timing round-trips * * * * * * * without replacing untouched source",
+    "status": "passed",
+    "milliseconds": 0.12816700000007586
+  },
+  {
+    "file": "frontend/src/lib/schedule-calendar.test.ts",
+    "node": "calendar controls preserve existing timing round-trips 0 0 * * tu-sa without replacing untouched source",
+    "status": "passed",
+    "milliseconds": 0.1398749999998472
+  },
+  {
+    "file": "frontend/src/lib/schedule-calendar.test.ts",
+    "node": "calendar controls preserve existing timing changes one selection while preserving other supported dimensions and notes",
+    "status": "passed",
+    "milliseconds": 1.0128750000001219
+  },
+  {
+    "file": "frontend/src/lib/schedule-calendar.test.ts",
+    "node": "calendar controls preserve existing timing adds seconds and year controls without losing the five-field calendar",
+    "status": "passed",
+    "milliseconds": 0.3484170000001541
+  },
+  {
+    "file": "frontend/src/lib/schedule-calendar.test.ts",
+    "node": "calendar controls preserve existing timing does not reinterpret invalid timing 60 9 * * *",
+    "status": "passed",
+    "milliseconds": 0.11691599999994651
+  },
+  {
+    "file": "frontend/src/lib/schedule-calendar.test.ts",
+    "node": "calendar controls preserve existing timing does not reinterpret invalid timing 0 24 * * *",
+    "status": "passed",
+    "milliseconds": 0.07412500000009459
+  },
+  {
+    "file": "frontend/src/lib/schedule-calendar.test.ts",
+    "node": "calendar controls preserve existing timing does not reinterpret invalid timing 0 9 0 * *",
+    "status": "passed",
+    "milliseconds": 0.05537499999991269
+  },
+  {
+    "file": "frontend/src/lib/schedule-calendar.test.ts",
+    "node": "calendar controls preserve existing timing does not reinterpret invalid timing 0 9 * * 8",
+    "status": "passed",
+    "milliseconds": 0.04362500000002001
+  },
+  {
+    "file": "frontend/src/lib/schedule-calendar.test.ts",
+    "node": "calendar controls preserve existing timing does not reinterpret invalid timing */0 * * * *",
+    "status": "passed",
+    "milliseconds": 0.049958000000060565
+  },
+  {
+    "file": "frontend/src/lib/schedule-calendar.test.ts",
+    "node": "calendar controls preserve existing timing does not reinterpret invalid timing 0 9 * * * 1999",
+    "status": "passed",
+    "milliseconds": 0.04991599999993923
+  },
+  {
+    "file": "frontend/src/lib/schedule-calendar.test.ts",
+    "node": "calendar controls preserve existing timing does not reinterpret invalid timing 0 9 * * * * * *",
+    "status": "passed",
+    "milliseconds": 0.038791999999830296
+  },
+  {
+    "file": "frontend/src/lib/schedule-calendar.test.ts",
+    "node": "fixed interval controls preserves @every 1h30m",
+    "status": "passed",
+    "milliseconds": 0.9193330000000515
+  },
+  {
+    "file": "frontend/src/lib/schedule-calendar.test.ts",
+    "node": "fixed interval controls preserves @every 14h/3h",
+    "status": "passed",
+    "milliseconds": 0.2975409999999101
+  },
+  {
+    "file": "frontend/src/lib/schedule-calendar.test.ts",
+    "node": "fixed interval controls preserves @every 2d/30m # recurring",
+    "status": "passed",
+    "milliseconds": 0.13425000000006548
+  },
+  {
+    "file": "frontend/src/lib/schedule-calendar.test.ts",
+    "node": "fixed interval controls preserves @every 500ms500ms",
+    "status": "passed",
+    "milliseconds": 0.08779099999992468
+  },
+  {
+    "file": "frontend/src/lib/schedule-calendar.test.ts",
+    "node": "fixed interval controls retains the reference start when changing the interval",
+    "status": "passed",
+    "milliseconds": 0.9454580000001442
+  },
+  {
+    "file": "frontend/src/lib/schedule-frequency.test.ts",
+    "node": "schedule frequency codec preserves 0 9 * * *",
+    "status": "passed",
+    "milliseconds": 1.6587919999999485
+  },
+  {
+    "file": "frontend/src/lib/schedule-frequency.test.ts",
+    "node": "schedule frequency codec preserves 30 23 * * 0",
+    "status": "passed",
+    "milliseconds": 0.3659579999998641
+  },
+  {
+    "file": "frontend/src/lib/schedule-frequency.test.ts",
+    "node": "schedule frequency codec preserves 59 0 31 * *",
+    "status": "passed",
+    "milliseconds": 0.13637500000004366
+  },
+  {
+    "file": "frontend/src/lib/schedule-frequency.test.ts",
+    "node": "schedule frequency codec retains unsupported timing 0 9 1 * 1",
+    "status": "passed",
+    "milliseconds": 1.0863329999999678
+  },
+  {
+    "file": "frontend/src/lib/schedule-frequency.test.ts",
+    "node": "schedule frequency codec retains unsupported timing */5 * * * *",
+    "status": "passed",
+    "milliseconds": 0.2647500000000491
+  },
+  {
+    "file": "frontend/src/lib/schedule-frequency.test.ts",
+    "node": "schedule frequency codec retains unsupported timing 0 9 * 1 *",
+    "status": "passed",
+    "milliseconds": 0.13449999999988904
+  },
+  {
+    "file": "frontend/src/lib/schedule-frequency.test.ts",
+    "node": "schedule frequency codec retains unsupported timing 60 9 * * *",
+    "status": "passed",
+    "milliseconds": 0.11358300000006238
+  },
+  {
+    "file": "frontend/src/lib/schedule-frequency.test.ts",
+    "node": "schedule frequency codec retains unsupported timing 0 24 * * *",
+    "status": "passed",
+    "milliseconds": 0.11512500000003456
+  },
+  {
+    "file": "frontend/src/lib/schedule-frequency.test.ts",
+    "node": "schedule frequency codec retains unsupported timing 0 9 0 * *",
+    "status": "passed",
+    "milliseconds": 0.13704200000006495
+  },
+  {
+    "file": "frontend/src/lib/schedule-frequency.test.ts",
+    "node": "schedule frequency codec retains unsupported timing 0 9 * * 7",
+    "status": "passed",
+    "milliseconds": 0.1979999999998654
+  },
+  {
+    "file": "frontend/src/lib/schedule-frequency.test.ts",
+    "node": "schedule frequency codec describes weekly timing without calculating dates",
+    "status": "passed",
+    "milliseconds": 0.22325000000000728
+  },
+  {
+    "file": "frontend/src/pages/not-found.test.tsx",
+    "node": "NotFoundPage renders the product-owned route fallback through a responsive full-page layout",
+    "status": "passed",
+    "milliseconds": 166.05720799999995
+  },
+  {
+    "file": "frontend/src/pages/route-error.test.tsx",
+    "node": "RouteErrorPage renders unexpected render failures through a readable responsive error layout",
+    "status": "passed",
+    "milliseconds": 166.31320800000003
+  },
+  {
+    "file": "frontend/src/pages/route-error.test.tsx",
+    "node": "RouteErrorPage renders route response failures without the default router error UI",
+    "status": "passed",
+    "milliseconds": 15.028124999999818
+  },
+  {
+    "file": "frontend/src/plugin-ui/index.test.tsx",
+    "node": "independent plugin presentation renders platform Markdown structures without executing HTML or fetching images",
+    "status": "passed",
+    "milliseconds": 184.54245800000012
+  },
+  {
+    "file": "frontend/src/plugin-ui/index.test.tsx",
+    "node": "independent plugin presentation cancels without confirmation and returns focus to the invoking control",
+    "status": "passed",
+    "milliseconds": 76.70399999999995
+  },
+  {
+    "file": "frontend/src/plugin-ui/index.test.tsx",
+    "node": "independent plugin presentation resolves a confirmed deletion exactly once",
+    "status": "passed",
+    "milliseconds": 24.482999999999947
+  },
+  {
+    "file": "frontend/src/components/shared/console-section.test.tsx",
+    "node": "ConsoleSection renders heading, description, children, and isolated actions",
+    "status": "passed",
+    "milliseconds": 155.32795899999996
+  },
+  {
+    "file": "frontend/src/components/shared/console-section.test.tsx",
+    "node": "ConsoleSection applies tone and density classes deterministically",
+    "status": "passed",
+    "milliseconds": 6.203792000000021
+  },
+  {
+    "file": "frontend/src/components/shared/constraint-inspector.test.tsx",
+    "node": "ConstraintInspector renders blocking, warning, and requirement states deterministically",
+    "status": "passed",
+    "milliseconds": 133.26075000000003
+  },
+  {
+    "file": "frontend/src/components/shared/constraint-inspector.test.tsx",
+    "node": "ConstraintInspector renders ready state and empty buckets without route-specific copy",
+    "status": "passed",
+    "milliseconds": 9.974125000000186
+  },
+  {
+    "file": "frontend/src/components/shared/entity-dialog-shell.test.tsx",
+    "node": "EntityDialogShell composes accessible dialog title, description, constraints, body, and footer",
+    "status": "passed",
+    "milliseconds": 260.23191699999984
+  },
+  {
+    "file": "frontend/src/components/shared/entity-dialog-shell.test.tsx",
+    "node": "EntityDialogShell keeps fixed dialog chrome outside a viewport-constrained scroll body",
+    "status": "passed",
+    "milliseconds": 29.541500000000042
+  },
+  {
+    "file": "frontend/src/components/shared/error-boundary-fallback.test.tsx",
+    "node": "ErrorBoundaryFallback renders app failures through an expanded responsive fallback layout",
+    "status": "passed",
+    "milliseconds": 163.06112499999995
+  },
+  {
+    "file": "frontend/src/components/shared/evidence-cluster.test.tsx",
+    "node": "EvidenceCluster renders labeled evidence with tone badges and descriptions",
+    "status": "passed",
+    "milliseconds": 102.33466700000008
+  },
+  {
+    "file": "frontend/src/components/shared/evidence-cluster.test.tsx",
+    "node": "EvidenceCluster renders deterministic empty and inline layouts",
+    "status": "passed",
+    "milliseconds": 5.493875000000116
+  },
+  {
+    "file": "frontend/src/components/shared/inline-state-panel.test.tsx",
+    "node": "InlineStatePanel renders tokenized inline panel chrome with icon, copy, children, and custom class names",
+    "status": "passed",
+    "milliseconds": 141.37700000000007
+  },
+  {
+    "file": "frontend/src/components/shared/inline-state-panel.test.tsx",
+    "node": "InlineStatePanel supports description-only danger copy without a title",
+    "status": "passed",
+    "milliseconds": 6.356792000000041
+  },
+  {
+    "file": "frontend/src/components/shared/inventory-page-shell.test.tsx",
+    "node": "InventoryPageShell renders context, toolbar, filters, and content in the inventory order",
+    "status": "passed",
+    "milliseconds": 41.32770800000003
+  },
+  {
+    "file": "frontend/src/components/shared/inventory-page-shell.test.tsx",
+    "node": "InventoryPageShell leaves the filter region empty when callers have no active filter bar",
+    "status": "passed",
+    "milliseconds": 5.88474999999994
+  },
+  {
+    "file": "frontend/src/components/shared/inventory-page-shell.test.tsx",
+    "node": "InventoryPageShell leaves the toolbar region empty when callers move summary into compact route context",
+    "status": "passed",
+    "milliseconds": 2.681874999999991
+  },
+  {
+    "file": "frontend/src/components/shared/inventory-state-panel.test.tsx",
+    "node": "InventoryStatePanel keeps shared inventory copy inside tokenized state card chrome",
+    "status": "passed",
+    "milliseconds": 133.5027500000001
+  },
+  {
+    "file": "frontend/src/components/shared/inventory-state-panel.test.tsx",
+    "node": "InventoryStatePanel keeps danger tone available for route-owned error copy",
+    "status": "passed",
+    "milliseconds": 11.631875000000036
+  },
+  {
+    "file": "frontend/src/components/shared/inventory-state-panel.test.tsx",
+    "node": "InventoryStatePanel keeps long title-only error copy unclamped",
+    "status": "passed",
+    "milliseconds": 6.860208000000057
+  },
+  {
+    "file": "frontend/src/components/shared/markdown-content.test.tsx",
+    "node": "preserves Markdown structure, ordered start, links and keyboard readable overflow",
+    "status": "passed",
+    "milliseconds": 163.39658299999996
+  },
+  {
+    "file": "frontend/src/components/shared/markdown-content.test.tsx",
+    "node": "does not enable raw HTML or unsafe links",
+    "status": "passed",
+    "milliseconds": 5.326999999999998
+  },
+  {
+    "file": "frontend/src/components/shared/page-context-bar.test.tsx",
+    "node": "PageContextBar renders title, context metadata, status, and isolated actions",
+    "status": "passed",
+    "milliseconds": 178.19616700000006
+  },
+  {
+    "file": "frontend/src/components/shared/page-context-bar.test.tsx",
+    "node": "PageContextBar renders compact density as a flat unboxed header",
+    "status": "passed",
+    "milliseconds": 4.860209000000168
+  },
+  {
+    "file": "frontend/src/components/shared/page-context-bar.test.tsx",
+    "node": "PageContextBar places the H1 and description in the same responsive row",
+    "status": "passed",
+    "milliseconds": 12.520541999999978
+  },
+  {
+    "file": "frontend/src/components/shared/page-context-bar.test.tsx",
+    "node": "PageContextBar keeps toolbar status and actions in the right-side area",
+    "status": "passed",
+    "milliseconds": 6.026458999999932
+  },
+  {
+    "file": "frontend/src/components/shared/page-context-bar.test.tsx",
+    "node": "PageContextBar can place toolbar metadata between title copy and status when requested",
+    "status": "passed",
+    "milliseconds": 5.7902500000000146
+  },
+  {
+    "file": "frontend/src/components/shared/page-context-bar.test.tsx",
+    "node": "PageContextBar allows a multi-action group to wrap within the available header width",
+    "status": "passed",
+    "milliseconds": 21.329291000000012
+  },
+  {
+    "file": "frontend/src/components/shared/resource-actions-menu.test.tsx",
+    "node": "ResourceActionsMenu renders a consistently labelled row action trigger",
+    "status": "passed",
+    "milliseconds": 154.1083329999999
+  },
+  {
+    "file": "frontend/src/components/shared/resource-actions-menu.test.tsx",
+    "node": "ResourceActionsMenu keeps route-owned action callbacks in the caller",
+    "status": "passed",
+    "milliseconds": 97.06520799999998
+  },
+  {
+    "file": "frontend/src/components/shared/resource-actions-menu.test.tsx",
+    "node": "ResourceActionsMenu supports route-specific trigger variants and content sizing",
+    "status": "passed",
+    "milliseconds": 9.720375000000104
+  },
+  {
+    "file": "frontend/src/components/shared/resource-bulk-actions-bar.test.tsx",
+    "node": "ResourceBulkActionsBar renders nothing when no resources are selected",
+    "status": "passed",
+    "milliseconds": 21.585959000000003
+  },
+  {
+    "file": "frontend/src/components/shared/resource-bulk-actions-bar.test.tsx",
+    "node": "ResourceBulkActionsBar renders selected-count summary and route-owned action callbacks",
+    "status": "passed",
+    "milliseconds": 138.41341699999998
+  },
+  {
+    "file": "frontend/src/components/shared/resource-bulk-actions-bar.test.tsx",
+    "node": "ResourceBulkActionsBar allows callers to provide a route-specific summary",
+    "status": "passed",
+    "milliseconds": 22.525916999999936
+  },
+  {
+    "file": "frontend/src/components/shared/resource-selection-checkbox.test.tsx",
+    "node": "ResourceSelectionCheckbox maps aggregate selection state to checked, mixed, and unchecked values",
+    "status": "passed",
+    "milliseconds": 159.83608400000003
+  },
+  {
+    "file": "frontend/src/components/shared/resource-selection-checkbox.test.tsx",
+    "node": "ResourceSelectionCheckbox converts checked-state changes back to booleans for callers",
+    "status": "passed",
+    "milliseconds": 11.057790999999952
+  },
+  {
+    "file": "frontend/src/components/shared/resource-status-strip.test.tsx",
+    "node": "ResourceStatusStrip renders status items with deterministic tone badges",
+    "status": "passed",
+    "milliseconds": 135.85679200000004
+  },
+  {
+    "file": "frontend/src/components/shared/resource-status-strip.test.tsx",
+    "node": "ResourceStatusStrip renders numeric zero values without showing empty falsy values",
+    "status": "passed",
+    "milliseconds": 9.166625000000067
+  },
+  {
+    "file": "frontend/src/components/shared/resource-status-strip.test.tsx",
+    "node": "ResourceStatusStrip renders deterministic empty status copy",
+    "status": "passed",
+    "milliseconds": 1.596416999999974
+  },
+  {
+    "file": "frontend/src/components/shared/resource-status-strip.test.tsx",
+    "node": "ResourceStatusStrip exports a reusable status badge helper for shared callers",
+    "status": "passed",
+    "milliseconds": 7.326957999999877
+  },
+  {
+    "file": "frontend/src/components/shared/resource-table-frame.test.tsx",
+    "node": "ResourceTableFrame wraps route-owned tables in a framed horizontally contained shell",
+    "status": "passed",
+    "milliseconds": 106.76558299999999
+  },
+  {
+    "file": "frontend/src/components/shared/resource-toolbar.test.tsx",
+    "node": "ResourceToolbar renders compact search controls with caller-owned handlers",
+    "status": "passed",
+    "milliseconds": 140.09216700000002
+  },
+  {
+    "file": "frontend/src/components/shared/resource-toolbar.test.tsx",
+    "node": "ResourceToolbar keeps filter affordances, actions, and selection summary presentational",
+    "status": "passed",
+    "milliseconds": 32.30600000000004
+  },
+  {
+    "file": "frontend/src/components/shared/workspace-page-shell.test.tsx",
+    "node": "WorkspacePageShell places sticky context, optional rail, and scroll body in shell-owned regions",
+    "status": "passed",
+    "milliseconds": 36.044084
+  },
+  {
+    "file": "frontend/src/components/shared/workspace-page-shell.test.tsx",
+    "node": "WorkspacePageShell renders without a left rail and keeps body as the only content region",
+    "status": "passed",
+    "milliseconds": 3.5909580000000005
+  },
+  {
+    "file": "frontend/src/lib/api/task-experience.test.ts",
+    "node": "preserves budget selections through preparation, historical reuse, presets, drafts and schedules",
+    "status": "passed",
+    "milliseconds": 11.356290999999828
+  },
+  {
+    "file": "frontend/src/lib/api/task-experience.test.ts",
+    "node": "invalidates preparation identity and schedule dirty state when only budgets change",
+    "status": "passed",
+    "milliseconds": 0.4903750000000855
+  },
+  {
+    "file": "frontend/src/lib/api/workflow-platform.test.ts",
+    "node": "workflow platform transport submits canonical camelCase launch identity without changing parameter values",
+    "status": "passed",
+    "milliseconds": 7.8424589999999625
+  },
+  {
+    "file": "frontend/src/lib/api/workflow-platform.test.ts",
+    "node": "workflow platform transport preserves a non-object parameter value in manual and scheduled writes: 0",
+    "status": "passed",
+    "milliseconds": 1.105874999999969
+  },
+  {
+    "file": "frontend/src/lib/api/workflow-platform.test.ts",
+    "node": "workflow platform transport preserves a non-object parameter value in manual and scheduled writes: false",
+    "status": "passed",
+    "milliseconds": 0.6228340000000117
+  },
+  {
+    "file": "frontend/src/lib/api/workflow-platform.test.ts",
+    "node": "workflow platform transport preserves a non-object parameter value in manual and scheduled writes: null",
+    "status": "passed",
+    "milliseconds": 0.8138749999998254
+  },
+  {
+    "file": "frontend/src/lib/api/workflow-platform.test.ts",
+    "node": "workflow platform transport preserves a non-object parameter value in manual and scheduled writes: undefined",
+    "status": "passed",
+    "milliseconds": 0.8425830000001042
+  },
+  {
+    "file": "frontend/src/lib/api/workflow-platform.test.ts",
+    "node": "workflow platform transport preserves a non-object parameter value in manual and scheduled writes: \"\"",
+    "status": "passed",
+    "milliseconds": 0.5869169999998576
+  },
+  {
+    "file": "frontend/src/lib/api/workflow-platform.test.ts",
+    "node": "workflow platform transport preserves a non-object parameter value in manual and scheduled writes: \"first\"",
+    "status": "passed",
+    "milliseconds": 0.33024999999997817
+  },
+  {
+    "file": "frontend/src/lib/api/workflow-platform.test.ts",
+    "node": "workflow platform transport preserves a non-object parameter value in manual and scheduled writes: \"  source text\\n\"",
+    "status": "passed",
+    "milliseconds": 0.23829200000000128
+  },
+  {
+    "file": "frontend/src/lib/api/workflow-platform.test.ts",
+    "node": "workflow platform transport keeps read-only synchronization projections out of closed schedule writes",
+    "status": "passed",
+    "milliseconds": 0.29874999999992724
+  },
+  {
+    "file": "frontend/src/lib/api/workflow-platform.test.ts",
+    "node": "workflow platform transport does not turn read-only credential revisions into resource writes",
+    "status": "passed",
+    "milliseconds": 0.3612500000001546
+  },
+  {
+    "file": "frontend/src/lib/api/workflow-platform.test.ts",
+    "node": "workflow platform transport encodes both parts of the qualified plugin identity",
+    "status": "passed",
+    "milliseconds": 0.3791249999999309
+  },
+  {
+    "file": "frontend/src/lib/api/workflow-platform.test.ts",
+    "node": "workflow platform transport passes a stable schedule trigger identity without inventing a run",
+    "status": "passed",
+    "milliseconds": 0.43916600000011385
+  },
+  {
+    "file": "frontend/src/lib/platform-authoring/mapping-sources.test.ts",
+    "node": "content source contracts resolves a declared list item at an arbitrary index and preserves absent knowledge",
+    "status": "passed",
+    "milliseconds": 3.6181249999999636
+  },
+  {
+    "file": "frontend/src/lib/platform-authoring/mapping-sources.test.ts",
+    "node": "content source contracts finds distinct declared text choices, including later list positions",
+    "status": "passed",
+    "milliseconds": 0.8305410000000393
+  },
+  {
+    "file": "frontend/src/lib/platform-authoring/mapping-sources.test.ts",
+    "node": "content source contracts prevents field renaming from overwriting a sibling",
+    "status": "passed",
+    "milliseconds": 0.4815000000000964
+  },
+  {
+    "file": "frontend/src/lib/platform-authoring/mapping-sources.test.ts",
+    "node": "content source contracts keeps comparison operands and nonempty boolean groups when changing operators",
+    "status": "passed",
+    "milliseconds": 0.8999579999999696
+  },
+  {
+    "file": "frontend/src/lib/platform-authoring/parameter-values.test.ts",
+    "node": "workflow parameter values preserves JSON root 0",
+    "status": "passed",
+    "milliseconds": 1.8262079999999514
+  },
+  {
+    "file": "frontend/src/lib/platform-authoring/parameter-values.test.ts",
+    "node": "workflow parameter values preserves JSON root false",
+    "status": "passed",
+    "milliseconds": 0.13720899999998437
+  },
+  {
+    "file": "frontend/src/lib/platform-authoring/parameter-values.test.ts",
+    "node": "workflow parameter values preserves JSON root null",
+    "status": "passed",
+    "milliseconds": 0.10866699999996854
+  },
+  {
+    "file": "frontend/src/lib/platform-authoring/parameter-values.test.ts",
+    "node": "workflow parameter values preserves JSON root []",
+    "status": "passed",
+    "milliseconds": 0.16562499999986358
+  },
+  {
+    "file": "frontend/src/lib/platform-authoring/parameter-values.test.ts",
+    "node": "workflow parameter values preserves JSON root \"\"",
+    "status": "passed",
+    "milliseconds": 0.13341700000000856
+  },
+  {
+    "file": "frontend/src/lib/platform-authoring/parameter-values.test.ts",
+    "node": "workflow parameter values preserves JSON root [\"99999999999999999.01\"]",
+    "status": "passed",
+    "milliseconds": 0.2127499999999145
+  },
+  {
+    "file": "frontend/src/lib/platform-authoring/parameter-values.test.ts",
+    "node": "workflow parameter values initializes scalar and array schemas without an object wrapper",
+    "status": "passed",
+    "milliseconds": 0.625041999999894
+  },
+  {
+    "file": "frontend/src/lib/platform-authoring/parameter-values.test.ts",
+    "node": "workflow parameter values uses object defaults exactly without adding nested optional defaults",
+    "status": "passed",
+    "milliseconds": 0.25175000000012915
+  },
+  {
+    "file": "frontend/src/lib/platform-authoring/parameter-values.test.ts",
+    "node": "workflow parameter values checks root scalar and array item types through the existing schema codec",
+    "status": "passed",
+    "milliseconds": 2.2068749999998545
+  },
+  {
+    "file": "frontend/src/lib/platform-authoring/parameter-values.test.ts",
+    "node": "workflow parameter values does not silently replace nonfinite numbers or blank input with null",
+    "status": "passed",
+    "milliseconds": 1.1357920000000377
+  },
+  {
+    "file": "frontend/src/components/platform-authoring/inspectors/structured-value-inspector.test.tsx",
+    "node": "StructuredValueInspector renders nested objects, arrays, and primitive values without editable controls",
+    "status": "passed",
+    "milliseconds": 77.95575000000008
+  },
+  {
+    "file": "frontend/src/components/platform-authoring/inspectors/structured-value-inspector.test.tsx",
+    "node": "StructuredValueInspector renders empty collections and sorts object keys deterministically",
+    "status": "passed",
+    "milliseconds": 6.133749999999964
+  },
+  {
+    "file": "frontend/src/components/platform-authoring/inspectors/structured-value-inspector.test.tsx",
+    "node": "StructuredValueInspector can preserve object insertion order in the compact tree presentation",
+    "status": "passed",
+    "milliseconds": 5.545875000000024
+  },
+  {
+    "file": "frontend/src/components/platform-authoring/inspectors/structured-value-inspector.test.tsx",
+    "node": "StructuredValueInspector renders multiline strings as raw JSON by default with a plain text view",
+    "status": "passed",
+    "milliseconds": 143.72325
+  },
+  {
+    "file": "frontend/src/components/platform-authoring/inspectors/structured-value-inspector.test.tsx",
+    "node": "StructuredValueInspector gates markdown preview behind an explicit inspector opt-in",
+    "status": "passed",
+    "milliseconds": 67.45299999999997
+  },
+  {
+    "file": "frontend/src/components/platform-authoring/schema-composer/json-schema-editor.test.tsx",
+    "node": "edits business field names without changing saved keys, values or closed constraints",
+    "status": "passed",
+    "milliseconds": 287.1338330000001
+  },
+  {
+    "file": "frontend/src/components/platform-authoring/schema-composer/json-schema-editor.test.tsx",
+    "node": "creates a null default with the correct annotation and no raw editor",
+    "status": "passed",
+    "milliseconds": 90.87029199999984
+  },
+  {
+    "file": "frontend/src/components/platform-authoring/schema-composer/json-schema-editor.test.tsx",
+    "node": "edits compound default values without adding omitted sibling defaults",
+    "status": "passed",
+    "milliseconds": 133.46854200000007
+  },
+  {
+    "file": "frontend/src/components/platform-authoring/schema-composer/json-schema-editor.test.tsx",
+    "node": "adds fields with meaningful names and lets the author mark them optional",
+    "status": "passed",
+    "milliseconds": 117.96154200000001
+  },
+  {
+    "file": "frontend/src/components/platform-authoring/generated-form/schema-form.test.tsx",
+    "node": "SchemaForm renders the value-entry editor body without the authoring card shell",
+    "status": "passed",
+    "milliseconds": 149.90987499999983
+  },
+  {
+    "file": "frontend/src/components/platform-authoring/generated-form/schema-form.test.tsx",
+    "node": "SchemaForm uses schema titles for field labels, falls back to property keys, and preserves value-entry payloads",
+    "status": "passed",
+    "milliseconds": 70.25708299999997
+  },
+  {
+    "file": "frontend/src/components/platform-authoring/generated-form/schema-form.test.tsx",
+    "node": "SchemaForm shows optional field titles and descriptions before and after adding them",
+    "status": "passed",
+    "milliseconds": 48.45095900000001
+  },
+  {
+    "file": "frontend/src/components/platform-authoring/generated-form/schema-form.test.tsx",
+    "node": "SchemaForm keeps absent optional defaults omitted until explicitly added",
+    "status": "passed",
+    "milliseconds": 21.72787500000004
+  },
+  {
+    "file": "frontend/src/components/platform-authoring/generated-form/schema-form.test.tsx",
+    "node": "SchemaForm starts optional no-default fields as addable generated fields",
+    "status": "passed",
+    "milliseconds": 12.203500000000076
+  },
+  {
+    "file": "frontend/src/components/platform-authoring/generated-form/schema-form.test.tsx",
+    "node": "SchemaForm removes optional no-default fields from the generated value after they are added",
+    "status": "passed",
+    "milliseconds": 31.11283299999991
+  },
+  {
+    "file": "frontend/src/components/platform-authoring/generated-form/schema-form.test.tsx",
+    "node": "SchemaForm preserves explicit empty values instead of replacing them with schema defaults",
+    "status": "passed",
+    "milliseconds": 57.723625000000084
+  },
+  {
+    "file": "frontend/src/components/platform-authoring/generated-form/schema-form.test.tsx",
+    "node": "SchemaForm uses enum descriptions while keeping the allowed option list constrained",
+    "status": "passed",
+    "milliseconds": 116.23729200000002
+  },
+  {
+    "file": "frontend/src/components/platform-authoring/generated-form/schema-form.test.tsx",
+    "node": "SchemaForm uses discriminated union branch titles in the selector and branch descriptions in the selected editor",
+    "status": "passed",
+    "milliseconds": 69.1394580000001
+  },
+  {
+    "file": "frontend/src/components/platform-authoring/generated-form/schema-form.test.tsx",
+    "node": "SchemaForm keeps selected union branches without descriptions on the existing object fallback copy",
+    "status": "passed",
+    "milliseconds": 31.397457999999915
+  },
+  {
+    "file": "frontend/src/components/platform-authoring/generated-form/value-editor.test.tsx",
+    "node": "preserves exact omitted, empty and null values while editing an array sibling",
+    "status": "passed",
+    "milliseconds": 260.6104580000001
+  },
+  {
+    "file": "frontend/src/components/platform-authoring/generated-form/value-editor.test.tsx",
+    "node": "makes compound choice contents visible and retains the chosen object exactly",
+    "status": "passed",
+    "milliseconds": 26.07941699999992
+  },
+  {
+    "file": "frontend/src/components/platform-authoring/generated-form/value-editor.test.tsx",
+    "node": "allows free values to change form and restore their earlier contents",
+    "status": "passed",
+    "milliseconds": 314.6518330000001
+  },
+  {
+    "file": "frontend/src/components/platform-authoring/generated-form/value-editor.test.tsx",
+    "node": "lets a missing boolean be explicitly answered no without adding other defaults",
+    "status": "passed",
+    "milliseconds": 64.57233300000007
+  },
+  {
+    "file": "frontend/src/components/platform-authoring/generated-form/value-editor.test.tsx",
+    "node": "preserves nullable values across edits and restores the previous nonempty alternative",
+    "status": "passed",
+    "milliseconds": 119.21441600000003
+  },
+  {
+    "file": "frontend/src/components/platform-authoring/generated-form/value-editor.test.tsx",
+    "node": "reports bounds and uniqueness in business language",
+    "status": "passed",
+    "milliseconds": 17.47220799999991
+  },
+  {
+    "file": "frontend/src/components/platform-authoring/generated-form/value-editor.test.tsx",
+    "node": "keeps a cleared number empty through sibling edits instead of inserting zero",
+    "status": "passed",
+    "milliseconds": 21.58695899999998
+  },
+  {
+    "file": "frontend/src/components/platform-authoring/generated-form/value-editor.test.tsx",
+    "node": "orders fields by declared hints without renaming keys or changing payload order",
+    "status": "passed",
+    "milliseconds": 14.800707999999986
+  },
+  {
+    "file": "frontend/src/components/platform-authoring/generated-form/value-editor.test.tsx",
+    "node": "matches hints to the current object and array item rather than unrelated field names",
+    "status": "passed",
+    "milliseconds": 18.530541000000085
+  },
+  {
+    "file": "frontend/src/components/platform-authoring/generated-form/value-editor.test.tsx",
+    "node": "accepts new multiline text without requiring a predeclared textarea hint",
+    "status": "passed",
+    "milliseconds": 8.32241699999986
+  },
+  {
+    "file": "frontend/src/components/platform-authoring/generated-form/value-editor.test.tsx",
+    "node": "describes allowed empty values without confusing stored presence with user effort",
+    "status": "passed",
+    "milliseconds": 38.72166700000025
+  },
+  {
+    "file": "frontend/src/components/platform-authoring/generated-form/value-editor.test.tsx",
+    "node": "treats nonempty-only choices as required even without a minimum length",
+    "status": "passed",
+    "milliseconds": 13.712291000000278
+  },
+  {
+    "file": "frontend/src/lib/platform-authoring/common/resource-ref.test.ts",
+    "node": "resource-ref parses key-only refs into typed ResourceRefs",
+    "status": "passed",
+    "milliseconds": 3.2600830000001224
+  },
+  {
+    "file": "frontend/src/lib/platform-authoring/common/resource-ref.test.ts",
+    "node": "resource-ref parses key+version refs and formats them back",
+    "status": "passed",
+    "milliseconds": 0.4950410000001284
+  },
+  {
+    "file": "frontend/src/lib/platform-authoring/common/resource-ref.test.ts",
+    "node": "resource-ref rejects invalid versions with current caller-facing wording",
+    "status": "passed",
+    "milliseconds": 1.491666000000123
+  },
+  {
+    "file": "frontend/src/lib/platform-authoring/common/resource-ref.test.ts",
+    "node": "resource-ref rejects blank input and exposes validation issues for shared callers",
+    "status": "passed",
+    "milliseconds": 0.6140000000000327
+  },
+  {
+    "file": "frontend/src/lib/platform-authoring/common/resource-ref.test.ts",
+    "node": "resource-ref parses line-delimited refs and tracks indexed validation paths",
+    "status": "passed",
+    "milliseconds": 0.8771669999998721
+  },
+  {
+    "file": "frontend/src/pages/platform/attention.test.tsx",
+    "node": "keeps viewed unknown operations actionable and provides no-Run fire navigation",
+    "status": "passed",
+    "milliseconds": 251.23824999999988
+  },
+  {
+    "file": "frontend/src/pages/platform/budget-controls.test.tsx",
+    "node": "keeps unlimited, service-controlled and inherited values distinct",
+    "status": "passed",
+    "milliseconds": 690.405334
+  },
+  {
+    "file": "frontend/src/pages/platform/budget-controls.test.tsx",
+    "node": "batch edits preserve other per-agent fields and pending controls are locked",
+    "status": "passed",
+    "milliseconds": 286.6132499999999
+  },
+  {
+    "file": "frontend/src/pages/platform/budget-controls.test.tsx",
+    "node": "renders all budget modes and sources without protocol values or agent identities",
+    "status": "passed",
+    "milliseconds": 40.138374999999996
+  },
+  {
+    "file": "frontend/src/pages/platform/cache-provenance.test.tsx",
+    "node": "links reused output to its originating run and preserves freshness timestamps",
+    "status": "passed",
+    "milliseconds": 150.53962500000011
+  },
+  {
+    "file": "frontend/src/pages/platform/connection-model.test.ts",
+    "node": "normalizes a complete model address while retaining provider limits and unrelated saved settings",
+    "status": "passed",
+    "milliseconds": 3.1552079999999023
+  },
+  {
+    "file": "frontend/src/pages/platform/connection-model.test.ts",
+    "node": "rejects unsupported or credential-bearing service addresses: javascript:alert(1)",
+    "status": "passed",
+    "milliseconds": 0.8730419999999413
+  },
+  {
+    "file": "frontend/src/pages/platform/connection-model.test.ts",
+    "node": "rejects unsupported or credential-bearing service addresses: https://secret:password@example.com/v1",
+    "status": "passed",
+    "milliseconds": 0.22254100000009203
+  },
+  {
+    "file": "frontend/src/pages/platform/connection-model.test.ts",
+    "node": "rejects unsupported or credential-bearing service addresses: https://example.com/v1?key=secret",
+    "status": "passed",
+    "milliseconds": 0.1646659999998974
+  },
+  {
+    "file": "frontend/src/pages/platform/connection-model.test.ts",
+    "node": "rejects unsupported or credential-bearing service addresses: not a url",
+    "status": "passed",
+    "milliseconds": 0.1699580000001788
+  },
+  {
+    "file": "frontend/src/pages/platform/connection-model.test.ts",
+    "node": "validates model names and execution limits before making a request",
+    "status": "passed",
+    "milliseconds": 0.23704099999986283
+  },
+  {
+    "file": "frontend/src/pages/platform/connection-model.test.ts",
+    "node": "preserves arbitrary business scope while checking meaningful service limits",
+    "status": "passed",
+    "milliseconds": 0.20954200000005585
+  },
+  {
+    "file": "frontend/src/pages/platform/execution-diagnostic.test.tsx",
+    "node": "explains known quota errors without exposing implementation codes",
+    "status": "passed",
+    "milliseconds": 119.78712499999995
+  },
+  {
+    "file": "frontend/src/pages/platform/execution-diagnostic.test.tsx",
+    "node": "does not reinterpret historical HTTP errors as quota or input errors",
+    "status": "passed",
+    "milliseconds": 7.20070799999985
+  },
+  {
+    "file": "frontend/src/pages/platform/execution-diagnostic.test.tsx",
+    "node": "explains a reported output limit violation even with unknown model category",
+    "status": "passed",
+    "milliseconds": 5.549665999999888
+  },
+  {
+    "file": "frontend/src/pages/platform/execution-diagnostic.test.tsx",
+    "node": "preserves an output limit diagnosis through an aggregate workflow failure",
+    "status": "passed",
+    "milliseconds": 3.6140419999999267
+  },
+  {
+    "file": "frontend/src/pages/platform/execution-diagnostic.test.tsx",
+    "node": "explains an unusable reply without implying that contacting the model failed",
+    "status": "passed",
+    "milliseconds": 3.4051670000001195
+  },
+  {
+    "file": "frontend/src/pages/platform/execution-diagnostic.test.tsx",
+    "node": "shows authentication handling and an exact recent evidence link",
+    "status": "passed",
+    "milliseconds": 51.591457999999875
+  },
+  {
+    "file": "frontend/src/pages/platform/execution-diagnostic.test.tsx",
+    "node": "does not turn absent current-version observations into an online claim",
+    "status": "passed",
+    "milliseconds": 5.348916999999801
+  },
+  {
+    "file": "frontend/src/pages/platform/execution-diagnostic.test.tsx",
+    "node": "explains budget_exceeded independently from provider account quota",
+    "status": "passed",
+    "milliseconds": 3.760292000000163
+  },
+  {
+    "file": "frontend/src/pages/platform/execution-diagnostic.test.tsx",
+    "node": "explains usage_unavailable independently from provider account quota",
+    "status": "passed",
+    "milliseconds": 3.408957999999984
+  },
+  {
+    "file": "frontend/src/pages/platform/execution-diagnostic.test.tsx",
+    "node": "explains output_truncated independently from provider account quota",
+    "status": "passed",
+    "milliseconds": 3.048999999999978
+  },
+  {
+    "file": "frontend/src/pages/platform/feedback.test.tsx",
+    "node": "offers conflict recovery without exposing transport details",
+    "status": "passed",
+    "milliseconds": 135.430292
+  },
+  {
+    "file": "frontend/src/pages/platform/feedback.test.tsx",
+    "node": "keeps uncertain operations cautious without revealing a provider exception",
+    "status": "passed",
+    "milliseconds": 8.932542000000012
+  },
+  {
+    "file": "frontend/src/pages/platform/launch-inputs.test.tsx",
+    "node": "edits scalar input directly and reports recoverable integer errors without truncation",
+    "status": "passed",
+    "milliseconds": 183.99970899999994
+  },
+  {
+    "file": "frontend/src/pages/platform/launch-inputs.test.tsx",
+    "node": "edits array and null roots without inventing an object wrapper",
+    "status": "passed",
+    "milliseconds": 48.11666700000001
+  },
+  {
+    "file": "frontend/src/pages/platform/launch-inputs.test.tsx",
+    "node": "preserves input and declared business labels when switching display modes",
+    "status": "passed",
+    "milliseconds": 20.940207999999984
+  },
+  {
+    "file": "frontend/src/pages/platform/launch-inputs.test.tsx",
+    "node": "recovers valid unapplied drafts only after an explicit restore action",
+    "status": "passed",
+    "milliseconds": 23.821249999999964
+  },
+  {
+    "file": "frontend/src/pages/platform/launch-inputs.test.tsx",
+    "node": "retains incomplete originals with download and explicit discard, preserving applied values",
+    "status": "passed",
+    "milliseconds": 36.999250000000075
+  },
+  {
+    "file": "frontend/src/pages/platform/launch-inputs.test.tsx",
+    "node": "blocks incomplete fields with their declared titles and repairs them in place",
+    "status": "passed",
+    "milliseconds": 7.835917000000109
+  },
+  {
+    "file": "frontend/src/pages/platform/launch-inputs.test.tsx",
+    "node": "downloads an unfinished original verbatim without clearing it",
+    "status": "passed",
+    "milliseconds": 15.67854199999988
+  },
+  {
+    "file": "frontend/src/pages/platform/model-usage-panel.test.tsx",
+    "node": "keeps absent provider counters unknown while explaining failed-attempt coverage",
+    "status": "passed",
+    "milliseconds": 176.99095799999986
+  },
+  {
+    "file": "frontend/src/pages/platform/model-usage-panel.test.tsx",
+    "node": "shows an explicitly reported zero and allows the model breakdown to be opened",
+    "status": "passed",
+    "milliseconds": 31.146375000000035
+  },
+  {
+    "file": "frontend/src/pages/platform/model-usage-panel.test.tsx",
+    "node": "offers a read retry after errors and labels today's actual timezone",
+    "status": "passed",
+    "milliseconds": 41.25974999999994
+  },
+  {
+    "file": "frontend/src/pages/platform/model-usage-panel.test.tsx",
+    "node": "shows independent effective output limits without changing omitted settings",
+    "status": "passed",
+    "milliseconds": 19.820459000000028
+  },
+  {
+    "file": "frontend/src/pages/platform/package-expert.test.tsx",
+    "node": "business workflow authoring edits prompt, services and limits without replacing mappings, annotations or comments",
+    "status": "passed",
+    "milliseconds": 691.278875
+  },
+  {
+    "file": "frontend/src/pages/platform/package-expert.test.tsx",
+    "node": "business workflow authoring adds reusable assistants, workflows and steps using generated identities",
+    "status": "passed",
+    "milliseconds": 381.5649999999998
+  },
+  {
+    "file": "frontend/src/pages/platform/package-expert.test.tsx",
+    "node": "business workflow authoring keeps an assistant in use and requires explicit confirmation before deleting an unused assistant",
+    "status": "passed",
+    "milliseconds": 458.6172080000001
+  },
+  {
+    "file": "frontend/src/pages/platform/package-expert.test.tsx",
+    "node": "business workflow authoring edits sources, dependencies, conditions and recovery with visible choices",
+    "status": "passed",
+    "milliseconds": 227.9268750000001
+  },
+  {
+    "file": "frontend/src/pages/platform/package-expert.test.tsx",
+    "node": "business workflow authoring retains imported comments and user instructions through source selection and repair",
+    "status": "passed",
+    "milliseconds": 10.469290999999885
+  },
+  {
+    "file": "frontend/src/pages/platform/package-expert.test.tsx",
+    "node": "business workflow authoring creates distinct new definitions and reports diagnostics without internal values",
+    "status": "passed",
+    "milliseconds": 9.938083000000006
+  },
+  {
+    "file": "frontend/src/pages/platform/package-expert.test.tsx",
+    "node": "business workflow authoring prevents deleting output sources but ignores literal text that happens to resemble a reference",
+    "status": "passed",
+    "milliseconds": 0.9873749999997017
+  },
+  {
+    "file": "frontend/src/pages/platform/package-expert.test.tsx",
+    "node": "dependency viewport supports zoom, keyboard movement and named steps while explaining all dependencies",
+    "status": "passed",
+    "milliseconds": 60.813292000000274
+  },
+  {
+    "file": "frontend/src/pages/platform/package-mapping.test.tsx",
+    "node": "business content mapping selects named source fields and any list position without displaying internal references",
+    "status": "passed",
+    "milliseconds": 655.227292
+  },
+  {
+    "file": "frontend/src/pages/platform/package-mapping.test.tsx",
+    "node": "business content mapping preserves a missing saved source until the user deliberately selects a replacement",
+    "status": "passed",
+    "milliseconds": 230.16245900000013
+  },
+  {
+    "file": "frontend/src/pages/platform/package-mapping.test.tsx",
+    "node": "business content mapping keeps literal objects and composed objects distinct while editing a sibling value",
+    "status": "passed",
+    "milliseconds": 188.11400000000003
+  },
+  {
+    "file": "frontend/src/pages/platform/package-mapping.test.tsx",
+    "node": "business content mapping does not confuse a business field named like a whole-object option with the whole object",
+    "status": "passed",
+    "milliseconds": 117.34441600000036
+  },
+  {
+    "file": "frontend/src/pages/platform/package-mapping.test.tsx",
+    "node": "business content mapping reorders composed items without converting their nested values",
+    "status": "passed",
+    "milliseconds": 256.6242080000002
+  },
+  {
+    "file": "frontend/src/pages/platform/package-mapping.test.tsx",
+    "node": "business content mapping edits a nested condition while retaining unrelated comparisons and all operator choices",
+    "status": "passed",
+    "milliseconds": 240.6612500000001
+  },
+  {
+    "file": "frontend/src/pages/platform/package-presentation.test.tsx",
+    "node": "result reading editor does not materialize absent presentation settings before an explicit edit",
+    "status": "passed",
+    "milliseconds": 379.212708
+  },
+  {
+    "file": "frontend/src/pages/platform/package-presentation.test.tsx",
+    "node": "result reading editor changes a title without rewriting placeholders, section declarations or omitted options",
+    "status": "passed",
+    "milliseconds": 218.25920799999994
+  },
+  {
+    "file": "frontend/src/pages/platform/package-presentation.test.tsx",
+    "node": "result reading editor creates distinct text hints and switches an input title through named fields",
+    "status": "passed",
+    "milliseconds": 414.31937500000004
+  },
+  {
+    "file": "frontend/src/pages/platform/package-presentation.test.tsx",
+    "node": "result reading editor preserves unknown saved service links while another section changes",
+    "status": "passed",
+    "milliseconds": 167.31550000000016
+  },
+  {
+    "file": "frontend/src/pages/platform/package-presentation.test.tsx",
+    "node": "result reading editor builds a named service result link and offers every supported result section",
+    "status": "passed",
+    "milliseconds": 214.92733399999997
+  },
+  {
+    "file": "frontend/src/pages/platform/platform.test.tsx",
+    "node": "frozen definition editing edits the same document without erasing nodes, comments or constraints",
+    "status": "passed",
+    "milliseconds": 105.33799999999974
+  },
+  {
+    "file": "frontend/src/pages/platform/platform.test.tsx",
+    "node": "frozen definition editing keeps unreadable imports without silently repairing or exposing source errors",
+    "status": "passed",
+    "milliseconds": 141.07554200000004
+  },
+  {
+    "file": "frontend/src/pages/platform/platform.test.tsx",
+    "node": "frozen definition editing adds a workflow through controls without replacing the other sections",
+    "status": "passed",
+    "milliseconds": 76.3271249999998
+  },
+  {
+    "file": "frontend/src/pages/platform/platform.test.tsx",
+    "node": "frozen definition editing uses the saved document rather than stale summary metadata",
+    "status": "passed",
+    "milliseconds": 149.55516699999998
+  },
+  {
+    "file": "frontend/src/pages/platform/platform.test.tsx",
+    "node": "frozen definition editing names authoring services from declared titles and safe effect labels without protocol descriptions",
+    "status": "passed",
+    "milliseconds": 1109.4134999999997
+  },
+  {
+    "file": "frontend/src/pages/platform/platform.test.tsx",
+    "node": "frozen definition editing blocks editing when reading the saved workflow fails and offers recovery",
+    "status": "passed",
+    "milliseconds": 30.68187500000022
+  },
+  {
+    "file": "frontend/src/pages/platform/platform.test.tsx",
+    "node": "execution inspection shows all merged dependency sources and real terminal reasons",
+    "status": "passed",
+    "milliseconds": 54.13633299999992
+  },
+  {
+    "file": "frontend/src/pages/platform/platform.test.tsx",
+    "node": "execution inspection renders invocation ownership separately from the dependency graph",
+    "status": "passed",
+    "milliseconds": 33.079959000000144
+  },
+  {
+    "file": "frontend/src/pages/platform/platform.test.tsx",
+    "node": "execution inspection validates evidence deep links against the loaded run",
+    "status": "passed",
+    "milliseconds": 44.55741599999965
+  },
+  {
+    "file": "frontend/src/pages/platform/platform.test.tsx",
+    "node": "execution inspection inspects a planned node without inventing missing input or reporting an invalid evidence link",
+    "status": "passed",
+    "milliseconds": 80.56987500000014
+  },
+  {
+    "file": "frontend/src/pages/platform/platform.test.tsx",
+    "node": "execution inspection loads CAS text only on demand and clears an unrelated artifact selection",
+    "status": "passed",
+    "milliseconds": 34.60616600000003
+  },
+  {
+    "file": "frontend/src/pages/platform/platform.test.tsx",
+    "node": "execution inspection discovers nested CAS references without converting ordinary money strings",
+    "status": "passed",
+    "milliseconds": 0.41045800000028976
+  },
+  {
+    "file": "frontend/src/pages/platform/platform.test.tsx",
+    "node": "resources and independent plugins does not refill saved credential values and clears newly submitted credentials",
+    "status": "passed",
+    "milliseconds": 334.59962499999983
+  },
+  {
+    "file": "frontend/src/pages/platform/platform.test.tsx",
+    "node": "resources and independent plugins does not echo credential values from rejected saves into diagnostics",
+    "status": "passed",
+    "milliseconds": 285.541416
+  },
+  {
+    "file": "frontend/src/pages/platform/platform.test.tsx",
+    "node": "resources and independent plugins takes business page links from enabled plugin releases and rejects executable URLs",
+    "status": "passed",
+    "milliseconds": 33.1347080000005
+  },
+  {
+    "file": "frontend/src/pages/platform/platform.test.tsx",
+    "node": "resources and independent plugins edits exact string inputs without adding omitted optional values",
+    "status": "passed",
+    "milliseconds": 8.416166999999405
+  },
+  {
+    "file": "frontend/src/pages/platform/platform.test.tsx",
+    "node": "resources and independent plugins refuses ambiguous duplicate keys instead of replacing a definition",
+    "status": "passed",
+    "milliseconds": 3.045791999999892
+  },
+  {
+    "file": "frontend/src/pages/platform/plugin-health.test.tsx",
+    "node": "reports recorded failure and recovery without exposing identifiers or raw error codes",
+    "status": "passed",
+    "milliseconds": 193.44812500000012
+  },
+  {
+    "file": "frontend/src/pages/platform/plugin-health.test.tsx",
+    "node": "does not equate a lack of observations with availability",
+    "status": "passed",
+    "milliseconds": 8.986499999999978
+  },
+  {
+    "file": "frontend/src/pages/platform/plugin-health.test.tsx",
+    "node": "preserves uncertainty and tells the user to check effects before repeating",
+    "status": "passed",
+    "milliseconds": 7.482124999999996
+  },
+  {
+    "file": "frontend/src/pages/platform/plugins.test.tsx",
+    "node": "imports an installation file, reviews capabilities and waits for explicit confirmation before registration",
+    "status": "passed",
+    "milliseconds": 220.76712500000008
+  },
+  {
+    "file": "frontend/src/pages/platform/plugins.test.tsx",
+    "node": "keeps a valid installation draft after an invalid file and provides a readable recovery",
+    "status": "passed",
+    "milliseconds": 40.01695799999993
+  },
+  {
+    "file": "frontend/src/pages/platform/resources.test.tsx",
+    "node": "creates a named service through a form, manages its identity and clears credentials after save",
+    "status": "passed",
+    "milliseconds": 429.77045799999996
+  },
+  {
+    "file": "frontend/src/pages/platform/result-artifact-presentation.test.tsx",
+    "node": "reads a large response through the frozen declared selector without exposing its envelope",
+    "status": "passed",
+    "milliseconds": 169.29674999999997
+  },
+  {
+    "file": "frontend/src/pages/platform/result-artifact-presentation.test.tsx",
+    "node": "exports only declared large content and preserves the user's original code",
+    "status": "passed",
+    "milliseconds": 108.34537499999988
+  },
+  {
+    "file": "frontend/src/pages/platform/result-artifact-presentation.test.tsx",
+    "node": "does not interpret a tool envelope with selectors belonging to a differently mapped node",
+    "status": "passed",
+    "milliseconds": 7.690665999999965
+  },
+  {
+    "file": "frontend/src/pages/platform/result-artifact-presentation.test.tsx",
+    "node": "keeps unmatched selectors incomplete instead of exporting the raw response",
+    "status": "passed",
+    "milliseconds": 0.652791999999863
+  },
+  {
+    "file": "frontend/src/pages/platform/result-compare.test.tsx",
+    "node": "retains original input and unknown status with identical text without exposing identifiers",
+    "status": "passed",
+    "milliseconds": 344.9459999999999
+  },
+  {
+    "file": "frontend/src/pages/platform/result-compare.test.tsx",
+    "node": "requires explicit attachment reading even with a fixed selection URL",
+    "status": "passed",
+    "milliseconds": 146.87679200000002
+  },
+  {
+    "file": "frontend/src/pages/platform/result-compare.test.tsx",
+    "node": "keeps empty results honest and uses explicit generic JSON section selection",
+    "status": "passed",
+    "milliseconds": 173.51583300000016
+  },
+  {
+    "file": "frontend/src/pages/platform/result-compare.test.tsx",
+    "node": "selects a known result from server history without requiring its ID to be remembered",
+    "status": "passed",
+    "milliseconds": 73.26545799999985
+  },
+  {
+    "file": "frontend/src/pages/platform/result-compare.test.tsx",
+    "node": "retains an earlier source selection when equal generic sections are grouped",
+    "status": "passed",
+    "milliseconds": 80.94466700000021
+  },
+  {
+    "file": "frontend/src/pages/platform/result-content.test.tsx",
+    "node": "renders boolean, null and business-like keys as literal generic values",
+    "status": "passed",
+    "milliseconds": 122.11849999999981
+  },
+  {
+    "file": "frontend/src/pages/platform/result-content.test.tsx",
+    "node": "keeps JSON string and invalid JSON bytes literal: \"# A JSON string\"",
+    "status": "passed",
+    "milliseconds": 13.002333000000135
+  },
+  {
+    "file": "frontend/src/pages/platform/result-content.test.tsx",
+    "node": "keeps JSON string and invalid JSON bytes literal: # invalid JSON",
+    "status": "passed",
+    "milliseconds": 3.6570420000000468
+  },
+  {
+    "file": "frontend/src/pages/platform/result-content.test.tsx",
+    "node": "renders text attachments with shared Markdown",
+    "status": "passed",
+    "milliseconds": 22.26266600000008
+  },
+  {
+    "file": "frontend/src/pages/platform/result-content.test.tsx",
+    "node": "uses declared field titles without changing arbitrary business values or source text",
+    "status": "passed",
+    "milliseconds": 11.773750000000064
+  },
+  {
+    "file": "frontend/src/pages/platform/result-delivery.test.ts",
+    "node": "confirmed content selection keeps declared sections in order and does not duplicate legacy body/receipt",
+    "status": "passed",
+    "milliseconds": 3.21225000000004
+  },
+  {
+    "file": "frontend/src/pages/platform/result-delivery.test.ts",
+    "node": "confirmed content selection supports historical body, receipt and generic output without business aliases",
+    "status": "passed",
+    "milliseconds": 1.905416999999943
+  },
+  {
+    "file": "frontend/src/pages/platform/result-delivery.test.ts",
+    "node": "confirmed content selection preserves partial, cancellation and provenance",
+    "status": "passed",
+    "milliseconds": 0.4135830000000169
+  },
+  {
+    "file": "frontend/src/pages/platform/result-delivery.test.ts",
+    "node": "confirmed content selection preserves unknown, cancellation and provenance",
+    "status": "passed",
+    "milliseconds": 0.2165829999999005
+  },
+  {
+    "file": "frontend/src/pages/platform/result-delivery.test.ts",
+    "node": "confirmed content selection exports read uncertainty without claiming an unconfirmed save",
+    "status": "passed",
+    "milliseconds": 0.1914160000001175
+  },
+  {
+    "file": "frontend/src/pages/platform/result-delivery.test.ts",
+    "node": "confirmed content selection requires explicit artifact loading and records excluded/deferred content",
+    "status": "passed",
+    "milliseconds": 1.469916000000012
+  },
+  {
+    "file": "frontend/src/pages/platform/result-delivery.test.ts",
+    "node": "confirmed content selection exports a large confirmed JSON value with many code delimiters without argument overflow",
+    "status": "passed",
+    "milliseconds": 2.427832999999964
+  },
+  {
+    "file": "frontend/src/pages/platform/result-delivery.test.ts",
+    "node": "confirmed content selection has no pretend content for empty results and preserves fenced source bytes",
+    "status": "passed",
+    "milliseconds": 0.2876669999998285
+  },
+  {
+    "file": "frontend/src/pages/platform/result-delivery.test.ts",
+    "node": "exports receipt confirmation without a service envelope while keeping declared body unchanged",
+    "status": "passed",
+    "milliseconds": 0.30291699999997945
+  },
+  {
+    "file": "frontend/src/pages/platform/result-diff.test.ts",
+    "node": "preserves both exact inputs in deterministic differences",
+    "status": "passed",
+    "milliseconds": 3.3289589999999407
+  },
+  {
+    "file": "frontend/src/pages/platform/result-diff.test.ts",
+    "node": "preserves both exact inputs in deterministic differences",
+    "status": "passed",
+    "milliseconds": 0.47995800000012423
+  },
+  {
+    "file": "frontend/src/pages/platform/result-diff.test.ts",
+    "node": "preserves both exact inputs in deterministic differences",
+    "status": "passed",
+    "milliseconds": 0.28112499999997453
+  },
+  {
+    "file": "frontend/src/pages/platform/result-diff.test.ts",
+    "node": "preserves both exact inputs in deterministic differences",
+    "status": "passed",
+    "milliseconds": 0.3062919999999849
+  },
+  {
+    "file": "frontend/src/pages/platform/result-diff.test.ts",
+    "node": "preserves both exact inputs in deterministic differences",
+    "status": "passed",
+    "milliseconds": 0.20462500000007822
+  },
+  {
+    "file": "frontend/src/pages/platform/result-diff.test.ts",
+    "node": "bounds large comparisons without truncating either source",
+    "status": "passed",
+    "milliseconds": 0.3377499999999145
+  },
+  {
+    "file": "frontend/src/pages/platform/result-export.test.tsx",
+    "node": "copies confirmed content and keeps clipboard failure recoverable",
+    "status": "passed",
+    "milliseconds": 208.11575000000016
+  },
+  {
+    "file": "frontend/src/pages/platform/result-export.test.tsx",
+    "node": "reads selected artifacts only and blocks delivery until loaded, with retry",
+    "status": "passed",
+    "milliseconds": 62.94837500000017
+  },
+  {
+    "file": "frontend/src/pages/platform/result-export.test.tsx",
+    "node": "reports failed downloads and allows retry",
+    "status": "passed",
+    "milliseconds": 22.977292000000034
+  },
+  {
+    "file": "frontend/src/pages/platform/result-export.test.tsx",
+    "node": "does not offer export for unconfirmed empty output",
+    "status": "passed",
+    "milliseconds": 7.857582999999977
+  },
+  {
+    "file": "frontend/src/pages/platform/result-export.test.tsx",
+    "node": "downloads a Markdown file containing provenance and confirmation status",
+    "status": "passed",
+    "milliseconds": 20.577957999999853
+  },
+  {
+    "file": "frontend/src/pages/platform/result-history.test.tsx",
+    "node": "loads package choices and preserves history context through a personal mark",
+    "status": "passed",
+    "milliseconds": 817.0932500000001
+  },
+  {
+    "file": "frontend/src/pages/platform/result-metadata.test.tsx",
+    "node": "reads without a write and submits only the explicit metadata field",
+    "status": "passed",
+    "milliseconds": 195.42483300000004
+  },
+  {
+    "file": "frontend/src/pages/platform/result-metadata.test.tsx",
+    "node": "retains a conflicting note draft and requires review of the newer version",
+    "status": "passed",
+    "milliseconds": 86.0155000000002
+  },
+  {
+    "file": "frontend/src/pages/platform/result-metadata.test.tsx",
+    "node": "retains an unsaved note across navigation and warns before refresh without browser persistence",
+    "status": "passed",
+    "milliseconds": 41.74808300000018
+  },
+  {
+    "file": "frontend/src/pages/platform/result-rules.test.tsx",
+    "node": "explains frozen conditions with field titles and preserves literal values",
+    "status": "passed",
+    "milliseconds": 128.74791600000003
+  },
+  {
+    "file": "frontend/src/pages/platform/result-rules.test.tsx",
+    "node": "keeps nested fixed source code unchanged when showing mapping fallbacks",
+    "status": "passed",
+    "milliseconds": 6.282916999999998
+  },
+  {
+    "file": "frontend/src/pages/platform/result-run-ux.test.tsx",
+    "node": "opens an exact source operation through a readable link without showing execution envelopes",
+    "status": "passed",
+    "milliseconds": 337.8147080000001
+  },
+  {
+    "file": "frontend/src/pages/platform/result-run-ux.test.tsx",
+    "node": "uses a frozen business title or effect label instead of protocol documentation: title=true",
+    "status": "passed",
+    "milliseconds": 57.18570799999998
+  },
+  {
+    "file": "frontend/src/pages/platform/result-run-ux.test.tsx",
+    "node": "uses a frozen business title or effect label instead of protocol documentation: title=false",
+    "status": "passed",
+    "milliseconds": 59.258125000000064
+  },
+  {
+    "file": "frontend/src/pages/platform/result-run-ux.test.tsx",
+    "node": "inspects frozen input sources and confirmed upstream content without showing intermediate API values",
+    "status": "passed",
+    "milliseconds": 158.53920800000014
+  },
+  {
+    "file": "frontend/src/pages/platform/result-run-ux.test.tsx",
+    "node": "uses the projected known failure in the execution header while leaving the model reply unpromoted",
+    "status": "passed",
+    "milliseconds": 35.768583000000035
+  },
+  {
+    "file": "frontend/src/pages/platform/result-run-ux.test.tsx",
+    "node": "keeps failed step and operation status tones consistent",
+    "status": "passed",
+    "milliseconds": 41.007500000000164
+  },
+  {
+    "file": "frontend/src/pages/platform/result-run-ux.test.tsx",
+    "node": "keeps timed_out step and operation status tones consistent",
+    "status": "passed",
+    "milliseconds": 37.00916699999971
+  },
+  {
+    "file": "frontend/src/pages/platform/result-run-ux.test.tsx",
+    "node": "keeps unknown step and operation status tones consistent",
+    "status": "passed",
+    "milliseconds": 36.26470900000004
+  },
+  {
+    "file": "frontend/src/pages/platform/result-run-ux.test.tsx",
+    "node": "keeps succeeded step and operation status tones consistent",
+    "status": "passed",
+    "milliseconds": 39.74979099999973
+  },
+  {
+    "file": "frontend/src/pages/platform/result-section-groups.test.tsx",
+    "node": "reads equal generic content once while retaining every source link and the original values",
+    "status": "passed",
+    "milliseconds": 140.29537499999992
+  },
+  {
+    "file": "frontend/src/pages/platform/result-section-groups.test.tsx",
+    "node": "preserves separately authored sections even when their confirmed text is identical",
+    "status": "passed",
+    "milliseconds": 5.47395900000015
+  },
+  {
+    "file": "frontend/src/pages/platform/result-section-groups.test.tsx",
+    "node": "uses exact typed equality without trimming strings or merging distinct list contents",
+    "status": "passed",
+    "milliseconds": 0.4863750000001801
+  },
+  {
+    "file": "frontend/src/pages/platform/result-section-groups.test.tsx",
+    "node": "copies and downloads the readable string once by default without quoting or fencing its text",
+    "status": "passed",
+    "milliseconds": 79.00683299999992
+  },
+  {
+    "file": "frontend/src/pages/platform/result-section-groups.test.tsx",
+    "node": "retains deselected content while frozen display information finishes loading",
+    "status": "passed",
+    "milliseconds": 51.83616699999993
+  },
+  {
+    "file": "frontend/src/pages/platform/result-section-groups.test.tsx",
+    "node": "waits for frozen display information before default delivery can include duplicates",
+    "status": "passed",
+    "milliseconds": 30.119667000000163
+  },
+  {
+    "file": "frontend/src/pages/platform/result-view.test.tsx",
+    "node": "ordinary results shows a confirmed receipt without exposing its raw service response and retains original input",
+    "status": "passed",
+    "milliseconds": 231.24420799999984
+  },
+  {
+    "file": "frontend/src/pages/platform/result-view.test.tsx",
+    "node": "ordinary results explains a model failure while retaining the input-reuse and evidence destinations",
+    "status": "passed",
+    "milliseconds": 54.30316700000003
+  },
+  {
+    "file": "frontend/src/pages/platform/result-view.test.tsx",
+    "node": "ordinary results shows body, missing information and provenance before technical evidence",
+    "status": "passed",
+    "milliseconds": 51.44487499999991
+  },
+  {
+    "file": "frontend/src/pages/platform/result-view.test.tsx",
+    "node": "ordinary results preserves history filters through evidence selection, technical tabs and return",
+    "status": "passed",
+    "milliseconds": 163.90866600000004
+  },
+  {
+    "file": "frontend/src/pages/platform/result-view.test.tsx",
+    "node": "ordinary results does not claim cancellation has stopped execution or unknown writes succeeded",
+    "status": "passed",
+    "milliseconds": 37.35279199999991
+  },
+  {
+    "file": "frontend/src/pages/platform/result-view.test.tsx",
+    "node": "ordinary results reviews changed bindings before rerun and retains identity after an uncertain response",
+    "status": "passed",
+    "milliseconds": 115.11858300000017
+  },
+  {
+    "file": "frontend/src/pages/platform/result-view.test.tsx",
+    "node": "ordinary results creates a fresh rerun command after moving to another result",
+    "status": "passed",
+    "milliseconds": 193.2232080000001
+  },
+  {
+    "file": "frontend/src/pages/platform/result-view.test.tsx",
+    "node": "ordinary results keeps an uncertain rerun identity and binding while visiting its technical evidence",
+    "status": "passed",
+    "milliseconds": 196.59574999999995
+  },
+  {
+    "file": "frontend/src/pages/platform/result-view.test.tsx",
+    "node": "ordinary results keeps uncertain reads visible and allows rerun without save verification",
+    "status": "passed",
+    "milliseconds": 53.93745899999976
+  },
+  {
+    "file": "frontend/src/pages/platform/result-view.test.tsx",
+    "node": "ordinary results requires explicit verification before repeating an unknown write",
+    "status": "passed",
+    "milliseconds": 93.3797910000003
+  },
+  {
+    "file": "frontend/src/pages/platform/result-view.test.tsx",
+    "node": "ordinary results opens only the explicitly projected frozen plugin link",
+    "status": "passed",
+    "milliseconds": 32.286167000000205
+  },
+  {
+    "file": "frontend/src/pages/platform/result-view.test.tsx",
+    "node": "ordinary results recognizes the projected artifact reference and offers a download",
+    "status": "passed",
+    "milliseconds": 31.032458000000133
+  },
+  {
+    "file": "frontend/src/pages/platform/result-view.test.tsx",
+    "node": "ordinary results reads a large JSON artifact without requiring technical evidence",
+    "status": "passed",
+    "milliseconds": 79.57391599999983
+  },
+  {
+    "file": "frontend/src/pages/platform/result-view.test.tsx",
+    "node": "ordinary results refreshes from the first page with a new snapshot while retaining filters",
+    "status": "passed",
+    "milliseconds": 283.674708
+  },
+  {
+    "file": "frontend/src/pages/platform/result-view.test.tsx",
+    "node": "ordinary results keeps server filters and snapshot watermark when paging",
+    "status": "passed",
+    "milliseconds": 183.88941599999998
+  },
+  {
+    "file": "frontend/src/pages/platform/result-view.test.tsx",
+    "node": "keeps cancelled work distinct from failure and describes input reuse",
+    "status": "passed",
+    "milliseconds": 43.77333300000009
+  },
+  {
+    "file": "frontend/src/pages/platform/result-view.test.tsx",
+    "node": "recovers an uncertain rerun after refresh without persisting input or connection settings",
+    "status": "passed",
+    "milliseconds": 137.83337500000016
+  },
+  {
+    "file": "frontend/src/pages/platform/schedule-fire-history.test.tsx",
+    "node": "distinguishes failed launch receipts from linked successful executions",
+    "status": "passed",
+    "milliseconds": 221.47620800000004
+  },
+  {
+    "file": "frontend/src/pages/platform/schedule-list.test.tsx",
+    "node": "retains an uncertain manual execution through leaving and returning",
+    "status": "passed",
+    "milliseconds": 243.2008330000001
+  },
+  {
+    "file": "frontend/src/pages/platform/schedule-timing.test.tsx",
+    "node": "preserves complex calendar and hidden policies while editing the timezone",
+    "status": "passed",
+    "milliseconds": 1097.8319170000002
+  },
+  {
+    "file": "frontend/src/pages/platform/schedule-timing.test.tsx",
+    "node": "marks an unavailable engine preview without changing the schedule",
+    "status": "passed",
+    "milliseconds": 877.1249589999998
+  },
+  {
+    "file": "frontend/src/pages/platform/schedule-timing.test.tsx",
+    "node": "edits multiple execution hours without exposing an expression editor",
+    "status": "passed",
+    "milliseconds": 822.9708339999997
+  },
+  {
+    "file": "frontend/src/pages/platform/schedule-timing.test.tsx",
+    "node": "shows authoritative pending preview without internal revisions or notes",
+    "status": "passed",
+    "milliseconds": 66.77658299999985
+  },
+  {
+    "file": "frontend/src/pages/platform/schedule-timing.test.tsx",
+    "node": "edits a fixed interval and its reference time through ordinary controls",
+    "status": "passed",
+    "milliseconds": 96.40941599999951
+  },
+  {
+    "file": "frontend/src/pages/platform/schedules.test.tsx",
+    "node": "inherits business input and keeps one creation identity after an uncertain response",
+    "status": "passed",
+    "milliseconds": 885.1046250000002
+  },
+  {
+    "file": "frontend/src/pages/platform/task-connections.test.tsx",
+    "node": "requires confirmation, preserves configuration, clears entered secrets and omits blank credentials",
+    "status": "passed",
+    "milliseconds": 361.39149999999995
+  },
+  {
+    "file": "frontend/src/pages/platform/task-connections.test.tsx",
+    "node": "allows a missing model to be connected with an ordinary address and password form",
+    "status": "passed",
+    "milliseconds": 142.85349999999994
+  },
+  {
+    "file": "frontend/src/pages/platform/task-connections.test.tsx",
+    "node": "keeps inputs and gives actionable local validation when the address is wrong",
+    "status": "passed",
+    "milliseconds": 112.08158300000014
+  },
+  {
+    "file": "frontend/src/pages/platform/task-connections.test.tsx",
+    "node": "distinguishes loading and preset failures while preserving entered credentials",
+    "status": "passed",
+    "milliseconds": 181.98962499999993
+  },
+  {
+    "file": "frontend/src/pages/platform/task-connections.test.tsx",
+    "node": "copies saved public connection settings without implying credentials were copied",
+    "status": "passed",
+    "milliseconds": 92.33287500000006
+  },
+  {
+    "file": "frontend/src/pages/platform/task-connections.test.tsx",
+    "node": "retains the public draft across page remounts without browser storage",
+    "status": "passed",
+    "milliseconds": 56.12758299999996
+  },
+  {
+    "file": "frontend/src/pages/platform/task-inputs.test.tsx",
+    "node": "uses declared labels and static hints after fields are renamed, preserving whitespace",
+    "status": "passed",
+    "milliseconds": 137.53475000000003
+  },
+  {
+    "file": "frontend/src/pages/platform/task-inputs.test.tsx",
+    "node": "preserves omitted defaults, nullable and unknown fields when editing siblings",
+    "status": "passed",
+    "milliseconds": 90.07879099999991
+  },
+  {
+    "file": "frontend/src/pages/platform/task-inputs.test.tsx",
+    "node": "edits arrays using the shared form without delimiter parsing",
+    "status": "passed",
+    "milliseconds": 54.37858399999982
+  },
+  {
+    "file": "frontend/src/pages/platform/task-inputs.test.tsx",
+    "node": "treats includeRisk/reportId/collection as ordinary data; only declared defaults seed drafts",
+    "status": "passed",
+    "milliseconds": 0.6424580000000333
+  },
+  {
+    "file": "frontend/src/pages/platform/task-inputs.test.tsx",
+    "node": "discovers new package and workflow names including all legal roots",
+    "status": "passed",
+    "milliseconds": 0.49841700000001765
+  },
+  {
+    "file": "frontend/src/pages/platform/task-inputs.test.tsx",
+    "node": "keeps array item defaults omitted while editing another item",
+    "status": "passed",
+    "milliseconds": 46.1848329999998
+  },
+  {
+    "file": "frontend/src/pages/platform/task-inputs.test.tsx",
+    "node": "matches JSON Schema Unicode code point length constraints",
+    "status": "passed",
+    "milliseconds": 0.4752089999999498
+  },
+  {
+    "file": "frontend/src/pages/platform/task-preparation.test.tsx",
+    "node": "preserves arbitrary business values and avoids falling back to internal connection identifiers",
+    "status": "passed",
+    "milliseconds": 136.87245899999994
+  },
+  {
+    "file": "frontend/src/pages/platform/task-preparation.test.tsx",
+    "node": "shows current model observation without changing configuration readiness",
+    "status": "passed",
+    "milliseconds": 36.03495900000007
+  },
+  {
+    "file": "frontend/src/pages/platform/task-preparation.test.tsx",
+    "node": "identifies a budget-only change without describing it as a connection change",
+    "status": "passed",
+    "milliseconds": 6.936959000000115
+  },
+  {
+    "file": "frontend/src/pages/platform/task-preparation.test.tsx",
+    "node": "shows business scope and previous settings without exposing platform bindings or issues",
+    "status": "passed",
+    "milliseconds": 15.257916999999907
+  },
+  {
+    "file": "frontend/src/pages/platform/tasks.test.tsx",
+    "node": "shows the catalog authoring entry only in expert mode while keeping ordinary tasks",
+    "status": "passed",
+    "milliseconds": 174.01708299999996
+  },
+  {
+    "file": "frontend/src/pages/platform/tasks.test.tsx",
+    "node": "keeps a customized task discoverable in ordinary mode",
+    "status": "passed",
+    "milliseconds": 14.697916999999961
+  },
+  {
+    "file": "frontend/src/pages/platform/tasks.test.tsx",
+    "node": "restores and saves explicit preset input null separately from a bookmark",
+    "status": "passed",
+    "milliseconds": 102.97633299999984
+  },
+  {
+    "file": "frontend/src/pages/platform/tasks.test.tsx",
+    "node": "restores and saves explicit preset input [] separately from a bookmark",
+    "status": "passed",
+    "milliseconds": 44.35541699999999
+  },
+  {
+    "file": "frontend/src/pages/platform/tasks.test.tsx",
+    "node": "restores and saves explicit preset input \"scalar input\" separately from a bookmark",
+    "status": "passed",
+    "milliseconds": 36.500749999999925
+  },
+  {
+    "file": "frontend/src/pages/platform/tasks.test.tsx",
+    "node": "restores and saves explicit preset input 0 separately from a bookmark",
+    "status": "passed",
+    "milliseconds": 30.90712499999995
+  },
+  {
+    "file": "frontend/src/pages/platform/tasks.test.tsx",
+    "node": "restores and saves explicit preset input false separately from a bookmark",
+    "status": "passed",
+    "milliseconds": 36.23116600000003
+  },
+  {
+    "file": "frontend/src/pages/platform/tasks.test.tsx",
+    "node": "retains an explicit historical null instead of the current schema default",
+    "status": "passed",
+    "milliseconds": 21.540457999999944
+  },
+  {
+    "file": "frontend/src/pages/platform/tasks.test.tsx",
+    "node": "shows effective settings automatically and starts with one user action",
+    "status": "passed",
+    "milliseconds": 71.62895800000001
+  },
+  {
+    "file": "frontend/src/pages/platform/tasks.test.tsx",
+    "node": "lets experts recheck ready settings without changing the ordinary task input",
+    "status": "passed",
+    "milliseconds": 123.81783299999984
+  },
+  {
+    "file": "frontend/src/pages/platform/tasks.test.tsx",
+    "node": "lets an automatic preparation failure be retried before starting",
+    "status": "passed",
+    "milliseconds": 92.13612499999999
+  },
+  {
+    "file": "frontend/src/pages/platform/tasks.test.tsx",
+    "node": "requires visible confirmation for automatically discovered binding changes",
+    "status": "passed",
+    "milliseconds": 83.84470800000008
+  },
+  {
+    "file": "frontend/src/pages/platform/tasks.test.tsx",
+    "node": "automatically exposes missing connections without starting or changing input",
+    "status": "passed",
+    "milliseconds": 49.253333999999995
+  },
+  {
+    "file": "frontend/src/pages/platform/tasks.test.tsx",
+    "node": "restores an uncertain submission after remount and retries the same identity without input edits",
+    "status": "passed",
+    "milliseconds": 171.16162499999996
+  },
+  {
+    "file": "frontend/src/pages/platform/tasks.test.tsx",
+    "node": "keeps business input and draft name through mode switches and editor return",
+    "status": "passed",
+    "milliseconds": 84.60687499999995
+  },
+  {
+    "file": "frontend/src/pages/platform/tasks.test.tsx",
+    "node": "lets an explicit binding rejection be repaired and prepared again",
+    "status": "passed",
+    "milliseconds": 146.17495800000006
+  },
+  {
+    "file": "frontend/src/pages/platform/tasks.test.tsx",
+    "node": "preserves explicit false and omitted schema/2 defaults when editing and saving a preset",
+    "status": "passed",
+    "milliseconds": 48.90370800000028
+  },
+  {
+    "file": "frontend/src/pages/platform/tasks.test.tsx",
+    "node": "commits pending identity before launch and restores it after a lost response in a new editor",
+    "status": "passed",
+    "milliseconds": 128.22900000000027
+  },
+  {
+    "file": "frontend/src/pages/platform/tasks.test.tsx",
+    "node": "does not send a launch if the pending draft cannot be persisted",
+    "status": "passed",
+    "milliseconds": 94.47816700000021
+  },
+  {
+    "file": "frontend/src/pages/platform/tasks.test.tsx",
+    "node": "restores an unfinished draft with its frozen schema and saves invalid text without launching",
+    "status": "passed",
+    "milliseconds": 96.27866700000004
+  },
+  {
+    "file": "frontend/src/pages/platform/tasks.test.tsx",
+    "node": "locks submission throughout pending persistence and keeps the lock across the recovery URL change",
+    "status": "passed",
+    "milliseconds": 153.66708300000028
+  },
+  {
+    "file": "frontend/src/pages/platform/tasks.test.tsx",
+    "node": "keeps a resumed unsaved draft locked while the launch response is still pending",
+    "status": "passed",
+    "milliseconds": 163.82941699999992
+  },
+  {
+    "file": "frontend/src/pages/platform/tasks.test.tsx",
+    "node": "keeps a object input task discoverable from its catalog action",
+    "status": "passed",
+    "milliseconds": 13.813874999999825
+  },
+  {
+    "file": "frontend/src/pages/platform/tasks.test.tsx",
+    "node": "keeps a array input task discoverable from its catalog action",
+    "status": "passed",
+    "milliseconds": 15.009750000000167
+  },
+  {
+    "file": "frontend/src/pages/platform/tasks.test.tsx",
+    "node": "keeps a string input task discoverable from its catalog action",
+    "status": "passed",
+    "milliseconds": 12.963459000000057
+  },
+  {
+    "file": "frontend/src/pages/platform/tasks.test.tsx",
+    "node": "keeps a integer input task discoverable from its catalog action",
+    "status": "passed",
+    "milliseconds": 15.512041999999838
+  },
+  {
+    "file": "frontend/src/pages/platform/tasks.test.tsx",
+    "node": "keeps a number input task discoverable from its catalog action",
+    "status": "passed",
+    "milliseconds": 12.96929100000034
+  },
+  {
+    "file": "frontend/src/pages/platform/tasks.test.tsx",
+    "node": "keeps a boolean input task discoverable from its catalog action",
+    "status": "passed",
+    "milliseconds": 15.003999999999905
+  },
+  {
+    "file": "frontend/src/pages/platform/tasks.test.tsx",
+    "node": "keeps a null input task discoverable from its catalog action",
+    "status": "passed",
+    "milliseconds": 14.057374999999865
+  },
+  {
+    "file": "frontend/src/lib/platform-authoring/schema/codec.test.ts",
+    "node": "schema codec writes title and description metadata for supported builder nodes",
+    "status": "passed",
+    "milliseconds": 3.258874999999989
+  },
+  {
+    "file": "frontend/src/lib/platform-authoring/schema/codec.test.ts",
+    "node": "schema codec reads title and description metadata from supported JSON Schema nodes",
+    "status": "passed",
+    "milliseconds": 2.327166000000034
+  },
+  {
+    "file": "frontend/src/lib/platform-authoring/schema/codec.test.ts",
+    "node": "schema codec parses already-decoded JSON Schema objects through the shared schema parser",
+    "status": "passed",
+    "milliseconds": 0.9272500000001855
+  },
+  {
+    "file": "frontend/src/lib/platform-authoring/schema/codec.test.ts",
+    "node": "schema codec returns structured parser failures for invalid already-decoded JSON Schema values",
+    "status": "passed",
+    "milliseconds": 0.24558400000000802
+  },
+  {
+    "file": "frontend/src/lib/platform-authoring/schema/codec.test.ts",
+    "node": "schema codec writes primitive builder defaultValue entries as JSON Schema defaults",
+    "status": "passed",
+    "milliseconds": 0.2549589999998716
+  },
+  {
+    "file": "frontend/src/lib/platform-authoring/schema/codec.test.ts",
+    "node": "schema codec round-trips nested object and array defaultValue entries through JSON Schema defaults",
+    "status": "passed",
+    "milliseconds": 1.369374999999991
+  },
+  {
+    "file": "frontend/src/lib/platform-authoring/schema/codec.test.ts",
+    "node": "schema codec reads primitive JSON Schema defaults into builder defaultValue entries",
+    "status": "passed",
+    "milliseconds": 0.2802080000001297
+  },
+  {
+    "file": "frontend/src/lib/platform-authoring/schema/codec.test.ts",
+    "node": "schema codec rejects undeclared fields in closed object defaults",
+    "status": "passed",
+    "milliseconds": 0.21816600000011022
+  },
+  {
+    "file": "frontend/src/lib/platform-authoring/schema/codec.test.ts",
+    "node": "schema codec reports unsupported keywords with the current parser wording",
+    "status": "passed",
+    "milliseconds": 0.20887500000003456
+  },
+  {
+    "file": "frontend/src/lib/platform-authoring/schema/codec.test.ts",
+    "node": "schema codec decodes registry refs into key and version fields",
+    "status": "passed",
+    "milliseconds": 0.18524999999999636
+  },
+  {
+    "file": "frontend/src/lib/platform-authoring/schema/codec.test.ts",
+    "node": "versioned schema annotations requires per-node opt-in and never inherits the root marker",
+    "status": "passed",
+    "milliseconds": 0.6289170000000013
+  },
+  {
+    "file": "frontend/src/lib/platform-authoring/schema/codec.test.ts",
+    "node": "versioned schema annotations preserves marker, empty examples and constraint declarations without adding annotations elsewhere",
+    "status": "passed",
+    "milliseconds": 0.2562920000000304
+  },
+  {
+    "file": "frontend/src/lib/platform-authoring/schema/codec.test.ts",
+    "node": "versioned schema annotations validates examples and defaults against preserved constraints",
+    "status": "passed",
+    "milliseconds": 0.16075000000000728
+  },
+  {
+    "file": "frontend/src/lib/platform-authoring/schema/codec.test.ts",
+    "node": "versioned schema annotations keeps explicit null as an error for a non-nullable scalar rather than silently omitting it",
+    "status": "passed",
+    "milliseconds": 0.09912499999995816
+  },
+  {
+    "file": "frontend/src/lib/platform-authoring/schema/input-values.test.ts",
+    "node": "initializes every legal root and arbitrary constant without wrapping or supplementing it",
+    "status": "passed",
+    "milliseconds": 3.9624999999998636
+  },
+  {
+    "file": "frontend/src/lib/platform-authoring/schema/input-values.test.ts",
+    "node": "validates compound choices structurally regardless of object key order",
+    "status": "passed",
+    "milliseconds": 1.7637079999999514
+  },
+  {
+    "file": "frontend/src/lib/platform-authoring/schema/input-values.test.ts",
+    "node": "validates all supported numeric, text, collection and omission boundaries with labels",
+    "status": "passed",
+    "milliseconds": 0.7401670000001559
+  },
+  {
+    "file": "frontend/src/lib/platform-authoring/schema/launch-input-state.test.ts",
+    "node": "launch input state creates canonical state for required and defaulted fields",
+    "status": "passed",
+    "milliseconds": 16.467291000000046
+  },
+  {
+    "file": "frontend/src/lib/platform-authoring/schema/launch-input-state.test.ts",
+    "node": "launch input state keeps formatted JSON deterministic",
+    "status": "passed",
+    "milliseconds": 0.6838330000000497
+  },
+  {
+    "file": "frontend/src/lib/platform-authoring/schema/launch-input-state.test.ts",
+    "node": "launch input state rejects missing required fields before applying payloads",
+    "status": "passed",
+    "milliseconds": 1.0542500000001382
+  },
+  {
+    "file": "frontend/src/lib/platform-authoring/schema/launch-input-state.test.ts",
+    "node": "launch input state rejects unknown fields before applying supported object payloads",
+    "status": "passed",
+    "milliseconds": 0.7979170000000977
+  },
+  {
+    "file": "frontend/src/lib/platform-authoring/schema/launch-input-state.test.ts",
+    "node": "launch input state keeps optional fields and defaults absent in explicitly supplied payloads",
+    "status": "passed",
+    "milliseconds": 0.587833000000046
+  },
+  {
+    "file": "frontend/src/lib/platform-authoring/schema/launch-input-state.test.ts",
+    "node": "launch input state rejects nested missing required fields and nested unknown fields",
+    "status": "passed",
+    "milliseconds": 0.2953330000000278
+  },
+  {
+    "file": "frontend/src/lib/platform-authoring/schema/launch-input-state.test.ts",
+    "node": "launch input state drops optional schema keys from the canonical payload after form removal",
+    "status": "passed",
+    "milliseconds": 0.8684580000001461
+  },
+  {
+    "file": "frontend/src/lib/platform-authoring/schema/launch-input-state.test.ts",
+    "node": "launch input state roundtrips explicit nullable nulls for primitive enum object and array wrappers",
+    "status": "passed",
+    "milliseconds": 0.7186669999998685
+  },
+  {
+    "file": "frontend/src/lib/platform-authoring/schema/launch-input-state.test.ts",
+    "node": "launch input state rejects non-nullable nulls before applying raw JSON to a draft",
+    "status": "passed",
+    "milliseconds": 0.3362919999999576
+  },
+  {
+    "file": "frontend/src/lib/platform-authoring/schema/launch-input-state.test.ts",
+    "node": "launch input state preserves unknown fields and nullable nulls when metadata rebinds the draft",
+    "status": "passed",
+    "milliseconds": 0.40604199999984303
+  },
+  {
+    "file": "frontend/src/lib/platform-authoring/schema/launch-input-state.test.ts",
+    "node": "launch input state keeps unsupported schemas on the raw JSON fallback path",
+    "status": "passed",
+    "milliseconds": 0.4592920000000049
+  },
+  {
+    "file": "frontend/src/lib/platform-authoring/schema/launch-input-state.test.ts",
+    "node": "launch input state parses only object raw JSON payloads",
+    "status": "passed",
+    "milliseconds": 0.8483750000000327
+  },
+  {
+    "file": "frontend/src/lib/platform-authoring/schema/preview.test.ts",
+    "node": "schema preview values keeps titles out of synthesized string samples",
+    "status": "passed",
+    "milliseconds": 3.1330829999999423
+  },
+  {
+    "file": "frontend/src/lib/platform-authoring/schema/preview.test.ts",
+    "node": "schema preview values builds initial run input values from required fields only",
+    "status": "passed",
+    "milliseconds": 0.34124999999994543
+  },
+  {
+    "file": "frontend/src/lib/platform-authoring/schema/schema-template.test.ts",
+    "node": "launch schema templates derives deterministic JSON from required and defaulted schema fields",
+    "status": "passed",
+    "milliseconds": 17.184999999999945
+  },
+  {
+    "file": "frontend/src/lib/platform-authoring/schema/schema-template.test.ts",
+    "node": "launch schema templates resets back to the exact generated template text",
+    "status": "passed",
+    "milliseconds": 0.29920800000002146
+  },
+  {
+    "file": "frontend/src/lib/platform-authoring/schema/schema-template.test.ts",
+    "node": "launch schema templates starts unsupported or non-object schemas from an empty object template",
+    "status": "passed",
+    "milliseconds": 0.6903749999999036
+  },
+  {
+    "file": "frontend/src/lib/platform-authoring/schema/schema-template.test.ts",
+    "node": "launch schema templates parses only object JSON launch parameters",
+    "status": "passed",
+    "milliseconds": 0.92287500000009
+  },
+  {
+    "file": "frontend/src/lib/platform-authoring/schema/schema-template.test.ts",
+    "node": "launch schema templates preserves explicit nulls in parsed launch parameter JSON",
+    "status": "passed",
+    "milliseconds": 0.21649999999999636
+  }
+]

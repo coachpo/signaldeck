@@ -1,0 +1,282 @@
+[
+  {
+    "project": "clean-full",
+    "nodeid": "shell-full.spec.ts:30 :: generic navigation owns one route shell without embedded finance pages",
+    "status": "passed",
+    "duration_ms": 1095,
+    "error": ""
+  },
+  {
+    "project": "clean-full",
+    "nodeid": "shell-full.spec.ts:67 :: definition workspace and resources fit width 375",
+    "status": "passed",
+    "duration_ms": 1160,
+    "error": ""
+  },
+  {
+    "project": "clean-full",
+    "nodeid": "shell-full.spec.ts:67 :: definition workspace and resources fit width 768",
+    "status": "passed",
+    "duration_ms": 1239,
+    "error": ""
+  },
+  {
+    "project": "clean-full",
+    "nodeid": "shell-full.spec.ts:67 :: definition workspace and resources fit width 1024",
+    "status": "passed",
+    "duration_ms": 1427,
+    "error": ""
+  },
+  {
+    "project": "clean-full",
+    "nodeid": "shell-full.spec.ts:67 :: definition workspace and resources fit width 1440",
+    "status": "passed",
+    "duration_ms": 1318,
+    "error": ""
+  },
+  {
+    "project": "tablet-full",
+    "nodeid": "shell-full.spec.ts:67 :: definition workspace and resources fit width 375",
+    "status": "passed",
+    "duration_ms": 1082,
+    "error": ""
+  },
+  {
+    "project": "tablet-full",
+    "nodeid": "shell-full.spec.ts:67 :: definition workspace and resources fit width 768",
+    "status": "failed",
+    "duration_ms": 5502,
+    "error": "Error: expect(received).toBeLessThanOrEqual(expected)\n\nExpected: <= 1\nReceived:    1032\n\nCall Log:\n- Timeout 5000ms exceeded while waiting on the predicate"
+  },
+  {
+    "project": "tablet-full",
+    "nodeid": "shell-full.spec.ts:67 :: definition workspace and resources fit width 1024",
+    "status": "passed",
+    "duration_ms": 1185,
+    "error": ""
+  },
+  {
+    "project": "tablet-full",
+    "nodeid": "shell-full.spec.ts:67 :: definition workspace and resources fit width 1440",
+    "status": "passed",
+    "duration_ms": 1235,
+    "error": ""
+  },
+  {
+    "project": "mobile-full",
+    "nodeid": "shell-full.spec.ts:67 :: definition workspace and resources fit width 375",
+    "status": "failed",
+    "duration_ms": 5424,
+    "error": "Error: expect(received).toBeLessThanOrEqual(expected)\n\nExpected: <= 1\nReceived:    1425\n\nCall Log:\n- Timeout 5000ms exceeded while waiting on the predicate"
+  },
+  {
+    "project": "mobile-full",
+    "nodeid": "shell-full.spec.ts:67 :: definition workspace and resources fit width 768",
+    "status": "passed",
+    "duration_ms": 1172,
+    "error": ""
+  },
+  {
+    "project": "mobile-full",
+    "nodeid": "shell-full.spec.ts:67 :: definition workspace and resources fit width 1024",
+    "status": "passed",
+    "duration_ms": 1168,
+    "error": ""
+  },
+  {
+    "project": "mobile-full",
+    "nodeid": "shell-full.spec.ts:67 :: definition workspace and resources fit width 1440",
+    "status": "passed",
+    "duration_ms": 1246,
+    "error": ""
+  },
+  {
+    "project": "hidden-full",
+    "nodeid": "shell-full.spec.ts:30 :: generic navigation owns one route shell without embedded finance pages",
+    "status": "failed",
+    "duration_ms": 5331,
+    "error": "Error: expect(locator).toHaveCount(expected) failed\n\nLocator:  getByRole('link', { name: '选择任务', exact: true })\nExpected: 5\nReceived: 0\nTimeout:  5000ms\n\nCall log:\n  - Expect \"toHaveCount\" with timeout 5000ms\n  - waiting for getByRole('link', { name: '选择任务', exact: true })\n    14 × locator resolved to 0 elements\n       - unexpected value \"0\"\n"
+  },
+  {
+    "project": "href-full",
+    "nodeid": "shell-full.spec.ts:30 :: generic navigation owns one route shell without embedded finance pages",
+    "status": "failed",
+    "duration_ms": 5298,
+    "error": "Error: expect(locator).toBeVisible() failed\n\nLocator: locator('a[href=\"/tasks/new?packageKey=digital_oracle_researcher&workflowKey=research\"]')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n  - Expect \"toBeVisible\" with timeout 5000ms\n  - waiting for locator('a[href=\"/tasks/new?packageKey=digital_oracle_researcher&workflowKey=research\"]')\n"
+  },
+  {
+    "project": "clean-reduced",
+    "nodeid": "shell-reduced.spec.ts:30 :: generic navigation owns one route shell without embedded finance pages",
+    "status": "passed",
+    "duration_ms": 1082,
+    "error": ""
+  },
+  {
+    "project": "clean-reduced",
+    "nodeid": "shell-reduced.spec.ts:66 :: definition workspace and resources fit width 375",
+    "status": "passed",
+    "duration_ms": 1073,
+    "error": ""
+  },
+  {
+    "project": "clean-reduced",
+    "nodeid": "shell-reduced.spec.ts:66 :: definition workspace and resources fit width 768",
+    "status": "passed",
+    "duration_ms": 1169,
+    "error": ""
+  },
+  {
+    "project": "clean-reduced",
+    "nodeid": "shell-reduced.spec.ts:66 :: definition workspace and resources fit width 1024",
+    "status": "passed",
+    "duration_ms": 1196,
+    "error": ""
+  },
+  {
+    "project": "clean-reduced",
+    "nodeid": "shell-reduced.spec.ts:66 :: definition workspace and resources fit width 1440",
+    "status": "passed",
+    "duration_ms": 1290,
+    "error": ""
+  },
+  {
+    "project": "tablet-reduced",
+    "nodeid": "shell-reduced.spec.ts:66 :: definition workspace and resources fit width 375",
+    "status": "passed",
+    "duration_ms": 1086,
+    "error": ""
+  },
+  {
+    "project": "tablet-reduced",
+    "nodeid": "shell-reduced.spec.ts:66 :: definition workspace and resources fit width 768",
+    "status": "failed",
+    "duration_ms": 5422,
+    "error": "Error: expect(received).toBeLessThanOrEqual(expected)\n\nExpected: <= 1\nReceived:    1032\n\nCall Log:\n- Timeout 5000ms exceeded while waiting on the predicate"
+  },
+  {
+    "project": "tablet-reduced",
+    "nodeid": "shell-reduced.spec.ts:66 :: definition workspace and resources fit width 1024",
+    "status": "passed",
+    "duration_ms": 1199,
+    "error": ""
+  },
+  {
+    "project": "tablet-reduced",
+    "nodeid": "shell-reduced.spec.ts:66 :: definition workspace and resources fit width 1440",
+    "status": "passed",
+    "duration_ms": 1213,
+    "error": ""
+  },
+  {
+    "project": "mobile-reduced",
+    "nodeid": "shell-reduced.spec.ts:66 :: definition workspace and resources fit width 375",
+    "status": "failed",
+    "duration_ms": 5439,
+    "error": "Error: expect(received).toBeLessThanOrEqual(expected)\n\nExpected: <= 1\nReceived:    1425\n\nCall Log:\n- Timeout 5000ms exceeded while waiting on the predicate"
+  },
+  {
+    "project": "mobile-reduced",
+    "nodeid": "shell-reduced.spec.ts:66 :: definition workspace and resources fit width 768",
+    "status": "passed",
+    "duration_ms": 1198,
+    "error": ""
+  },
+  {
+    "project": "mobile-reduced",
+    "nodeid": "shell-reduced.spec.ts:66 :: definition workspace and resources fit width 1024",
+    "status": "passed",
+    "duration_ms": 1151,
+    "error": ""
+  },
+  {
+    "project": "mobile-reduced",
+    "nodeid": "shell-reduced.spec.ts:66 :: definition workspace and resources fit width 1440",
+    "status": "passed",
+    "duration_ms": 1275,
+    "error": ""
+  },
+  {
+    "project": "hidden-reduced",
+    "nodeid": "shell-reduced.spec.ts:30 :: generic navigation owns one route shell without embedded finance pages",
+    "status": "failed",
+    "duration_ms": 5295,
+    "error": "Error: expect(locator).toHaveCount(expected) failed\n\nLocator:  getByRole('link', { name: '选择任务', exact: true })\nExpected: 5\nReceived: 0\nTimeout:  5000ms\n\nCall log:\n  - Expect \"toHaveCount\" with timeout 5000ms\n  - waiting for getByRole('link', { name: '选择任务', exact: true })\n    14 × locator resolved to 0 elements\n       - unexpected value \"0\"\n"
+  },
+  {
+    "project": "href-reduced",
+    "nodeid": "shell-reduced.spec.ts:30 :: generic navigation owns one route shell without embedded finance pages",
+    "status": "failed",
+    "duration_ms": 5293,
+    "error": "Error: expect(locator).toBeVisible() failed\n\nLocator: locator('a[href=\"/tasks/new?packageKey=digital_oracle_researcher&workflowKey=research\"]')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n  - Expect \"toBeVisible\" with timeout 5000ms\n  - waiting for locator('a[href=\"/tasks/new?packageKey=digital_oracle_researcher&workflowKey=research\"]')\n"
+  },
+  {
+    "project": "clean-no-tablet",
+    "nodeid": "shell-no-tablet.spec.ts:30 :: generic navigation owns one route shell without embedded finance pages",
+    "status": "passed",
+    "duration_ms": 1027,
+    "error": ""
+  },
+  {
+    "project": "clean-no-tablet",
+    "nodeid": "shell-no-tablet.spec.ts:66 :: definition workspace and resources fit width 375",
+    "status": "passed",
+    "duration_ms": 1037,
+    "error": ""
+  },
+  {
+    "project": "clean-no-tablet",
+    "nodeid": "shell-no-tablet.spec.ts:66 :: definition workspace and resources fit width 1024",
+    "status": "passed",
+    "duration_ms": 1232,
+    "error": ""
+  },
+  {
+    "project": "clean-no-tablet",
+    "nodeid": "shell-no-tablet.spec.ts:66 :: definition workspace and resources fit width 1440",
+    "status": "passed",
+    "duration_ms": 1263,
+    "error": ""
+  },
+  {
+    "project": "tablet-no-tablet",
+    "nodeid": "shell-no-tablet.spec.ts:66 :: definition workspace and resources fit width 375",
+    "status": "passed",
+    "duration_ms": 1078,
+    "error": ""
+  },
+  {
+    "project": "tablet-no-tablet",
+    "nodeid": "shell-no-tablet.spec.ts:66 :: definition workspace and resources fit width 1024",
+    "status": "passed",
+    "duration_ms": 1237,
+    "error": ""
+  },
+  {
+    "project": "tablet-no-tablet",
+    "nodeid": "shell-no-tablet.spec.ts:66 :: definition workspace and resources fit width 1440",
+    "status": "passed",
+    "duration_ms": 1262,
+    "error": ""
+  },
+  {
+    "project": "mobile-no-tablet",
+    "nodeid": "shell-no-tablet.spec.ts:66 :: definition workspace and resources fit width 375",
+    "status": "failed",
+    "duration_ms": 5425,
+    "error": "Error: expect(received).toBeLessThanOrEqual(expected)\n\nExpected: <= 1\nReceived:    1425\n\nCall Log:\n- Timeout 5000ms exceeded while waiting on the predicate"
+  },
+  {
+    "project": "mobile-no-tablet",
+    "nodeid": "shell-no-tablet.spec.ts:66 :: definition workspace and resources fit width 1024",
+    "status": "passed",
+    "duration_ms": 1226,
+    "error": ""
+  },
+  {
+    "project": "mobile-no-tablet",
+    "nodeid": "shell-no-tablet.spec.ts:66 :: definition workspace and resources fit width 1440",
+    "status": "passed",
+    "duration_ms": 1203,
+    "error": ""
+  }
+]
