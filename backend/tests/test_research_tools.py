@@ -1,12 +1,20 @@
 """Canonical research reports bind immutable observations through the public plugin."""
 
+import asyncio
 import sys
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from uuid import uuid4
 
+import httpx
 import pytest
 from fastapi.testclient import TestClient
+from mcp import ClientSession
+from mcp.client.streamable_http import streamable_http_client
+
+from tests.test_durable_runtime_support import serve_app
+from tests.test_independent_plugins import invocation
+from tests.test_research_discussion import report_arguments
 
 for directory in ("runtime", "finance"):
     sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "plugins" / directory))
@@ -200,3 +208,50 @@ def test_market_evidence_cannot_bypass_symbol_grants(database_url):
             {"symbol": "MSFT", "asOfDate": "2099-01-01"},
             identity(),
         )
+
+
+def test_discussion_report_round_trips_through_real_mcp_and_http(database_url):
+    app = create_app(database_url, DeterministicQuoteProvider())
+
+    async def scenario():
+        async with app.router.lifespan_context(app):
+            async with serve_app(app) as url:
+                async with streamable_http_client(url + "/mcp/") as (read, write, _):
+                    async with ClientSession(read, write) as session:
+                        await session.initialize()
+                        release = (await session.list_tools()).meta["signaldeck/release"]
+
+                        async def call(short, args):
+                            tool = "signaldeck/finance/" + short
+                            result = await session.call_tool(
+                                tool,
+                                args,
+                                meta={
+                                    "signaldeck/release": release,
+                                    "signaldeck/context": invocation(tool),
+                                },
+                            )
+                            assert not result.isError, result
+                            return result.structuredContent
+
+                        args = report_arguments()
+                        compiled = await call("research_report_compile", args)
+                        assert compiled["status"] == "validated"
+                        assert compiled["narrativeStatus"] == "unverified"
+                        saved = await call(
+                            "research_reports_create",
+                            {key: compiled[key] for key in ("name", "content")},
+                        )
+                        assert saved["content"] == compiled["content"]
+                        async with httpx.AsyncClient(base_url=url) as client:
+                            read_back = await client.get(f"/api/reports/{saved['slug']}")
+                            download = await client.get(f"/api/reports/{saved['slug']}/download")
+                        assert read_back.status_code == download.status_code == 200
+                        assert read_back.json()["content"] == download.text == compiled["content"]
+                        assert "Demand remains resilient." in download.text
+                        assert "Retain with stated uncertainty." in download.text
+
+    try:
+        asyncio.run(scenario())
+    finally:
+        app.state.engine.dispose()

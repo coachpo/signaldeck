@@ -723,8 +723,41 @@ agents:
           minLength: 1
           maxLength: 5000
           title: 论证与回应
+        case:
+          type: object
+          properties:
+            arguments:
+              type: array
+              maxItems: 3
+              items:
+                type: object
+                properties:
+                  argumentId:
+                    type: string
+                    minLength: 1
+                    maxLength: 80
+                  statement:
+                    type: string
+                    minLength: 1
+                    maxLength: 1000
+                  evidenceIds:
+                    type: array
+                    maxItems: 10
+                    items:
+                      type: string
+                      minLength: 1
+                      maxLength: 160
+                unevaluatedProperties: false
+                required:
+                - argumentId
+                - statement
+                - evidenceIds
+          unevaluatedProperties: false
+          required:
+          - arguments
       required:
       - content
+      - case
       unevaluatedProperties: false
     strategy:
       kind: model
@@ -736,12 +769,18 @@ agents:
         或 excerptTruncated 表示本次显示不完整，不得以摘要中未出现某项资料证明完整账本没有该资料。文本预览不是原文全文。数值、单位、期间与引用身份不可改写；URL、公开时间、期间、单位和定位以该集合为准，不自行改写来源。collectionGaps
         是实际采集限制，不得隐去。标题/摘要不等于已读正文；社交只提供待核查假设。用户材料未独立核实。宏观缺口明确说明，不用公司财务或 Treasury 平均利率冒充宏观公布版本或无风险期限收益率。
 
-        按 symbol、asOfDate、horizonMonths、question 完成角色职责。四路分析分别关注行情与技术、公司财务、宏观敞口、新闻政策。多空阶段根据 perspective
-        建立论证；回应 ownCase/opposingCase 的核心分歧；风险复核检验缺口、反证及阈值依据；裁决综合各阶段并在关键事实不足时选择 insufficient_evidence。
+        按 symbol、asOfDate、horizonMonths、question 完成角色职责。四路分析分别关注行情与技术、公司财务、宏观敞口、新闻政策。多空阶段根据 perspective 建立论证；回应
+        ownCase/opposingCase 的核心分歧；风险复核检验缺口、反证及阈值依据；裁决综合各阶段并在关键事实不足时选择 insufficient_evidence。
 
-        content 只写定性分析和反证，不包含数字、比例、目标价或未经校验的阈值断言。事实性数字必须在最终 claims 字段引用 evidenceIds 并保留口径，阈值必须在 thresholds
-        中明示 guidance/historical/hypothesis。无法支持的数字不输出。最终裁决必须在 content 中明确写出偏多、偏空、中性或证据不足，并给出依据、反证、定性失效条件与历史文字对比；这些方向与论证仍只是模型意见。最终裁决的
-        content 是未核实定性解读，不是规范报告；后续确定性工具负责生成唯一保存正文。previousReport 仅为用户未核实的历史文字，用于定性对比，不是监测基线。没有材料时明确缺口，不声称分析成功。'
+        content 只写定性分析和反证，不包含数字、比例、目标价或未经校验的阈值断言。事实性数字必须在最终 claims 字段引用 evidenceIds 并保留口径，阈值必须在 thresholds 中明示
+        guidance/historical/hypothesis。无法支持的数字不输出。最终裁决必须在 content 中明确写出偏多、偏空、中性或证据不足，并给出依据、反证、定性失效条件与历史文字对比；这些方向与论证仍只是模型意见。最终裁决的
+        content 是未核实定性解读，不是规范报告；后续确定性工具负责生成唯一保存正文。previousReport 仅为用户未核实的历史文字，用于定性对比，不是监测基线。没有材料时明确缺口，不声称分析成功。
+
+
+        case.arguments 输出最多三个定性论点；perspective=bull 使用稳定编号 bull-1、bull-2、bull-3，bear 使用 bear-1、bear-2、bear-3。每项写
+        argumentId、statement、evidenceIds；仅引用输入 evidence 中可核验的证据，不把论点编号当作数值 claims 编号。证据不足时可少于三个或为空，不凑数。 新增结构中的
+        statement/rationale 仅为定性意见，不得包含数值事实、比例、目标价或阈值；事实数值仍只能通过最终 claims/thresholds 校验。evidenceIds 可为空；非空引用只使用已核验且截至截止时间可用的输入证据。上游结构为
+        {} 表示阶段缺失，不是成功但没有论点；不得编造缺失阶段，须在 content 说明限制。'
     tools: []
     resources: []
     budget:
@@ -875,6 +914,68 @@ agents:
             type: string
         cutoffAt:
           type: string
+        ownArguments:
+          type: object
+          properties:
+            arguments:
+              type: array
+              maxItems: 3
+              items:
+                type: object
+                properties:
+                  argumentId:
+                    type: string
+                    minLength: 1
+                    maxLength: 80
+                  statement:
+                    type: string
+                    minLength: 1
+                    maxLength: 1000
+                  evidenceIds:
+                    type: array
+                    maxItems: 10
+                    items:
+                      type: string
+                      minLength: 1
+                      maxLength: 160
+                unevaluatedProperties: false
+                required:
+                - argumentId
+                - statement
+                - evidenceIds
+          unevaluatedProperties: false
+          required: []
+        opposingArguments:
+          type: object
+          properties:
+            arguments:
+              type: array
+              maxItems: 3
+              items:
+                type: object
+                properties:
+                  argumentId:
+                    type: string
+                    minLength: 1
+                    maxLength: 80
+                  statement:
+                    type: string
+                    minLength: 1
+                    maxLength: 1000
+                  evidenceIds:
+                    type: array
+                    maxItems: 10
+                    items:
+                      type: string
+                      minLength: 1
+                      maxLength: 160
+                unevaluatedProperties: false
+                required:
+                - argumentId
+                - statement
+                - evidenceIds
+          unevaluatedProperties: false
+          required: []
       required:
       - symbol
       - asOfDate
@@ -900,8 +1001,49 @@ agents:
           minLength: 1
           maxLength: 5000
           title: 论证与回应
+        response:
+          type: object
+          properties:
+            responses:
+              type: array
+              maxItems: 3
+              items:
+                type: object
+                properties:
+                  argumentId:
+                    type: string
+                    minLength: 1
+                    maxLength: 80
+                  disposition:
+                    type: string
+                    enum:
+                    - accepted
+                    - partially_accepted
+                    - rejected
+                    - unresolved
+                  rationale:
+                    type: string
+                    minLength: 1
+                    maxLength: 1000
+                  evidenceIds:
+                    type: array
+                    maxItems: 10
+                    items:
+                      type: string
+                      minLength: 1
+                      maxLength: 160
+                unevaluatedProperties: false
+                required:
+                - argumentId
+                - disposition
+                - rationale
+                - evidenceIds
+          unevaluatedProperties: false
+          required:
+          - responses
       required:
       - content
+      - response
       unevaluatedProperties: false
     strategy:
       kind: model
@@ -913,12 +1055,19 @@ agents:
         或 excerptTruncated 表示本次显示不完整，不得以摘要中未出现某项资料证明完整账本没有该资料。文本预览不是原文全文。数值、单位、期间与引用身份不可改写；URL、公开时间、期间、单位和定位以该集合为准，不自行改写来源。collectionGaps
         是实际采集限制，不得隐去。标题/摘要不等于已读正文；社交只提供待核查假设。用户材料未独立核实。宏观缺口明确说明，不用公司财务或 Treasury 平均利率冒充宏观公布版本或无风险期限收益率。
 
-        按 symbol、asOfDate、horizonMonths、question 完成角色职责。四路分析分别关注行情与技术、公司财务、宏观敞口、新闻政策。多空阶段根据 perspective
-        建立论证；回应 ownCase/opposingCase 的核心分歧；风险复核检验缺口、反证及阈值依据；裁决综合各阶段并在关键事实不足时选择 insufficient_evidence。
+        按 symbol、asOfDate、horizonMonths、question 完成角色职责。四路分析分别关注行情与技术、公司财务、宏观敞口、新闻政策。多空阶段根据 perspective 建立论证；回应
+        ownCase/opposingCase 的核心分歧；风险复核检验缺口、反证及阈值依据；裁决综合各阶段并在关键事实不足时选择 insufficient_evidence。
 
-        content 只写定性分析和反证，不包含数字、比例、目标价或未经校验的阈值断言。事实性数字必须在最终 claims 字段引用 evidenceIds 并保留口径，阈值必须在 thresholds
-        中明示 guidance/historical/hypothesis。无法支持的数字不输出。最终裁决必须在 content 中明确写出偏多、偏空、中性或证据不足，并给出依据、反证、定性失效条件与历史文字对比；这些方向与论证仍只是模型意见。最终裁决的
-        content 是未核实定性解读，不是规范报告；后续确定性工具负责生成唯一保存正文。previousReport 仅为用户未核实的历史文字，用于定性对比，不是监测基线。没有材料时明确缺口，不声称分析成功。'
+        content 只写定性分析和反证，不包含数字、比例、目标价或未经校验的阈值断言。事实性数字必须在最终 claims 字段引用 evidenceIds 并保留口径，阈值必须在 thresholds 中明示
+        guidance/historical/hypothesis。无法支持的数字不输出。最终裁决必须在 content 中明确写出偏多、偏空、中性或证据不足，并给出依据、反证、定性失效条件与历史文字对比；这些方向与论证仍只是模型意见。最终裁决的
+        content 是未核实定性解读，不是规范报告；后续确定性工具负责生成唯一保存正文。previousReport 仅为用户未核实的历史文字，用于定性对比，不是监测基线。没有材料时明确缺口，不声称分析成功。
+
+
+        读取 ownArguments 与 opposingArguments 的原始论点。response.responses 对 opposingArguments.arguments 中的每个 argumentId
+        恰好回应一次，保留其编号，不回应自己的论点、不新建编号。每项给 disposition=accepted/partially_accepted/rejected/unresolved、rationale
+        和 evidenceIds；无法判断明确 unresolved。content 保留简短可读摘要，不替代逐项记录。 新增结构中的 statement/rationale 仅为定性意见，不得包含数值事实、比例、目标价或阈值；事实数值仍只能通过最终
+        claims/thresholds 校验。evidenceIds 可为空；非空引用只使用已核验且截至截止时间可用的输入证据。上游结构为 {} 表示阶段缺失，不是成功但没有论点；不得编造缺失阶段，须在
+        content 说明限制。'
     tools: []
     resources: []
     budget:
@@ -1055,6 +1204,146 @@ agents:
             type: string
         cutoffAt:
           type: string
+        bullArguments:
+          type: object
+          properties:
+            arguments:
+              type: array
+              maxItems: 3
+              items:
+                type: object
+                properties:
+                  argumentId:
+                    type: string
+                    minLength: 1
+                    maxLength: 80
+                  statement:
+                    type: string
+                    minLength: 1
+                    maxLength: 1000
+                  evidenceIds:
+                    type: array
+                    maxItems: 10
+                    items:
+                      type: string
+                      minLength: 1
+                      maxLength: 160
+                unevaluatedProperties: false
+                required:
+                - argumentId
+                - statement
+                - evidenceIds
+          unevaluatedProperties: false
+          required: []
+        bearArguments:
+          type: object
+          properties:
+            arguments:
+              type: array
+              maxItems: 3
+              items:
+                type: object
+                properties:
+                  argumentId:
+                    type: string
+                    minLength: 1
+                    maxLength: 80
+                  statement:
+                    type: string
+                    minLength: 1
+                    maxLength: 1000
+                  evidenceIds:
+                    type: array
+                    maxItems: 10
+                    items:
+                      type: string
+                      minLength: 1
+                      maxLength: 160
+                unevaluatedProperties: false
+                required:
+                - argumentId
+                - statement
+                - evidenceIds
+          unevaluatedProperties: false
+          required: []
+        bullResponse:
+          type: object
+          properties:
+            responses:
+              type: array
+              maxItems: 3
+              items:
+                type: object
+                properties:
+                  argumentId:
+                    type: string
+                    minLength: 1
+                    maxLength: 80
+                  disposition:
+                    type: string
+                    enum:
+                    - accepted
+                    - partially_accepted
+                    - rejected
+                    - unresolved
+                  rationale:
+                    type: string
+                    minLength: 1
+                    maxLength: 1000
+                  evidenceIds:
+                    type: array
+                    maxItems: 10
+                    items:
+                      type: string
+                      minLength: 1
+                      maxLength: 160
+                unevaluatedProperties: false
+                required:
+                - argumentId
+                - disposition
+                - rationale
+                - evidenceIds
+          unevaluatedProperties: false
+          required: []
+        bearResponse:
+          type: object
+          properties:
+            responses:
+              type: array
+              maxItems: 3
+              items:
+                type: object
+                properties:
+                  argumentId:
+                    type: string
+                    minLength: 1
+                    maxLength: 80
+                  disposition:
+                    type: string
+                    enum:
+                    - accepted
+                    - partially_accepted
+                    - rejected
+                    - unresolved
+                  rationale:
+                    type: string
+                    minLength: 1
+                    maxLength: 1000
+                  evidenceIds:
+                    type: array
+                    maxItems: 10
+                    items:
+                      type: string
+                      minLength: 1
+                      maxLength: 160
+                unevaluatedProperties: false
+                required:
+                - argumentId
+                - disposition
+                - rationale
+                - evidenceIds
+          unevaluatedProperties: false
+          required: []
       required:
       - symbol
       - asOfDate
@@ -1081,8 +1370,48 @@ agents:
           minLength: 1
           maxLength: 6000
           title: 分析内容
+        review:
+          type: object
+          properties:
+            assessments:
+              type: array
+              maxItems: 6
+              items:
+                type: object
+                properties:
+                  argumentId:
+                    type: string
+                    minLength: 1
+                    maxLength: 80
+                  assessment:
+                    type: string
+                    enum:
+                    - supported
+                    - weakened
+                    - unresolved
+                  rationale:
+                    type: string
+                    minLength: 1
+                    maxLength: 1000
+                  evidenceIds:
+                    type: array
+                    maxItems: 10
+                    items:
+                      type: string
+                      minLength: 1
+                      maxLength: 160
+                unevaluatedProperties: false
+                required:
+                - argumentId
+                - assessment
+                - rationale
+                - evidenceIds
+          unevaluatedProperties: false
+          required:
+          - assessments
       required:
       - content
+      - review
       unevaluatedProperties: false
     strategy:
       kind: model
@@ -1094,12 +1423,18 @@ agents:
         或 excerptTruncated 表示本次显示不完整，不得以摘要中未出现某项资料证明完整账本没有该资料。文本预览不是原文全文。数值、单位、期间与引用身份不可改写；URL、公开时间、期间、单位和定位以该集合为准，不自行改写来源。collectionGaps
         是实际采集限制，不得隐去。标题/摘要不等于已读正文；社交只提供待核查假设。用户材料未独立核实。宏观缺口明确说明，不用公司财务或 Treasury 平均利率冒充宏观公布版本或无风险期限收益率。
 
-        按 symbol、asOfDate、horizonMonths、question 完成角色职责。四路分析分别关注行情与技术、公司财务、宏观敞口、新闻政策。多空阶段根据 perspective
-        建立论证；回应 ownCase/opposingCase 的核心分歧；风险复核检验缺口、反证及阈值依据；裁决综合各阶段并在关键事实不足时选择 insufficient_evidence。
+        按 symbol、asOfDate、horizonMonths、question 完成角色职责。四路分析分别关注行情与技术、公司财务、宏观敞口、新闻政策。多空阶段根据 perspective 建立论证；回应
+        ownCase/opposingCase 的核心分歧；风险复核检验缺口、反证及阈值依据；裁决综合各阶段并在关键事实不足时选择 insufficient_evidence。
 
-        content 只写定性分析和反证，不包含数字、比例、目标价或未经校验的阈值断言。事实性数字必须在最终 claims 字段引用 evidenceIds 并保留口径，阈值必须在 thresholds
-        中明示 guidance/historical/hypothesis。无法支持的数字不输出。最终裁决必须在 content 中明确写出偏多、偏空、中性或证据不足，并给出依据、反证、定性失效条件与历史文字对比；这些方向与论证仍只是模型意见。最终裁决的
-        content 是未核实定性解读，不是规范报告；后续确定性工具负责生成唯一保存正文。previousReport 仅为用户未核实的历史文字，用于定性对比，不是监测基线。没有材料时明确缺口，不声称分析成功。'
+        content 只写定性分析和反证，不包含数字、比例、目标价或未经校验的阈值断言。事实性数字必须在最终 claims 字段引用 evidenceIds 并保留口径，阈值必须在 thresholds 中明示
+        guidance/historical/hypothesis。无法支持的数字不输出。最终裁决必须在 content 中明确写出偏多、偏空、中性或证据不足，并给出依据、反证、定性失效条件与历史文字对比；这些方向与论证仍只是模型意见。最终裁决的
+        content 是未核实定性解读，不是规范报告；后续确定性工具负责生成唯一保存正文。previousReport 仅为用户未核实的历史文字，用于定性对比，不是监测基线。没有材料时明确缺口，不声称分析成功。
+
+
+        读取 bullArguments、bearArguments、bullResponse、bearResponse 的原始结构。review.assessments 对双方每个已有 argumentId
+        恰好复核一次；assessment=supported/weakened/unresolved，说明 rationale 和 evidenceIds，不改写编号，不新增论点。证据不足明确 unresolved，content
+        保留简短可读风险摘要。 新增结构中的 statement/rationale 仅为定性意见，不得包含数值事实、比例、目标价或阈值；事实数值仍只能通过最终 claims/thresholds 校验。evidenceIds
+        可为空；非空引用只使用已核验且截至截止时间可用的输入证据。上游结构为 {} 表示阶段缺失，不是成功但没有论点；不得编造缺失阶段，须在 content 说明限制。'
     tools: []
     resources: []
     budget:
@@ -1246,6 +1581,184 @@ agents:
             type: string
         cutoffAt:
           type: string
+        bullArguments:
+          type: object
+          properties:
+            arguments:
+              type: array
+              maxItems: 3
+              items:
+                type: object
+                properties:
+                  argumentId:
+                    type: string
+                    minLength: 1
+                    maxLength: 80
+                  statement:
+                    type: string
+                    minLength: 1
+                    maxLength: 1000
+                  evidenceIds:
+                    type: array
+                    maxItems: 10
+                    items:
+                      type: string
+                      minLength: 1
+                      maxLength: 160
+                unevaluatedProperties: false
+                required:
+                - argumentId
+                - statement
+                - evidenceIds
+          unevaluatedProperties: false
+          required: []
+        bearArguments:
+          type: object
+          properties:
+            arguments:
+              type: array
+              maxItems: 3
+              items:
+                type: object
+                properties:
+                  argumentId:
+                    type: string
+                    minLength: 1
+                    maxLength: 80
+                  statement:
+                    type: string
+                    minLength: 1
+                    maxLength: 1000
+                  evidenceIds:
+                    type: array
+                    maxItems: 10
+                    items:
+                      type: string
+                      minLength: 1
+                      maxLength: 160
+                unevaluatedProperties: false
+                required:
+                - argumentId
+                - statement
+                - evidenceIds
+          unevaluatedProperties: false
+          required: []
+        bullResponse:
+          type: object
+          properties:
+            responses:
+              type: array
+              maxItems: 3
+              items:
+                type: object
+                properties:
+                  argumentId:
+                    type: string
+                    minLength: 1
+                    maxLength: 80
+                  disposition:
+                    type: string
+                    enum:
+                    - accepted
+                    - partially_accepted
+                    - rejected
+                    - unresolved
+                  rationale:
+                    type: string
+                    minLength: 1
+                    maxLength: 1000
+                  evidenceIds:
+                    type: array
+                    maxItems: 10
+                    items:
+                      type: string
+                      minLength: 1
+                      maxLength: 160
+                unevaluatedProperties: false
+                required:
+                - argumentId
+                - disposition
+                - rationale
+                - evidenceIds
+          unevaluatedProperties: false
+          required: []
+        bearResponse:
+          type: object
+          properties:
+            responses:
+              type: array
+              maxItems: 3
+              items:
+                type: object
+                properties:
+                  argumentId:
+                    type: string
+                    minLength: 1
+                    maxLength: 80
+                  disposition:
+                    type: string
+                    enum:
+                    - accepted
+                    - partially_accepted
+                    - rejected
+                    - unresolved
+                  rationale:
+                    type: string
+                    minLength: 1
+                    maxLength: 1000
+                  evidenceIds:
+                    type: array
+                    maxItems: 10
+                    items:
+                      type: string
+                      minLength: 1
+                      maxLength: 160
+                unevaluatedProperties: false
+                required:
+                - argumentId
+                - disposition
+                - rationale
+                - evidenceIds
+          unevaluatedProperties: false
+          required: []
+        riskAssessment:
+          type: object
+          properties:
+            assessments:
+              type: array
+              maxItems: 6
+              items:
+                type: object
+                properties:
+                  argumentId:
+                    type: string
+                    minLength: 1
+                    maxLength: 80
+                  assessment:
+                    type: string
+                    enum:
+                    - supported
+                    - weakened
+                    - unresolved
+                  rationale:
+                    type: string
+                    minLength: 1
+                    maxLength: 1000
+                  evidenceIds:
+                    type: array
+                    maxItems: 10
+                    items:
+                      type: string
+                      minLength: 1
+                      maxLength: 160
+                unevaluatedProperties: false
+                required:
+                - argumentId
+                - assessment
+                - rationale
+                - evidenceIds
+          unevaluatedProperties: false
+          required: []
       required:
       - symbol
       - asOfDate
@@ -1474,6 +1987,46 @@ agents:
             - periodEnd
             - observedEvidenceId
             unevaluatedProperties: false
+        judgment:
+          type: object
+          properties:
+            decisions:
+              type: array
+              maxItems: 6
+              items:
+                type: object
+                properties:
+                  argumentId:
+                    type: string
+                    minLength: 1
+                    maxLength: 80
+                  disposition:
+                    type: string
+                    enum:
+                    - retained
+                    - revised
+                    - withdrawn
+                    - unresolved
+                  rationale:
+                    type: string
+                    minLength: 1
+                    maxLength: 1000
+                  evidenceIds:
+                    type: array
+                    maxItems: 10
+                    items:
+                      type: string
+                      minLength: 1
+                      maxLength: 160
+                unevaluatedProperties: false
+                required:
+                - argumentId
+                - disposition
+                - rationale
+                - evidenceIds
+          unevaluatedProperties: false
+          required:
+          - decisions
       required:
       - name
       - symbol
@@ -1490,6 +2043,7 @@ agents:
       - content
       - claims
       - thresholds
+      - judgment
       unevaluatedProperties: false
     strategy:
       kind: model
@@ -1501,12 +2055,19 @@ agents:
         或 excerptTruncated 表示本次显示不完整，不得以摘要中未出现某项资料证明完整账本没有该资料。文本预览不是原文全文。数值、单位、期间与引用身份不可改写；URL、公开时间、期间、单位和定位以该集合为准，不自行改写来源。collectionGaps
         是实际采集限制，不得隐去。标题/摘要不等于已读正文；社交只提供待核查假设。用户材料未独立核实。宏观缺口明确说明，不用公司财务或 Treasury 平均利率冒充宏观公布版本或无风险期限收益率。
 
-        按 symbol、asOfDate、horizonMonths、question 完成角色职责。四路分析分别关注行情与技术、公司财务、宏观敞口、新闻政策。多空阶段根据 perspective
-        建立论证；回应 ownCase/opposingCase 的核心分歧；风险复核检验缺口、反证及阈值依据；裁决综合各阶段并在关键事实不足时选择 insufficient_evidence。
+        按 symbol、asOfDate、horizonMonths、question 完成角色职责。四路分析分别关注行情与技术、公司财务、宏观敞口、新闻政策。多空阶段根据 perspective 建立论证；回应
+        ownCase/opposingCase 的核心分歧；风险复核检验缺口、反证及阈值依据；裁决综合各阶段并在关键事实不足时选择 insufficient_evidence。
 
-        content 只写定性分析和反证，不包含数字、比例、目标价或未经校验的阈值断言。事实性数字必须在最终 claims 字段引用 evidenceIds 并保留口径，阈值必须在 thresholds
-        中明示 guidance/historical/hypothesis。无法支持的数字不输出。最终裁决必须在 content 中明确写出偏多、偏空、中性或证据不足，并给出依据、反证、定性失效条件与历史文字对比；这些方向与论证仍只是模型意见。最终裁决的
-        content 是未核实定性解读，不是规范报告；后续确定性工具负责生成唯一保存正文。previousReport 仅为用户未核实的历史文字，用于定性对比，不是监测基线。没有材料时明确缺口，不声称分析成功。'
+        content 只写定性分析和反证，不包含数字、比例、目标价或未经校验的阈值断言。事实性数字必须在最终 claims 字段引用 evidenceIds 并保留口径，阈值必须在 thresholds 中明示
+        guidance/historical/hypothesis。无法支持的数字不输出。最终裁决必须在 content 中明确写出偏多、偏空、中性或证据不足，并给出依据、反证、定性失效条件与历史文字对比；这些方向与论证仍只是模型意见。最终裁决的
+        content 是未核实定性解读，不是规范报告；后续确定性工具负责生成唯一保存正文。previousReport 仅为用户未核实的历史文字，用于定性对比，不是监测基线。没有材料时明确缺口，不声称分析成功。
+
+
+        读取 bullArguments、bearArguments、bullResponse、bearResponse 和 riskAssessment 的原始结构。judgment.decisions 对双方每个已有
+        argumentId 恰好裁决一次，保留编号，disposition=retained/revised/withdrawn/unresolved，写 rationale 和 evidenceIds。不得重写或代替上游原始记录；content
+        保留方向与主要依据。结构化争议与现有数值 claims/thresholds 分开。 新增结构中的 statement/rationale 仅为定性意见，不得包含数值事实、比例、目标价或阈值；事实数值仍只能通过最终
+        claims/thresholds 校验。evidenceIds 可为空；非空引用只使用已核验且截至截止时间可用的输入证据。上游结构为 {} 表示阶段缺失，不是成功但没有论点；不得编造缺失阶段，须在
+        content 说明限制。'
     tools: []
     resources: []
     budget:
@@ -3968,6 +4529,228 @@ agents:
         comparison:
           maxLength: 4000
           type: string
+        discussion:
+          type: object
+          properties:
+            bullCase:
+              type: object
+              properties:
+                arguments:
+                  type: array
+                  maxItems: 3
+                  items:
+                    type: object
+                    properties:
+                      argumentId:
+                        type: string
+                        minLength: 1
+                        maxLength: 80
+                      statement:
+                        type: string
+                        minLength: 1
+                        maxLength: 1000
+                      evidenceIds:
+                        type: array
+                        maxItems: 10
+                        items:
+                          type: string
+                          minLength: 1
+                          maxLength: 160
+                    unevaluatedProperties: false
+                    required:
+                    - argumentId
+                    - statement
+                    - evidenceIds
+              unevaluatedProperties: false
+              required: []
+            bearCase:
+              type: object
+              properties:
+                arguments:
+                  type: array
+                  maxItems: 3
+                  items:
+                    type: object
+                    properties:
+                      argumentId:
+                        type: string
+                        minLength: 1
+                        maxLength: 80
+                      statement:
+                        type: string
+                        minLength: 1
+                        maxLength: 1000
+                      evidenceIds:
+                        type: array
+                        maxItems: 10
+                        items:
+                          type: string
+                          minLength: 1
+                          maxLength: 160
+                    unevaluatedProperties: false
+                    required:
+                    - argumentId
+                    - statement
+                    - evidenceIds
+              unevaluatedProperties: false
+              required: []
+            bullResponse:
+              type: object
+              properties:
+                responses:
+                  type: array
+                  maxItems: 3
+                  items:
+                    type: object
+                    properties:
+                      argumentId:
+                        type: string
+                        minLength: 1
+                        maxLength: 80
+                      disposition:
+                        type: string
+                        enum:
+                        - accepted
+                        - partially_accepted
+                        - rejected
+                        - unresolved
+                      rationale:
+                        type: string
+                        minLength: 1
+                        maxLength: 1000
+                      evidenceIds:
+                        type: array
+                        maxItems: 10
+                        items:
+                          type: string
+                          minLength: 1
+                          maxLength: 160
+                    unevaluatedProperties: false
+                    required:
+                    - argumentId
+                    - disposition
+                    - rationale
+                    - evidenceIds
+              unevaluatedProperties: false
+              required: []
+            bearResponse:
+              type: object
+              properties:
+                responses:
+                  type: array
+                  maxItems: 3
+                  items:
+                    type: object
+                    properties:
+                      argumentId:
+                        type: string
+                        minLength: 1
+                        maxLength: 80
+                      disposition:
+                        type: string
+                        enum:
+                        - accepted
+                        - partially_accepted
+                        - rejected
+                        - unresolved
+                      rationale:
+                        type: string
+                        minLength: 1
+                        maxLength: 1000
+                      evidenceIds:
+                        type: array
+                        maxItems: 10
+                        items:
+                          type: string
+                          minLength: 1
+                          maxLength: 160
+                    unevaluatedProperties: false
+                    required:
+                    - argumentId
+                    - disposition
+                    - rationale
+                    - evidenceIds
+              unevaluatedProperties: false
+              required: []
+            riskReview:
+              type: object
+              properties:
+                assessments:
+                  type: array
+                  maxItems: 6
+                  items:
+                    type: object
+                    properties:
+                      argumentId:
+                        type: string
+                        minLength: 1
+                        maxLength: 80
+                      assessment:
+                        type: string
+                        enum:
+                        - supported
+                        - weakened
+                        - unresolved
+                      rationale:
+                        type: string
+                        minLength: 1
+                        maxLength: 1000
+                      evidenceIds:
+                        type: array
+                        maxItems: 10
+                        items:
+                          type: string
+                          minLength: 1
+                          maxLength: 160
+                    unevaluatedProperties: false
+                    required:
+                    - argumentId
+                    - assessment
+                    - rationale
+                    - evidenceIds
+              unevaluatedProperties: false
+              required: []
+            adjudication:
+              type: object
+              properties:
+                decisions:
+                  type: array
+                  maxItems: 6
+                  items:
+                    type: object
+                    properties:
+                      argumentId:
+                        type: string
+                        minLength: 1
+                        maxLength: 80
+                      disposition:
+                        type: string
+                        enum:
+                        - retained
+                        - revised
+                        - withdrawn
+                        - unresolved
+                      rationale:
+                        type: string
+                        minLength: 1
+                        maxLength: 1000
+                      evidenceIds:
+                        type: array
+                        maxItems: 10
+                        items:
+                          type: string
+                          minLength: 1
+                          maxLength: 160
+                    unevaluatedProperties: false
+                    required:
+                    - argumentId
+                    - disposition
+                    - rationale
+                    - evidenceIds
+              unevaluatedProperties: false
+              required: []
+          unevaluatedProperties: false
+          required: []
       required:
       - symbol
       - asOfDate
@@ -4884,6 +5667,22 @@ workflows:
           title: 预测事件及关联理由
           x-signaldeck-schema: signaldeck.schema/2
           default: []
+        lookbackDays:
+          type: integer
+          minimum: 1
+          maximum: 31
+          title: 行情与新闻回看天数
+          description: 行情、新闻及可选社交资料的采集窗口；最长三十一天，不等于判断期限，也不保证完整历史覆盖。
+          x-signaldeck-schema: signaldeck.schema/2
+          default: 7
+        statementLimit:
+          type: integer
+          minimum: 1
+          maximum: 12
+          title: 财务期间条数上限
+          description: 采集最近可用财务期间的条数上限；实际覆盖受公开日期、报表可用性和完整证据容量限制，不等于判断期限。
+          x-signaldeck-schema: signaldeck.schema/2
+          default: 4
       required:
       - symbol
       - asOfDate
@@ -5204,6 +6003,10 @@ workflows:
               ref: workflow.input.includeSocial
               onMissing:
                 value: false
+            lookbackDays:
+              ref: workflow.input.lookbackDays
+              onMissing:
+                value: 7
       financial_source:
         uses: collect_financials
         inputMapping:
@@ -5217,7 +6020,9 @@ workflows:
               onMissing:
                 value: ''
             statementLimit:
-              value: 4
+              ref: workflow.input.statementLimit
+              onMissing:
+                value: 4
       document_source:
         uses: collect_documents
         inputMapping:
@@ -5677,6 +6482,14 @@ workflows:
               onMissing:
                 value:
                 - 证据合并失败；研究证据不足。
+            ownArguments:
+              ref: nodes.bull.output.case
+              onMissing:
+                value: {}
+            opposingArguments:
+              ref: nodes.bear.output.case
+              onMissing:
+                value: {}
       bear_reply:
         uses: respond_case
         maxAttempts: 2
@@ -5739,6 +6552,14 @@ workflows:
               onMissing:
                 value:
                 - 证据合并失败；研究证据不足。
+            ownArguments:
+              ref: nodes.bear.output.case
+              onMissing:
+                value: {}
+            opposingArguments:
+              ref: nodes.bull.output.case
+              onMissing:
+                value: {}
       risk:
         uses: risk_review
         maxAttempts: 2
@@ -5807,6 +6628,22 @@ workflows:
               onMissing:
                 value:
                 - 证据合并失败；研究证据不足。
+            bullArguments:
+              ref: nodes.bull.output.case
+              onMissing:
+                value: {}
+            bearArguments:
+              ref: nodes.bear.output.case
+              onMissing:
+                value: {}
+            bullResponse:
+              ref: nodes.bull_reply.output.response
+              onMissing:
+                value: {}
+            bearResponse:
+              ref: nodes.bear_reply.output.response
+              onMissing:
+                value: {}
       decision:
         uses: adjudicate
         maxAttempts: 2
@@ -5883,6 +6720,26 @@ workflows:
               onMissing:
                 value:
                 - 证据合并失败；研究证据不足。
+            bullArguments:
+              ref: nodes.bull.output.case
+              onMissing:
+                value: {}
+            bearArguments:
+              ref: nodes.bear.output.case
+              onMissing:
+                value: {}
+            bullResponse:
+              ref: nodes.bull_reply.output.response
+              onMissing:
+                value: {}
+            bearResponse:
+              ref: nodes.bear_reply.output.response
+              onMissing:
+                value: {}
+            riskAssessment:
+              ref: nodes.risk.output.review
+              onMissing:
+                value: {}
       compile:
         uses: compile_report
         inputMapping:
@@ -5920,6 +6777,32 @@ workflows:
               ref: nodes.decision.output.changes
               onMissing:
                 value: 未完成历史文字比较；不能推断研究判断已发生变化。
+            discussion:
+              object:
+                bullCase:
+                  ref: nodes.bull.output.case
+                  onMissing:
+                    value: {}
+                bearCase:
+                  ref: nodes.bear.output.case
+                  onMissing:
+                    value: {}
+                bullResponse:
+                  ref: nodes.bull_reply.output.response
+                  onMissing:
+                    value: {}
+                bearResponse:
+                  ref: nodes.bear_reply.output.response
+                  onMissing:
+                    value: {}
+                riskReview:
+                  ref: nodes.risk.output.review
+                  onMissing:
+                    value: {}
+                adjudication:
+                  ref: nodes.decision.output.judgment
+                  onMissing:
+                    value: {}
         acceptUpstreamStates:
         - succeeded
         - failed
@@ -6041,7 +6924,7 @@ workflows:
         linkKey: report
   monitor:
     name: 美股证据变化监测
-    description: 每次触发冻结新截止，比较同范围有效证据；资料无效或无实质变化跳过深研究，仅首次基线或实质变化执行研究并绑定快照。
+    description: 每次触发冻结新截止，比较同范围有效证据；资料无效或无实质变化跳过深研究，仅首次基线或实质变化执行研究并绑定快照。 采集固定回看七天行情、新闻及可选社交，财务最近四个可用期间；资料覆盖与判断期限不同，不承诺完整历史。
     inputSchema:
       type: object
       properties:
@@ -6328,6 +7211,8 @@ workflows:
               ref: workflow.input.scope.includeSocial
               onMissing:
                 value: false
+            lookbackDays:
+              value: 7
       financial_source:
         uses: collect_financials
         inputMapping:
@@ -6889,6 +7774,14 @@ workflows:
               onMissing:
                 value:
                 - 证据合并失败；研究证据不足。
+            ownArguments:
+              ref: nodes.bull.output.case
+              onMissing:
+                value: {}
+            opposingArguments:
+              ref: nodes.bear.output.case
+              onMissing:
+                value: {}
         condition:
           op: eq
           args:
@@ -6960,6 +7853,14 @@ workflows:
               onMissing:
                 value:
                 - 证据合并失败；研究证据不足。
+            ownArguments:
+              ref: nodes.bear.output.case
+              onMissing:
+                value: {}
+            opposingArguments:
+              ref: nodes.bull.output.case
+              onMissing:
+                value: {}
         condition:
           op: eq
           args:
@@ -7037,6 +7938,22 @@ workflows:
               onMissing:
                 value:
                 - 证据合并失败；研究证据不足。
+            bullArguments:
+              ref: nodes.bull.output.case
+              onMissing:
+                value: {}
+            bearArguments:
+              ref: nodes.bear.output.case
+              onMissing:
+                value: {}
+            bullResponse:
+              ref: nodes.bull_reply.output.response
+              onMissing:
+                value: {}
+            bearResponse:
+              ref: nodes.bear_reply.output.response
+              onMissing:
+                value: {}
         condition:
           op: eq
           args:
@@ -7120,6 +8037,26 @@ workflows:
               onMissing:
                 value:
                 - 证据合并失败；研究证据不足。
+            bullArguments:
+              ref: nodes.bull.output.case
+              onMissing:
+                value: {}
+            bearArguments:
+              ref: nodes.bear.output.case
+              onMissing:
+                value: {}
+            bullResponse:
+              ref: nodes.bull_reply.output.response
+              onMissing:
+                value: {}
+            bearResponse:
+              ref: nodes.bear_reply.output.response
+              onMissing:
+                value: {}
+            riskAssessment:
+              ref: nodes.risk.output.review
+              onMissing:
+                value: {}
         condition:
           op: eq
           args:
@@ -7166,6 +8103,32 @@ workflows:
               ref: nodes.decision.output.changes
               onMissing:
                 value: 未完成历史文字比较；不能推断研究判断已发生变化。
+            discussion:
+              object:
+                bullCase:
+                  ref: nodes.bull.output.case
+                  onMissing:
+                    value: {}
+                bearCase:
+                  ref: nodes.bear.output.case
+                  onMissing:
+                    value: {}
+                bullResponse:
+                  ref: nodes.bull_reply.output.response
+                  onMissing:
+                    value: {}
+                bearResponse:
+                  ref: nodes.bear_reply.output.response
+                  onMissing:
+                    value: {}
+                riskReview:
+                  ref: nodes.risk.output.review
+                  onMissing:
+                    value: {}
+                adjudication:
+                  ref: nodes.decision.output.judgment
+                  onMissing:
+                    value: {}
         acceptUpstreamStates:
         - succeeded
         - failed

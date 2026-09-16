@@ -7,6 +7,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Literal
 
+from finance_plugin.research_discussion_models import ResearchDiscussion
 from plugin_runtime.common import CamelModel, ensure_timezone
 from pydantic import Field, field_validator, model_validator
 
@@ -152,6 +153,7 @@ class ResearchReportInput(CamelModel):
     upstream_gaps: list[str] = Field(default_factory=list, max_length=300)
     narrative: str = Field(default="", max_length=20000)
     comparison: str = Field(default="", max_length=4000)
+    discussion: ResearchDiscussion | None = None
 
     @field_validator("cutoff_at")
     @classmethod

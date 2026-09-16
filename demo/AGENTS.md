@@ -2,8 +2,6 @@
 
 This directory contains standalone example v2 Workflow Packages, not platform components or test fixtures:
 
-- `tradingagents_advisory_research.yaml`: fresh Finance quotes, parallel reusable analyst nodes, explicit risk-review skipping and Finance report persistence.
-- `digital_oracle_researcher.yaml`: parallel reusable specialist Agents using independently published Oracle tools, then Finance report persistence.
 - `research_notes.yaml`: collection-scoped Notes research and a deterministic capture workflow without a model dependency.
 - `us_equity_research.yaml`: independently declared equity research and explicit monitoring with Finance and Oracle tools.
 

@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-import html
-import re
 from datetime import UTC, datetime
 from decimal import Decimal
 
+from finance_plugin.research_discussion import compile_discussion
 from finance_plugin.research_evidence import ResearchReportOutput
 from finance_plugin.research_report_display import limitation_label, metric_label
 from finance_plugin.research_report_input import parse_report_input
+from finance_plugin.research_report_text import NUMERIC_OR_THRESHOLD, label
 from finance_plugin.research_report_validation import (
     claim_problem,
     day_end,
@@ -18,23 +18,6 @@ from finance_plugin.research_report_validation import (
     threshold_problem,
 )
 from plugin_runtime.serialization import project
-
-# Narrative is never treated as verified. Numeric/threshold assertions must enter
-# the structured path even when they repeat a value found elsewhere in the report.
-_NUMERIC_OR_THRESHOLD = re.compile(
-    r"\d|[%％±<>≤≥]|[零〇一二三四五六七八九十百千万亿两]+\s*(?:成|倍|元|美元|股|点|%)"
-    r"|落空|超预期|不及预期|阈值|低于|高于|突破|超过|指引|至少|至多|翻倍|减半"
-    r"|\b(?:threshold|guidance|beat|miss|above|below|greater|less|percent|double|half"
-    r"|zero|one|two|three|four|five|six|seven|eight|nine|ten|hundred|million|billion)\b",
-    re.IGNORECASE,
-)
-
-
-def label(value: str) -> str:
-    escaped = html.escape(value.replace("\n", " ").replace("\r", " "), quote=False)
-    for character in "#`*_[]":
-        escaped = escaped.replace(character, f"&#{ord(character)};")
-    return escaped
 
 
 def compile_research_report(arguments: dict, *, now: datetime | None = None) -> dict:
@@ -135,12 +118,16 @@ def compile_research_report(arguments: dict, *, now: datetime | None = None) -> 
             classification = "below"
         if threshold.upper is not None and value > Decimal(threshold.upper):
             classification = "above"
-        classification_label = {"within": "区间内", "below": "低于下界", "above": "高于上界"}[
-            classification
-        ]
-        basis = {"guidance": "公司指引", "historical": "历史参考", "hypothesis": "研究假设"}[
-            threshold.basis
-        ]
+        classification_label = {
+            "within": "区间内",
+            "below": "低于下界",
+            "above": "高于上界",
+        }[classification]
+        basis = {
+            "guidance": "公司指引",
+            "historical": "历史参考",
+            "hypothesis": "研究假设",
+        }[threshold.basis]
         lines.append(
             f"- {label(metric_label(threshold.metric))}（{basis}）："
             f"[{threshold.lower or '-∞'}, {threshold.upper or '+∞'}] {label(threshold.unit)}；"
@@ -155,7 +142,7 @@ def compile_research_report(arguments: dict, *, now: datetime | None = None) -> 
         lines.append("未设置阈值。")
     if request.narrative.strip():
         lines += ["", "## 模型推论，未经事实校验", "", label(request.narrative)]
-        if _NUMERIC_OR_THRESHOLD.search(request.narrative):
+        if NUMERIC_OR_THRESHOLD.search(request.narrative):
             gaps.append(
                 "unverified numeric or threshold assertion in narrative; "
                 "use structured claims/thresholds"
@@ -167,14 +154,26 @@ def compile_research_report(arguments: dict, *, now: datetime | None = None) -> 
             "",
             "\n".join(label(line) for line in request.comparison.split("\n")),
         ]
-        if _NUMERIC_OR_THRESHOLD.search(request.comparison):
+        if NUMERIC_OR_THRESHOLD.search(request.comparison):
             gaps.append(
                 "unverified numeric or threshold assertion in comparison; "
                 "use structured claims/thresholds"
             )
+    discussion_has_text = False
+    if request.discussion is not None:
+        discussion_lines, discussion_gaps, discussion_has_text = compile_discussion(
+            request.discussion, set(eligible)
+        )
+        lines.extend(discussion_lines)
+        gaps.extend(discussion_gaps)
     gaps = list(dict.fromkeys(gaps))
     status = "insufficient_evidence" if gaps else "validated"
-    lines += ["", "## 校验状态与资料缺口", "", f"状态：{'证据不足' if gaps else '结构化校验通过'}"]
+    lines += [
+        "",
+        "## 校验状态与资料缺口",
+        "",
+        f"状态：{'证据不足' if gaps else '结构化校验通过'}",
+    ]
     lines += [f"- {label(limitation_label(gap))}" for gap in gaps] if gaps else ["结构化检查通过。"]
     lines += ["", "## 完整来源附录（含未核实及未采用资料）", ""]
     for item in evidence.values():
@@ -242,7 +241,9 @@ def compile_research_report(arguments: dict, *, now: datetime | None = None) -> 
         data_gaps=gaps,
         evidence=list(evidence.values()),
         narrative_status=(
-            "unverified" if request.narrative.strip() or request.comparison.strip() else "absent"
+            "unverified"
+            if request.narrative.strip() or request.comparison.strip() or discussion_has_text
+            else "absent"
         ),
         independent_source_count=len(source_groups),
         cutoff_at=cutoff,

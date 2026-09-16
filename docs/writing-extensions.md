@@ -168,6 +168,25 @@ Finance 的 `research_evidence_merge` 保存完整证据和来源覆盖，同时
 
 `research_reports_create` 接收规范 `name/content` 和可选 `snapshotId`，以调用身份和完整 resource scope 写入 Journal；与普通报告一样不可覆盖。只读 `ReportRead.metadata.researchSnapshotId` 不能由普通创建/上传请求伪造。`monitor_begin`、`monitor_observe`、`monitor_report_attach` 均声明 write，其原子性、基线、精确报告绑定和新增表由[数据模型](data-model.md#插件业务数据)维护；它们不授权读取 Core 私有状态。`research_scope_freeze`、市场采集、合并与报告编译为 read，市场采集仍要求 `finance-market-data` 并校验允许的证券。
 
+## Finance 研究争议合同
+
+Finance 1.2.0 的 `research_report_compile` 输入可省略 `discussion`。省略时沿用原报告内容与输出字段；传入时把各阶段原始记录编入同一规范正文，不新增存储表或专用页面。普通 `reports_create` 不受影响。
+
+`discussion` 是闭合对象，包含以下可省略阶段。阶段对象内对应集合也可省略：阶段不存在或为 `{}` 都表示未提供该阶段，产生资料缺口；有集合则按实际记录校验，不能用空集合冒充失败阶段。空论点集合单独说明未提供论点。
+
+| 阶段 | 集合与上限 | 条目字段 |
+| --- | --- | --- |
+| `bullCase`、`bearCase` | `arguments`，每方最多 3 条 | `argumentId`、`statement`、`evidenceIds` |
+| `bullResponse`、`bearResponse` | `responses`，每方最多 3 条 | `argumentId`、`disposition`、`rationale`、`evidenceIds` |
+| `riskReview` | `assessments`，最多 6 条 | `argumentId`、`assessment`、`rationale`、`evidenceIds` |
+| `adjudication` | `decisions`，最多 6 条 | `argumentId`、`disposition`、`rationale`、`evidenceIds` |
+
+条目字段均必填。论点编号长度 1–80，论点及理由长度 1–1000，每条最多引用 10 个证据编号，编号长度 1–160。证据数组可以为空；提供的引用必须属于本次截止、证券及派生依赖检查后可用的证据集合。线上合同不接受显式 null、未知字段或超出数量/长度上限的结构。
+
+回应的 `disposition` 为 `accepted`、`partially_accepted`、`rejected` 或 `unresolved`，且必须逐项回应对方原始论点。风险 `assessment` 为 `supported`、`weakened` 或 `unresolved`；裁决 `disposition` 为 `retained`、`revised`、`withdrawn` 或 `unresolved`。风险与裁决分别覆盖全部原始论点。编号重复、未知/错误方目标、遗漏处置及不可用证据进入业务可读的 `dataGaps`，不会删除原始记录；合法的明确未决本身不是结构错误。
+
+各阶段由调用方分别提交原始输出，不能由裁决模型重新编造完整过程。编译器保证记录完整性与引用资格，不判断论证是否有说服力，也不验证预测方向。所有定性内容标为未核实，含数字或阈值的定性文字继续触发现有缺口检测，必须走 `claims/thresholds` 的数值校验路径。争议章节进入原有 `content`；保存、读取、下载和监测报告绑定均沿用同一正文。升级遵循下方冻结发布规则，已有运行仍使用其原发布。
+
 ## 独立接入与升级
 
 1. 构建独立服务，发布上述身份与工具合同，在插件端完成 schema、scope 和 effect 校验。
@@ -207,4 +226,4 @@ Core 的 `GET /api/connection-presets` 读取部署方提供的非敏感配置�
 }
 ```
 
-首批研究任务都引用 `research-model`；仓库不提供虚构供应商、账户、密钥或默认模型。部署方应先确认服务支持的协议、地址、模型和所需凭据，再把填好的项加入文件的 `items`；需要保留本地工具选择时一起复制默认两项。普通用户按业务名称明确选择，核对账户/范围/保存位置后输入密钥。密钥只由资源加密存储处理，不能进入该文件、描述、scope 或日志；成功保存后浏览器密码框清空，留空更新保留既有凭据。
+模型资源标识由所选工作流的公开声明确定，不形成平台预置名单；仓库不提供虚构供应商、账户、密钥或默认模型。部署方应先确认服务支持的协议、地址、模型和所需凭据，再把填好的项加入文件的 `items`；需要保留本地工具选择时一起复制默认两项。普通用户按业务名称明确选择，核对账户/范围/保存位置后输入密钥。密钥只由资源加密存储处理，不能进入该文件、描述、scope 或日志；成功保存后浏览器密码框清空，留空更新保留既有凭据。

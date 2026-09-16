@@ -4,9 +4,8 @@ These standalone examples use `signaldeck.workflowPackage/v2`. They are not plat
 
 | Package | Workflow | Result | Resources |
 | --- | --- | --- | --- |
-| [Market advisory research](tradingagents_advisory_research.yaml) | `research` | Shared quotes, history and news evidence, parallel opportunity/risk assessments, and a Finance report with reasons and counterevidence | Finance plugin; `finance-market-data`; `research-model` |
-| [Digital Oracle research](digital_oracle_researcher.yaml) | `research` | Parallel specialist research, cross-source checks and a Finance report identifying conclusions, counterevidence and unresolved gaps | Digital Oracle and Finance plugins; `research-model` |
 | [US equity research](us_equity_research.yaml) | `research` | Four analyst reports, a bounded bull/bear debate, independent risk review, a directional assessment and optional comparison with a supplied prior report | Digital Oracle and Finance plugins; `finance-market-data`; `equity-research-model` |
+| [US equity research](us_equity_research.yaml) | `monitor` | Frozen observations and explicit evidence comparisons; deep research only on an initial baseline or material change | Digital Oracle and Finance plugins; `finance-market-data`; `equity-research-model` |
 | [Research notes](research_notes.yaml) | `research` | Collection search, optional editing of conclusions and evidence-backed revisions, and an immutable note with source links | Notes plugin; `notes-workspace`; `research-model` |
 | [Research notes](research_notes.yaml) | `capture` | Original text saved as an immutable note | Notes plugin; `notes-workspace` |
 
@@ -18,7 +17,7 @@ Each preset is an independent use case. Its business inputs, research roles, pro
 
 The model-based research presets request Chinese reports that distinguish facts from inference, retain source dates and attribution, explain counterevidence, and identify missing or incomparable data. Repeated citations of the same source do not count as independent corroboration. Explicit corrections are distinguished from unresolved conflicts. Successful execution and schema validation confirm the data path; they do not establish the accuracy of a model's judgment.
 
-The three Finance-report workflows accept an optional `previousReport`. Paste the earlier report, including its subject, date, scope or horizon, conclusion and sources. Independent research stages receive only this run's inputs and evidence; the final editor compares the supplied report afterward. It must distinguish new facts, corrected facts and changed assumptions, and explain when the reports cannot be compared. No prior report means no historical comparison baseline. The workflow does not fetch previous runs or maintain implicit memory; repeated or scheduled launches keep the supplied input until it is explicitly changed.
+The equity `research` workflow accepts an optional `previousReport`. Paste the earlier report, including its subject, date, scope or horizon, conclusion and sources. Independent research stages receive only this run's inputs and evidence; the final editor compares the supplied report afterward. It must distinguish new facts, corrected facts and changed assumptions, and explain when the reports cannot be compared. No prior report means no historical comparison baseline. This workflow does not fetch previous runs or maintain implicit memory; repeated launches keep the supplied input until it is explicitly changed. The separate `monitor` workflow uses explicitly scoped observations as described below.
 
 ## US equity research
 
@@ -30,6 +29,10 @@ The research flow freezes its information cutoff, then collects structured SEC f
 
 All analysts, both cases and replies, risk review and adjudication receive the same immutable collection through explicit mappings. They cannot replace collected source facts. The final model proposes structured claims and thresholds plus a qualitative narrative; a deterministic Finance tool validates periods, units, references, arithmetic and threshold origin. The canonical body, stored report and download are identical. It has a readable source appendix and an explicit evidence status. The model narrative remains unverified inference; numeric assertions outside the structured path lower the report's evidence status. Supporting materials remain user-supplied evidence, and `previousReport` enters only the final qualitative comparison.
 
+Each side proposes at most three numbered qualitative arguments, then responds once to every opposing argument. Risk review and adjudication address each original argument by the same identifier. The compiler receives each stage directly, preserving the original positions, responses and final dispositions in the canonical report. Missing stages and incomplete or invalid references remain visible gaps; an explicitly unresolved judgment is valid. These checks establish record completeness and reference eligibility, not the truth or persuasiveness of a judgment. Numerical claims still use the separate structured calculation contract. This requires the Finance 1.2.0 public [discussion contract](../docs/writing-extensions.md#finance-研究争议合同).
+
+For `research`, `lookbackDays` selects 1–31 days of market/news history (default 7), and `statementLimit` selects 1–12 financial records (default 4). Choose these within the providers' actual coverage; a longer judgment horizon does not turn a short collection window into long-term evidence. These inputs do not extend provider history or add model calls.
+
 SEC XBRL dates identify actual periods and filing versions, not merely fiscal-focus labels. Cumulative and quarterly cash flows are distinct. Different capital-expenditure concepts retain their scope; missing debt is not zero. Market-cap/enterprise-value calculations based on reported shares are labelled estimates because intervening splits, issuance and repurchases may not have been reconciled. News summaries are not full policy text; incomplete document sections, unavailable pages and unknown publication times remain visible limitations. The workflow does not execute trades, manage holdings, backtest or assign calibrated win probabilities.
 
 ### Explicit monitoring
@@ -38,11 +41,13 @@ The same package offers **美股研究监测** (`monitor`). Its input has `monit
 
 Only the explicitly selected `scope.sources` govern freshness and comparisons; the collection may retain extra material. No baseline or material changes trigger deep research, unchanged evidence skips it, and invalid required evidence does not replace the last valid baseline. Observation validity and report success are separate. Rules or scope changes start a new comparable baseline; retrieved timestamps, ordering and duplicate collection do not trigger research. Prediction rule, status and expiry changes are separate from price changes, and probabilities are never compared across incompatible rules. Reports are bound to an exact observation, not an implicit “latest” report. This is separate from the other presets' manual `previousReport` behavior.
 
+Monitoring keeps an explicit 7-day market/news window and four financial records. These settings are fixed within this example because the public monitoring scope does not include configurable collection windows. Its research stages use the same bounded discussion and canonical report path as manual research, without changing the observation cutoff or baseline rules.
+
 ## Configure resources
 
 Install the relevant release descriptors from each plugin's `/release` endpoint. Plugin deployment and resource scopes are described in [the plugin guide](../plugins/README.md).
 
-Create `research-model` for the original research packages, or `equity-research-model` for US equity research, with the provider's base URL and model ID. Enter its credential in the separate credential field; do not put credentials in a package, prompt or resource scope. The `capture` workflow does not use a model resource.
+Create `research-model` for Notes or `equity-research-model` for US equity research, with the provider's base URL and model ID. Enter its credential in the separate credential field; do not put credentials in a package, prompt or resource scope. Notes passes its title and search query into the summarizer so it can stay on topic even when the current text is empty; no relevant material produces an explicit gap rather than an unrelated summary. The `capture` workflow does not use a model resource.
 
 Create these tool resources when using the corresponding package:
 

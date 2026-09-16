@@ -15,7 +15,7 @@ Finance provider implementations and template/report compiler were extracted fro
 Run builds from the repository root. Finance and Notes use the root context to compile the shared UI from the locked frontend dependencies; Oracle keeps the `plugins` context:
 
 ```sh
-docker build -f plugins/finance/Dockerfile -t signaldeck-finance:1.1.0 .
+docker build -f plugins/finance/Dockerfile -t signaldeck-finance:1.2.0 .
 docker build -f plugins/digital_oracle/Dockerfile -t signaldeck-digital-oracle:1.0.0 plugins
 docker build -f plugins/notes/Dockerfile -t signaldeck-notes:1.3.0 .
 ```
@@ -59,6 +59,8 @@ Oracle adds `source_documents_lookup` for explicit URLs or bounded SEC discovery
 `research_macro_evidence` preserves the original five FRED series by default, with up to five selected series and 50 observations. Requests use one bounded time budget and a vintage for the latest fully completed New York date within the cutoff. `periodEnd` remains the observation period; `availableByDate` means the selected version was available by that date's end, not its publication timestamp. Reports and monitoring check that separate upper bound without inventing a release time.
 
 Finance exposes `research_scope_freeze`, `research_market_evidence`, `research_evidence_merge`, `research_report_compile` and `research_reports_create`. Source results enter the same closed, versioned evidence collection; models only propose claims, thresholds and qualitative explanations. The deterministic compiler recomputes accepted numerical claims, checks threshold provenance and emits one canonical body with readable source references. Report storage and download preserve that body. Valuations based on reported shares remain explicitly unverified estimates until intervening share changes can be reconciled. Ordinary `reports_create` retains its general-purpose behavior.
+
+Finance 1.2.0 accepts optional bounded discussion records in the report compiler. Original opposing arguments, responses, risk assessments and adjudications remain separate. The compiler checks identities, opposing response targets, coverage and eligible evidence references, adding readable gaps without discarding the original records. Explicitly unresolved outcomes are valid; all qualitative statements remain unverified, and numerical assertions still require the existing numerical contract. Omitting discussion preserves the previous report output. See the [public discussion contract](../docs/writing-extensions.md#finance-研究争议合同); no Core, UI or database changes are required.
 
 The `monitor_begin`, `monitor_observe` and `monitor_report_attach` write tools use Finance's own transaction journal and new observation tables. Scope includes explicit source/event selections and rule versions; dynamic retrieval times do not change scope identity. New official facts, revised facts, selected numerical thresholds and prediction-contract changes have distinct meanings. Incomplete required coverage never replaces a valid baseline. See the [research implementation record](../docs/planning/research-upgrade-readiness.md) for validation and remaining source limitations.
 
