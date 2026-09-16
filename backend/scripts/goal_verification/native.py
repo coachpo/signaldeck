@@ -213,7 +213,6 @@ def _commands(group: str, workspace: Path, output: Path, env: dict[str, str]) ->
                 "DATABASE_URL": "postgresql://example:example@db:5432/example",
                 "TEMPORAL_ADDRESS": "temporal:7233",
                 "AGENT_PLATFORM_ENCRYPTION_KEY": "acceptance-example-only",
-                "SIGNALDECK_API_TOKEN": "acceptance-example-only",
                 "SIGNALDECK_IMAGE": "signaldeck:acceptance-example-only",
                 **{
                     key: "acceptance-example-only"

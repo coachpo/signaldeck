@@ -6,20 +6,7 @@ export const embedded = window.parent !== window && new URLSearchParams(location
 const mount = location.pathname.match(/^\/_plugins\/[^/]+\//)?.[0] ?? '/';
 export function pluginUrl(path: string) { return mount + path.replace(/^\//, ''); }
 export async function pluginFetch(path: string, init: RequestInit = {}) {
-  const headers = new Headers(init.headers);
-  let token: string | null = null;
-  try { token = localStorage.getItem('signaldeck.apiToken'); } catch { /* Storage can be unavailable. */ }
-  if (token) headers.set('Authorization', `Bearer ${token}`);
-  let response = await fetch(pluginUrl(path), { ...init, headers });
-  if (response.status === 401) {
-    token = window.prompt('请输入访问口令以继续使用 SignalDeck')?.trim() || null;
-    if (token) {
-      try { localStorage.setItem('signaldeck.apiToken', token); } catch { /* Keep this request usable. */ }
-      headers.set('Authorization', `Bearer ${token}`);
-      response = await fetch(pluginUrl(path), { ...init, headers });
-    }
-  }
-  return response;
+  return fetch(pluginUrl(path), init);
 }
 export function send(type: string, fields: Record<string, unknown> = {}) {
   if (type === 'state') { busy = fields.busy === true; if (!busy && pendingLocation) { const apply = pendingLocation; pendingLocation = undefined; queueMicrotask(apply); } }

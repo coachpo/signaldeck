@@ -283,7 +283,6 @@ async function main() {
     OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: "",
     OTEL_EXPORTER_OTLP_METRICS_ENDPOINT: "",
     OTEL_EXPORTER_OTLP_LOGS_ENDPOINT: "",
-    SIGNALDECK_API_TOKEN: "",
   };
   const cliVersion = spawnSync(temporalCli, ["--version"], {
     encoding: "utf8",

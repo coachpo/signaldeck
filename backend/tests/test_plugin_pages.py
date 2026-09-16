@@ -9,11 +9,9 @@ from fastapi.testclient import TestClient
 from pydantic import ValidationError
 from sqlalchemy.orm import Session, sessionmaker
 
-from app.core.config import reset_settings_cache
 from app.domain.plugin_pages import PluginMountRegistry
 from app.domain.tool_contracts import PluginRelease, canonical_digest, tool_contract_digest
 from app.infrastructure.platform_store import PlatformStore
-from app.main import create_app
 
 
 def release(digit: str = "a", mount: str = "third-v1") -> dict[str, Any]:
@@ -119,20 +117,3 @@ def test_directory_keeps_historical_and_disabled_pages(
     response = client.get("/api/plugin-pages")
     assert response.status_code == 503
     assert "do-not-expose" not in response.text
-
-
-def test_plugin_auth_uses_existing_bearer_gate(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("SIGNALDECK_API_TOKEN", "test-token")
-    reset_settings_cache()
-    with TestClient(create_app(init_database=False)) as client:
-        assert client.get("/api/plugin-auth").status_code == 401
-        assert (
-            client.get(
-                "/api/plugin-auth", headers={"Authorization": "Bearer test-token"}
-            ).status_code
-            == 204
-        )
-    monkeypatch.delenv("SIGNALDECK_API_TOKEN")
-    reset_settings_cache()
-    with TestClient(create_app(init_database=False)) as client:
-        assert client.get("/api/plugin-auth").status_code == 204

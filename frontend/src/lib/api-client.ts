@@ -37,7 +37,6 @@ const CONFIGURED_API_BASE_URL = normalizeApiBaseUrl(
 const API_BASE_URL = toVersionedApiBaseUrl(CONFIGURED_API_BASE_URL, "v1");
 const PLATFORM_API_BASE_URL = toPlatformApiBaseUrl(CONFIGURED_API_BASE_URL);
 const DETAIL_KEY_PATTERN = /^[A-Za-z][A-Za-z0-9_]*$/;
-const API_TOKEN_STORAGE_KEY = "signaldeck.apiToken";
 const UNSAFE_DETAIL_KEY_PARTS = [
   "apikey",
   "authorization",
@@ -136,49 +135,6 @@ function buildQueryString(query?: Record<string, RequestQueryValue>): string {
   }
 
   return searchParams.toString();
-}
-
-function readStoredApiToken(): string | null {
-  if (typeof window === "undefined") {
-    return null;
-  }
-
-  try {
-    return window.localStorage.getItem(API_TOKEN_STORAGE_KEY) || null;
-  } catch {
-    return null;
-  }
-}
-
-function writeStoredApiToken(token: string): void {
-  try {
-    window.localStorage.setItem(API_TOKEN_STORAGE_KEY, token);
-  } catch {
-    return;
-  }
-}
-
-function applyStoredApiToken(headers: Headers): void {
-  const token = readStoredApiToken();
-
-  if (token) {
-    headers.set("Authorization", `Bearer ${token}`);
-  }
-}
-
-// ponytail: prompt-based token entry; build a settings page if multi-user ever happens.
-function promptForApiToken(): string | null {
-  if (typeof window === "undefined" || typeof window.prompt !== "function") {
-    return null;
-  }
-
-  const token = window.prompt("请输入访问口令以继续使用 SignalDeck")?.trim();
-  if (!token) {
-    return null;
-  }
-
-  writeStoredApiToken(token);
-  return token;
 }
 
 function buildUrlForBaseUrl(
@@ -340,28 +296,12 @@ async function fetchWithBaseUrl(
   if (!headers.has("Accept")) {
     headers.set("Accept", defaultAccept);
   }
-  applyStoredApiToken(headers);
-
-  let response = await fetch(url, {
+  const response = await fetch(url, {
     body,
     headers,
     method,
     signal: options.signal,
   });
-
-  if (response.status === 401) {
-    const token = promptForApiToken();
-    if (token) {
-      const retryHeaders = new Headers(headers);
-      retryHeaders.set("Authorization", `Bearer ${token}`);
-      response = await fetch(url, {
-        body,
-        headers: retryHeaders,
-        method,
-        signal: options.signal,
-      });
-    }
-  }
 
   if (!response.ok) {
     throw await toApiRequestError(response);

@@ -10,10 +10,8 @@ import urllib.request
 from pathlib import Path
 
 
-def request(url: str, *, payload: object | None = None, core: bool = False) -> dict:
+def request(url: str, *, payload: object | None = None) -> dict:
     headers = {"Content-Type": "application/json"}
-    if core and os.environ.get("SIGNALDECK_API_TOKEN"):
-        headers["Authorization"] = "Bearer " + os.environ["SIGNALDECK_API_TOKEN"]
     body = json.dumps(payload).encode() if payload is not None else None
     with urllib.request.urlopen(
         urllib.request.Request(url, data=body, headers=headers), timeout=5
@@ -27,11 +25,15 @@ def main() -> None:
     defaults = json.loads(Path(__file__).with_name("plugin-defaults.json").read_text())
     try:
         installed = {
-            item["pluginId"]: item for item in request(api + "/plugins", core=True)["items"]
+            item["pluginId"]: item for item in request(api + "/plugins")["items"]
         }
-        resources = {item["resourceId"] for item in request(api + "/resources", core=True)["items"]}
+        resources = {
+            item["resourceId"] for item in request(api + "/resources")["items"]
+        }
     except Exception:
-        print("Plugin bootstrap skipped: Core API unavailable; existing configuration retained")
+        print(
+            "Plugin bootstrap skipped: Core API unavailable; existing configuration retained"
+        )
         return
     for plugin in defaults:
         if plugin["profile"] not in enabled:
@@ -64,11 +66,10 @@ def main() -> None:
                         "release": release,
                         "enabled": previous["enabled"] if previous else True,
                     },
-                    core=True,
                 )
             for resource in plugin["resources"]:
                 if resource["resourceId"] not in resources:
-                    request(api + "/resources", payload=resource, core=True)
+                    request(api + "/resources", payload=resource)
                     resources.add(resource["resourceId"])
             print("Local plugin defaults ready: " + plugin["pluginId"])
         except Exception:

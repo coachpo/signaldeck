@@ -21,7 +21,6 @@ PASSWORDS = (
     "NOTES_DB_PASSWORD",
     "TEMPORAL_DB_PASSWORD",
     "AGENT_PLATFORM_ENCRYPTION_KEY",
-    "SIGNALDECK_API_TOKEN",
 )
 DATABASE_ISOLATION = r"""
 set -eu
@@ -102,7 +101,6 @@ def verify(args):
     for profile in plugins:
         compose.extend(["--profile", profile])
     check = Check(f"http://127.0.0.1:{port}", f"http://127.0.0.1:{port}")
-    check.client.headers["Authorization"] = "Bearer " + env["SIGNALDECK_API_TOKEN"]
     completed = []
     try:
         run(compose + ["up", "-d"])
@@ -129,7 +127,7 @@ def verify(args):
             check.client.get(
                 check.base + "/api/workflow-packages", headers={"Authorization": ""}
             ).status_code
-            == 401
+            == 200
         )
         assert (
             check.client.get(
@@ -155,7 +153,7 @@ def verify(args):
         refs = references(result)
         assert refs
         completed.append(
-            "authenticated plugin bootstrap, gateway, durable Notes execution and large artifacts"
+            "public plugin bootstrap, gateway, durable Notes execution and large artifacts"
         )
         schedule = check.request(
             "/api/schedules",

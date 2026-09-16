@@ -19,7 +19,6 @@ SECRET_KEYS = (
     "NOTES_DB_PASSWORD",
     "TEMPORAL_DB_PASSWORD",
     "AGENT_PLATFORM_ENCRYPTION_KEY",
-    "SIGNALDECK_API_TOKEN",
 )
 
 
@@ -50,7 +49,7 @@ class CreateEnvironmentTests(unittest.TestCase):
             if line and not line.startswith("#")
         )
         secrets = [values[key] for key in SECRET_KEYS]
-        self.assertEqual(len(set(secrets)), 7)
+        self.assertEqual(len(set(secrets)), 6)
         for value in secrets:
             self.assertIsNotNone(re.fullmatch("[0-9a-f]{64}", value))
             self.assertNotIn(value, result.stdout + result.stderr)

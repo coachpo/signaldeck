@@ -5,7 +5,6 @@ x-core-environment: &core-environment
   SIGNALDECK_CONNECTION_PRESETS_FILE: /etc/signaldeck/connection-presets.json
   DATABASE_URL: postgresql+psycopg://signaldeck_core:${CORE_DB_PASSWORD:-core-local-password}@db:5432/signaldeck_core
   AGENT_PLATFORM_ENCRYPTION_KEY: ${AGENT_PLATFORM_ENCRYPTION_KEY:-signaldeck-agent-platform-dev-key}
-  SIGNALDECK_API_TOKEN: ${SIGNALDECK_API_TOKEN:-}
   SIGNALDECK_ARTIFACT_DIR: /data/artifacts
   SIGNALDECK_CORE_ARTIFACT_DIR: /data/core
   SIGNALDECK_CORE_ENV_DIR: /data/core-environments
@@ -181,5 +180,4 @@ services:
         condition: service_healthy
     environment:
       SIGNALDECK_API_URL: http://app:8080/api
-      SIGNALDECK_API_TOKEN: ${SIGNALDECK_API_TOKEN:-}
       SIGNALDECK_PLUGINS: ${SIGNALDECK_PLUGINS-finance,digital-oracle,notes}

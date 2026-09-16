@@ -2,7 +2,6 @@
 
 - Database-backed tests use real PostgreSQL. `conftest.py` resolves `TEST_DATABASE_URL`, then `DATABASE_URL`, otherwise provisions or reuses a local `pgvector/pgvector:pg16` Docker container; do not substitute SQLite.
 - The database fixture connects to `postgres`, creates a UUID-named database and drops it after the test. Supplied credentials need those privileges; fixtures reset DB and settings caches.
-- The autouse fixture clears `SIGNALDECK_API_TOKEN`; auth tests set it explicitly and reset settings through the existing fixtures.
 - Provider tests use `httpx.MockTransport`, local protocol servers in `test_durable_runtime_support.py` and `fake_openai_provider.py`. Keep tests independent of real external provider credentials and availability.
 - Use v2 definitions from `test_dag_compiler.py`, `test_platform_api.py` or the bundled demo sources. Demo and seed changes require `test_target_seeds.py` to keep source, plan, tool/resource bindings and locked hashes aligned.
 - `test_durable_runtime*.py` exercises real Temporal with the local CLI; `test_independent_plugins.py` exercises separate plugin processes and PostgreSQL ownership. Preserve protocol and worker-boundary tests for recovery, cancellation, isolation and unknown write results; mocked engine responses do not prove those behaviors.

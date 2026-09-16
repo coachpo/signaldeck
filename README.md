@@ -18,7 +18,7 @@ cd signaldeck
 ./start.sh
 ```
 
-启动脚本构建并运行本地/演示栈，默认应用地址为 `http://localhost:8080`，可用 `APP_PORT` 覆盖端口。后台启动、查看状态和停止使用同一脚本，以保持 Compose 项目名、数据目录和插件配置一致：
+启动脚本构建并运行本地/演示栈，默认应用地址为 `http://localhost:8080`，可用 `APP_PORT` 覆盖端口。应用无需访问口令，适用于可信内网。后台启动、查看状态和停止使用同一脚本，以保持 Compose 项目名、数据目录和插件配置一致：
 
 ```bash
 ./start.sh --detach
@@ -42,7 +42,7 @@ SIGNALDECK_PLUGINS=notes ./start.sh --detach
 
 空值只启动通用平台。启动时 bootstrap 注册缺失的本地插件描述与默认资源，保留已有配置；插件不可用时可在修复服务后运行 `./start.sh refresh-plugins` 刷新已选插件的 release。使用自定义环境变量时，后续状态、刷新和停止命令也应使用相同设置。插件使用说明见 [`plugins/README.md`](plugins/README.md)。
 
-启动脚本在镜像构建后读取制品描述，生成数据目录内的 `plugin-mounts.json`，将同一文件只读挂载给 Core 与 Nginx。登记内容变化会更新应用容器配置，使代理在重新创建时读取新映射。路径包含制品摘要，业务菜单使用插件声明的名称。自定义挂载可设置 `SIGNALDECK_PLUGIN_MOUNTS_FILE=/absolute/path/mounts.json`；文件格式、认证及独立部署方式见[统一插件页面](docs/writing-extensions.md#统一插件页面)。直接调用 `docker compose up` 时须自行提供登记文件，缺省空登记仍可运行通用平台。
+启动脚本在镜像构建后读取制品描述，生成数据目录内的 `plugin-mounts.json`，将同一文件只读挂载给 Core 与 Nginx。登记内容变化会更新应用容器配置，使代理在重新创建时读取新映射。路径包含制品摘要，业务菜单使用插件声明的名称。自定义挂载可设置 `SIGNALDECK_PLUGIN_MOUNTS_FILE=/absolute/path/mounts.json`；文件格式、访问边界及独立部署方式见[统一插件页面](docs/writing-extensions.md#统一插件页面)。直接调用 `docker compose up` 时须自行提供登记文件，缺省空登记仍可运行通用平台。
 
 已有插件配置在普通启动时保持原发布，需明确执行 `refresh-plugins` 才切换当前发布。刷新前应为仍被历史链接或运行引用的旧发布保留独立服务和挂载；本地自动生成的文件只描述本次构建，不会自动维护旧服务。旧快照和地址不改写，旧挂载下线后显示不可用；不要把旧挂载键重新分配给新版本。
 

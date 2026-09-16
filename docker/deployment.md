@@ -2,7 +2,7 @@
 
 正式应用镜像为 `ghcr.io/coachpo/signaldeck`，包含前端静态资源、Nginx 和 Core 后端。`app` 容器运行 Nginx/API，`dispatcher` 和 `worker` 使用同一镜像的对应角色；PostgreSQL、Temporal 和业务插件仍独立运行。唯一正式 Compose 入口是 [`compose.production.yml`](compose.production.yml)。根 `docker-compose.yml` 和 `start.sh` 保留源码本地开发用途。
 
-当前适用边界仍是可信内网、单用户、单机部署，不提供高可用或公网服务承诺。服务器无需编译应用源码；固定 Core worker 首次安装某个制品的依赖时仍需访问锁文件中的公共下载地址。后续复用保留的执行环境和缓存。
+当前适用边界仍是可信内网、单用户、单机部署。应用和公开业务 API 无需访问口令，只向可信网络开放应用端口，不提供高可用或公网服务承诺。服务器无需编译应用源码；固定 Core worker 首次安装某个制品的依赖时仍需访问锁文件中的公共下载地址。后续复用保留的执行环境和缓存。
 
 ## GitHub 构建与镜像版本
 
@@ -26,7 +26,7 @@ cd ~/apps/signaldeck
 python3 docker/create_env.py --plugin-tag "sha-$(git rev-parse HEAD)"
 ```
 
-`create_env.py` 按 [`production.env.example`](production.env.example) 生成 `~/.config/signaldeck/production.env`，自动生成独立数据库密码、加密 key 和 API 口令，权限为 0600；已有文件拒绝覆盖，不输出密钥。默认应用跟随 main，三个插件固定到指定 SHA；可加 `--app-image ghcr.io/coachpo/signaldeck:<版本>` 固定应用。
+`create_env.py` 按 [`production.env.example`](production.env.example) 生成 `~/.config/signaldeck/production.env`，自动生成五个独立数据库密码和一个资源加密 key，权限为 0600；已有文件拒绝覆盖，不输出密钥。默认应用跟随 main，三个插件固定到指定 SHA；可加 `--app-image ghcr.io/coachpo/signaldeck:<版本>` 固定应用。
 
 检查配置中的 `APP_PORT`，默认 8089。此前只读检查发现 capy 的 8087/8088 被 Prism 占用；启动前仍需核对当前端口。保留同一个项目名和原配置文件，不要为更新重新生成密码。
 
@@ -45,7 +45,7 @@ sdcompose ps --all
 
 Compose 自动初始化独立数据库、Temporal schema 和 default namespace，随后启动执行服务，准备插件页面挂载并登记缺失插件。初始化服务完成后 `Exited (0)` 是正常状态；`wait bootstrap` 只表示登记步骤结束，不代表外部模型/provider 可用。数据库、Temporal RPC 和插件端口均不发布到宿主机；仅 app 绑定 `127.0.0.1:8089`。
 
-本机访问可执行 `ssh -N -L 8089:127.0.0.1:8089 capy`，然后打开 `http://localhost:8089`，输入配置文件中的 API 口令；也可接入已有可信反向代理。默认空平台通过专家制作或导入添加 Workflow；模型凭据通过资源表单保存，不能放到 YAML、镜像构建参数或前端环境变量中。
+本机访问可执行 `ssh -N -L 8089:127.0.0.1:8089 capy`，然后直接打开 `http://localhost:8089`；也可接入已有可信反向代理。默认空平台通过专家制作或导入添加 Workflow；模型凭据通过资源表单保存，不能放到 YAML、镜像构建参数或前端环境变量中。
 
 ## 日常更新
 
@@ -70,7 +70,6 @@ sdcompose up -d
 | 五个数据库密码变量 | 分别用于 bootstrap、Core、Finance、Notes、Temporal 角色，由脚本生成随机 hex 值。 |
 | 三个数据库 URL / `TEMPORAL_ADDRESS` | 默认使用本项目内网服务名，URL 从密码变量派生。不要将 env 文件作为 shell 脚本 source。 |
 | `AGENT_PLATFORM_ENCRYPTION_KEY` | 资源凭据加密 key；必须保留，更换会使原密文无法解密。 |
-| `SIGNALDECK_API_TOKEN` | 主站和插件业务 API 共用的访问口令。 |
 | `APP_PORT` | 默认 8089，仅绑定回环地址。 |
 | `CORS_ALLOWED_ORIGINS` | 默认空；同源 `/api` 和插件代理不需要跨源配置。 |
 
@@ -92,7 +91,7 @@ sdcompose run --rm --no-deps --entrypoint temporal \
   temporal-namespace operator cluster health
 ```
 
-`/health` 表示 API 存活，`/ready` 通过 Nginx 检查 API 与 PostgreSQL，未带口令的业务 API 应返回 401。这些检查不代替一次实际工作流；dispatcher/worker 没有 HTTP 探针。查看 `sdcompose logs --tail=100 app dispatcher worker bootstrap plugin-mounts`，确认执行终态、结果和证据，不能只看首页或容器 running。
+`/health` 表示 API 存活，`/ready` 通过 Nginx 检查 API 与 PostgreSQL，上述不带凭据的工作流列表请求应返回 200。这些检查不代替一次实际工作流；dispatcher/worker 没有 HTTP 探针。查看 `sdcompose logs --tail=100 app dispatcher worker bootstrap plugin-mounts`，确认执行终态、结果和证据，不能只看首页或容器 running。
 
 本地构建与隔离验证：
 
@@ -103,6 +102,6 @@ backend/.venv/bin/python docker/verify_deployment.py \
   --app-image signaldeck:local --notes-image signaldeck-notes:1.3.0
 ```
 
-验证器使用本机 Docker、随机项目名/端口/密码，验证身份与数据库隔离、自动挂载/登记、真实 Notes 任务、SIGTERM、容器重建后的计划/Temporal 历史/制品/产物，以及执行服务离线后的历史读取，只清理本次自有测试资源。它不读取仓库 `.env`、不访问 capy，不使用真实模型服务。完整质量检查见[贡献指南](../CONTRIBUTING.md)。
+验证器使用本机 Docker、随机项目名/端口/密码，验证无需口令访问、数据库隔离、自动挂载/登记、真实 Notes 任务、SIGTERM、容器重建后的计划/Temporal 历史/制品/产物，以及执行服务离线后的历史读取，只清理本次自有测试资源。它不读取仓库 `.env`、不访问 capy，不使用真实模型服务。完整质量检查见[贡献指南](../CONTRIBUTING.md)。
 
 可加 `--finance-image <已构建镜像>` 和 `--oracle-image <已构建镜像>` 同时验证另外两个插件的启动、登记与可用页面；不会调用真实外部 provider。

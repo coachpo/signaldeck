@@ -276,7 +276,7 @@ def main() -> None:
         key: value
         for key, value in os.environ.items()
         if not key.startswith(("LOGFIRE_", "OTEL_"))
-        and key not in {"PYTHONPATH", "VIRTUAL_ENV", "OPENAI_API_KEY", "SIGNALDECK_API_TOKEN"}
+        and key not in {"PYTHONPATH", "VIRTUAL_ENV", "OPENAI_API_KEY"}
     }
     env.update(
         PYTHONDONTWRITEBYTECODE="1",

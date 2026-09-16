@@ -7,25 +7,13 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 
-def render(registry, backend):
+def render(registry):
     if (
         set(registry) != {"version", "mounts"}
         or registry["version"] != "signaldeck.pluginMounts/1"
     ):
         raise ValueError("Invalid plugin mount registry version")
-    if not re.fullmatch(r"[A-Za-z0-9_.-]+:[0-9]{1,5}", backend):
-        raise ValueError("Invalid backend upstream")
-    lines = [
-        "resolver 127.0.0.11 valid=10s ipv6=off;",
-        """location = /_plugin_auth {
-    internal;
-    set $auth_upstream "http://BACKEND";
-    proxy_pass $auth_upstream/api/plugin-auth;
-    proxy_pass_request_body off;
-    proxy_set_header Content-Length "";
-    proxy_set_header Authorization $http_authorization;
-}""".replace("BACKEND", backend),
-    ]
+    lines = ["resolver 127.0.0.11 valid=10s ipv6=off;"]
     seen = set()
     releases = set()
     for mount in registry["mounts"]:
@@ -60,13 +48,9 @@ def render(registry, backend):
         lines.append(f"location = {prefix}/api {{ return 404; }}")
         for path in ("/", "/ui/", "/assets/", "/api/"):
             match = "= " if path == "/" else "^~ "
-            auth = (
-                "auth_request /_plugin_auth;"
-                if path == "/api/"
-                else "limit_except GET HEAD { deny all; }"
-            )
+            methods = "" if path == "/api/" else "limit_except GET HEAD { deny all; }"
             lines.append(f"""location {match}{prefix}{path} {{
-    {auth}
+    {methods}
     set $plugin_upstream "{upstream}";
     rewrite ^{prefix}(/.*)$ $1 break;
     proxy_pass $plugin_upstream;
@@ -91,6 +75,4 @@ if __name__ == "__main__":
         if source
         else {"version": "signaldeck.pluginMounts/1", "mounts": []}
     )
-    Path("/etc/nginx/plugin-locations.conf").write_text(
-        render(registry, os.environ.get("BACKEND_UPSTREAM", "127.0.0.1:8000"))
-    )
+    Path("/etc/nginx/plugin-locations.conf").write_text(render(registry))

@@ -62,7 +62,7 @@ except subprocess.TimeoutExpired as error:
     output, status = (error.stdout or b"") + b"\nDiagnostic capture timed out\n", 124
 text = output.decode("utf-8", errors="replace")
 names = ("POSTGRES_PASSWORD", "CORE_DB_PASSWORD", "FINANCE_DB_PASSWORD",
-         "NOTES_DB_PASSWORD", "AGENT_PLATFORM_ENCRYPTION_KEY", "SIGNALDECK_API_TOKEN")
+         "NOTES_DB_PASSWORD", "AGENT_PLATFORM_ENCRYPTION_KEY")
 secrets = [os.environ.get(name, "") for name in names] + ["compose-fake-credential"]
 for value in sorted(set(secrets), key=len, reverse=True):
     if value:
@@ -98,7 +98,6 @@ def run_compose(workspace: Path, evidence: Path, env: dict, run_command) -> dict
         SIGNALDECK_LOCAL_UID=str(os.getuid()),
         SIGNALDECK_LOCAL_GID=str(os.getgid()),
         SIGNALDECK_PLUGINS="finance,digital-oracle,notes",
-        SIGNALDECK_API_TOKEN="",
         AGENT_PLATFORM_ENCRYPTION_KEY=uuid4().hex,
         POSTGRES_PASSWORD=uuid4().hex,
         CORE_DB_PASSWORD=uuid4().hex,

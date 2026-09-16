@@ -92,7 +92,6 @@ def environment(session: str, workspace: Path) -> dict[str, str]:
             "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": "",
             "OTEL_EXPORTER_OTLP_METRICS_ENDPOINT": "",
             "OTEL_EXPORTER_OTLP_LOGS_ENDPOINT": "",
-            "SIGNALDECK_API_TOKEN": "",
             "PLAYWRIGHT_HTML_OPEN": "never",
             "CLOSED_LOOP_SOURCE_ROOT": str(ROOT),
         }

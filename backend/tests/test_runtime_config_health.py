@@ -22,7 +22,6 @@ def clear_runtime_env(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("SIGNALDECK_RUNTIME_MODE", raising=False)
     monkeypatch.delenv("DATABASE_URL", raising=False)
     monkeypatch.delenv("AGENT_PLATFORM_ENCRYPTION_KEY", raising=False)
-    monkeypatch.delenv("SIGNALDECK_API_TOKEN", raising=False)
     reset_settings_cache()
 
 
@@ -61,7 +60,7 @@ def test_production_runtime_rejects_placeholder_or_empty_encryption_key(
         _ = Settings()
 
 
-@pytest.mark.parametrize("field", ["database_url", "agent_platform_encryption_key", "api_token"])
+@pytest.mark.parametrize("field", ["database_url", "agent_platform_encryption_key"])
 def test_runtime_validation_error_hides_sensitive_configuration(
     monkeypatch: pytest.MonkeyPatch,
     field: str,
@@ -91,22 +90,6 @@ def test_production_runtime_accepts_explicit_non_placeholder_config(
     assert settings.runtime_mode == "production"
     assert settings.database_url == PRODUCTION_DATABASE_URL
     assert settings.agent_platform_encryption_key == PRODUCTION_ENCRYPTION_KEY
-
-
-def test_production_runtime_warns_when_api_token_missing(
-    monkeypatch: pytest.MonkeyPatch,
-    caplog: pytest.LogCaptureFixture,
-) -> None:
-    clear_runtime_env(monkeypatch)
-    monkeypatch.setenv("SIGNALDECK_RUNTIME_MODE", "production")
-    monkeypatch.setenv("DATABASE_URL", PRODUCTION_DATABASE_URL)
-    monkeypatch.setenv("AGENT_PLATFORM_ENCRYPTION_KEY", PRODUCTION_ENCRYPTION_KEY)
-
-    with caplog.at_level(logging.WARNING, logger="app.core.config"):
-        settings = Settings()
-
-    assert settings.api_token is None
-    assert "SIGNALDECK_API_TOKEN is not configured" in caplog.text
 
 
 def test_health_endpoint_is_liveness_only(monkeypatch: pytest.MonkeyPatch) -> None:

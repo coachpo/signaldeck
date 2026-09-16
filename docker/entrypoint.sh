@@ -20,7 +20,6 @@ case "$role" in
 esac
 
 mkdir -p /run/nginx
-export BACKEND_UPSTREAM="127.0.0.1:${BACKEND_PORT}"
 python /opt/signaldeck/gateway/generate.py
 envsubst '${PORT} ${BACKEND_PORT}' \
   </etc/nginx/templates/default.conf.template \

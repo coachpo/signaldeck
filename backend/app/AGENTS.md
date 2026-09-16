@@ -14,7 +14,7 @@ Use the [product specification](../../docs/产品说明.md) for supported execut
 
 ## Read and Validation Boundaries
 
-- `schemas/common.py` provides `CamelModel`; use `core/errors.py` for service/API errors and browser-safe details. Token middleware's 401 response is a separate existing contract.
+- `schemas/common.py` provides `CamelModel`; use `core/errors.py` for service/API errors and browser-safe details.
 - Historical package/run, resource, plugin and schedule reads use stored safe projections. Do not resolve credentials, contact plugins or connect to Temporal merely to display history. Artifact downloads verify content-addressed references through their dedicated adapter.
 - `domain/presentation.py` validates versioned frozen selectors; `application/result_projection.py` projects them from immutable output and confirmed evidence without inferring business fields, fetching plugin records or promoting unfinished model text. Preserve artifact/node/tool/operation/plugin ownership, optional skips, declared missing notices and deferred artifact selections. `infrastructure/run_history.py` must use the same frozen title selection as result reads. Declared links bind tool resultLinks/pageUrl during Launch, not during history reads. Keep result availability separate from Run status and cancellation requests. Unresolved logical operations remain visible; a recovered unknown network attempt alone is not an unknown effect. `infrastructure/run_history.py` owns database-wide filters, stable ordering and pagination.
 - Read [architecture](../../docs/架构说明.md) for current dependencies, [development rules](../../docs/开发规范.md) for backend contracts, and [CONTRIBUTING](../../CONTRIBUTING.md) for checks. API and backend tests have narrower guides.

@@ -1,4 +1,4 @@
-"""Exercise real Nginx routing/auth with disposable mock services (requires Docker)."""
+"""Exercise real Nginx routing with disposable mock services (requires Docker)."""
 
 import importlib.util
 import json
@@ -31,17 +31,18 @@ def main():
             root = Path(temp)
             (root / "server.py").write_text(
                 """from http.server import BaseHTTPRequestHandler, HTTPServer
-import json, os
+import json
 class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         body = self.rfile.read(int(self.headers.get('Content-Length', '0')))
-        if self.path == '/api/plugin-auth':
-            self.send_response(204 if self.headers.get('Authorization') == 'Bearer ' + os.environ.get('TEST_TOKEN', 'test-token') else 401)
-            self.end_headers()
-            return
         self.send_response(200)
+        self.send_header('Set-Cookie', 'plugin-cookie=hidden')
         self.end_headers()
-        result = {'path':self.path,'authorization':self.headers.get('Authorization'),'cookie':self.headers.get('Cookie')}
+        result = {
+            'path': self.path,
+            'authorization': self.headers.get('Authorization'),
+            'cookie': self.headers.get('Cookie'),
+        }
         if body:
             result['bodySize'] = len(body)
         self.wfile.write(json.dumps(result).encode())
@@ -90,9 +91,7 @@ HTTPServer(('0.0.0.0',8000),Handler).serve_forever()
                 # uses a separate name so it cannot pin the dynamic plugin DNS pool.
                 .replace("127.0.0.1:${BACKEND_PORT}", "core-original:8000")
             )
-            (root / "plugin-locations.conf").write_text(
-                gateway.render(registry, "mock:8000")
-            )
+            (root / "plugin-locations.conf").write_text(gateway.render(registry))
             nginx = docker(
                 "run",
                 "-d",
@@ -123,12 +122,9 @@ HTTPServer(('0.0.0.0',8000),Handler).serve_forever()
                     return error.code, error.read()
 
             status, body = 0, b""
-            for attempt in range(30):
+            for _ in range(30):
                 try:
-                    status, body = request(
-                        "/api/probe?item=original",
-                        {"Authorization": "Bearer test-token"},
-                    )
+                    status, body = request("/api/probe?item=original")
                     if status == 200:
                         break
                 except (OSError, urllib.error.URLError):
@@ -137,11 +133,13 @@ HTTPServer(('0.0.0.0',8000),Handler).serve_forever()
             assert status == 200, (status, body)
             assert json.loads(body) == {
                 "path": "/api/probe?item=original",
-                "authorization": "Bearer test-token",
+                "authorization": None,
                 "cookie": None,
             }
             assert request("/_plugins/third_v1/")[0] == 200
-            assert request("/_plugins/third_v1/api/notes")[0] == 401
+            assert request("/_plugins/third_v1/api/notes")[0] == 200
+            with urllib.request.urlopen(base + "/_plugins/third_v1/") as response:
+                assert response.headers.get("Set-Cookie") is None
             status, body = request(
                 "/_plugins/third_v1/api/notes?item=42",
                 {"Authorization": "Bearer test-token", "Cookie": "secret=hidden"},
@@ -154,22 +152,14 @@ HTTPServer(('0.0.0.0',8000),Handler).serve_forever()
             }
             status, body = request(
                 "/_plugins/third_v1/api/a%20b?item=42",
-                {"Authorization": "Bearer test-token"},
             )
             assert status == 200 and json.loads(body)["path"] == "/api/a%20b?item=42"
-            assert request("/_plugins/third_v1/api/write", method="POST")[0] == 401
-            assert (
-                request(
-                    "/_plugins/third_v1/api/write",
-                    {"Authorization": "Bearer test-token"},
-                    method="POST",
-                )[0]
-                == 200
-            )
+            assert request("/_plugins/third_v1/api/write", method="POST")[0] == 200
+            for path in ("", "ui/page", "assets/app.js"):
+                assert request("/_plugins/third_v1/" + path, method="POST")[0] == 403
             upload = b"x" * (1024 * 1024 + 1)
             status, body = request(
                 "/_plugins/third_v1/api/upload",
-                {"Authorization": "Bearer test-token", "Cookie": "secret=hidden"},
                 method="POST",
                 data=upload,
             )
@@ -183,7 +173,6 @@ HTTPServer(('0.0.0.0',8000),Handler).serve_forever()
             for path in ("mcp/", "release", "internal", "api", "../release"):
                 assert request("/_plugins/third_v1/" + path)[0] == 404, path
             assert request("/_plugins/unknown/")[0] == 404
-            assert request("/_plugin_auth")[0] == 404
             assert request("/_plugins/offline/")[0] == 502
             assert request("/")[0] == 200
             # Attach the replacement before detaching the old endpoint so Docker
@@ -195,8 +184,6 @@ HTTPServer(('0.0.0.0',8000),Handler).serve_forever()
                 name,
                 "--network-alias",
                 "mock",
-                "-e",
-                "TEST_TOKEN=replacement-token",
                 "-v",
                 f"{root}:/test:ro",
                 "python:3.13.13-slim",
@@ -213,26 +200,25 @@ HTTPServer(('0.0.0.0',8000),Handler).serve_forever()
             while True:
                 try:
                     status, body = request(
-                        "/_plugins/third_v1/api/notes?item=replacement",
-                        {"Authorization": "Bearer replacement-token"},
+                        "/_plugins/third_v1/api/notes?item=replacement"
                     )
                     if status == 200:
                         break
                 except (OSError, urllib.error.URLError):
                     pass
-                assert time.monotonic() < deadline, "Gateway did not resolve the replacement backend"
+                assert (
+                    time.monotonic() < deadline
+                ), "Gateway did not resolve the replacement backend"
                 time.sleep(0.2)
             assert json.loads(body) == {
                 "path": "/api/notes?item=replacement",
                 "authorization": None,
                 "cookie": None,
             }
-            assert request(
-                "/_plugins/third_v1/api/notes",
-                {"Authorization": "Bearer test-token"},
-            )[0] == 401
             print(
-                "Gateway integration passed: Core API, auth, credential stripping, paths, absent plugin, shell isolation and plugin/auth DNS refresh."
+                "Gateway integration passed: anonymous Core/plugin API, credential stripping, "
+                "paths, static methods, uploads, absent plugin, shell isolation "
+                "and plugin DNS refresh."
             )
     finally:
         for container in reversed(containers):

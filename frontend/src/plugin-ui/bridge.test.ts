@@ -10,13 +10,24 @@ describe('plugin transport boundary', () => {
     for (const path of ['/../api', '/%2e%2e/api', '/%2fapi', 'https://other.test/', '//other.test/', '/\\other.test', '/\nother']) expect(validPath(path)).toBe(false);
     expect(validPath('/?noteId=one')).toBe(true);
   });
-  it('authenticates plugin requests using the existing same-origin token', async () => {
+  it('ignores an old stored access token and preserves request options', async () => {
     localStorage.setItem('signaldeck.apiToken', 'test-token');
     const fetch = vi.fn().mockResolvedValue(new Response('{}'));
     vi.stubGlobal('fetch', fetch);
-    await pluginFetch('api/notes');
+    const init = {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'};
+    await pluginFetch('api/notes', init);
     expect(fetch.mock.calls[0][0]).toBe('/api/notes');
-    expect(fetch.mock.calls[0][1].headers.get('Authorization')).toBe('Bearer test-token');
+    expect(fetch.mock.calls[0][1]).toBe(init);
+    expect(new Headers(fetch.mock.calls[0][1].headers).has('Authorization')).toBe(false);
+  });
+  it('returns a plugin 401 without prompting for credentials or retrying', async () => {
+    const response = new Response('{}', {status:401});
+    const fetch = vi.fn().mockResolvedValue(response);
+    const prompt = vi.fn();
+    vi.stubGlobal('fetch', fetch); vi.stubGlobal('prompt', prompt);
+    expect(await pluginFetch('api/notes')).toBe(response);
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(prompt).not.toHaveBeenCalled();
   });
   it('keeps mounted API calls within the plugin gateway prefix', async () => {
     history.replaceState(null, '', '/_plugins/release-one/?embedded=1');

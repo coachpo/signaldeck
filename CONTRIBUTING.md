@@ -102,7 +102,7 @@ python3 docker/test_plugin_gateway.py
 
 正式应用镜像加独立 PostgreSQL/Temporal 的单机部署验证使用 `docker/verify_deployment.py`；镜像参数、隔离存储和清理范围见[部署说明](docker/deployment.md)。
 
-该配置沿用上面的隔离数据库与端口约定，可用 `SIGNALDECK_E2E_BUILD_DIR` 选择独立构建目录。其 Vite 代理验证页面流程；`docker/test_plugin_gateway.py` 用自己的临时 Docker 容器和网络验证实际 Nginx 的口令、凭据剥离、编码路径、内部接口隔离与离线上游。修改应用或插件镜像时，仍执行相应真实镜像构建和隔离 Compose 验证。
+该配置沿用上面的隔离数据库与端口约定，可用 `SIGNALDECK_E2E_BUILD_DIR` 选择独立构建目录。其 Vite 代理验证页面流程；`docker/test_plugin_gateway.py` 用自己的临时 Docker 容器和网络验证实际 Nginx 的无需口令访问、凭据剥离、编码路径、内部接口隔离与离线上游。修改应用或插件镜像时，仍执行相应真实镜像构建和隔离 Compose 验证。
 
 涉及取消后的未知写效果、插件离线或执行服务停止后的历史读取时，补充独立故障配置：
 

@@ -5,7 +5,6 @@ x-core-environment: &core-environment
   DATABASE_URL: ${DATABASE_URL:?Core PostgreSQL URL required}
   TEMPORAL_ADDRESS: ${TEMPORAL_ADDRESS:?Temporal address required}
   AGENT_PLATFORM_ENCRYPTION_KEY: ${AGENT_PLATFORM_ENCRYPTION_KEY:?Encryption key required}
-  SIGNALDECK_API_TOKEN: ${SIGNALDECK_API_TOKEN:?API token required}
   SIGNALDECK_ARTIFACT_DIR: /data/artifacts
   SIGNALDECK_CORE_ARTIFACT_DIR: /data/core
   SIGNALDECK_CORE_ENV_DIR: /data/core-environments
@@ -222,7 +221,6 @@ services:
       - /opt/signaldeck/bootstrap_plugins.py
     environment:
       SIGNALDECK_API_URL: http://app:8080/api
-      SIGNALDECK_API_TOKEN: ${SIGNALDECK_API_TOKEN:?API token required}
       SIGNALDECK_PLUGINS: ${SIGNALDECK_PLUGINS:-}
     depends_on:
       app:

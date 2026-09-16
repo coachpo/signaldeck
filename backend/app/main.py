@@ -15,7 +15,6 @@ from sqlalchemy.exc import SQLAlchemyError
 from app.api.platform_dependencies import get_core_artifacts, get_platform_store
 from app.api.platform_router import platform_router
 from app.api.platform_schedules import get_schedule_store
-from app.core.auth import BearerTokenMiddleware
 from app.core.config import get_settings
 from app.core.errors import ApiError, browser_safe_error_details, request_validation_to_details
 from app.core.telemetry import configure_logfire, instrument_fastapi_app
@@ -56,8 +55,6 @@ def create_app(*, init_database: bool = True) -> FastAPI:
         title="SignalDeck Backend", version="0.1.0", lifespan=lifespan if init_database else None
     )
     instrument_fastapi_app(app)
-    if settings.api_token:
-        app.add_middleware(BearerTokenMiddleware, token=settings.api_token)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_allowed_origins,

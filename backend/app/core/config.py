@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import logging
 from functools import lru_cache
 from pathlib import Path
 from typing import Annotated, ClassVar, Literal
@@ -16,7 +15,6 @@ PLACEHOLDER_AGENT_PLATFORM_ENCRYPTION_KEYS = {
     "change-me",
     "changeme",
 }
-logger = logging.getLogger(__name__)
 
 
 class Settings(BaseSettings):
@@ -42,7 +40,6 @@ class Settings(BaseSettings):
         default=DEFAULT_AGENT_PLATFORM_ENCRYPTION_KEY,
         alias="AGENT_PLATFORM_ENCRYPTION_KEY",
     )
-    api_token: str | None = Field(default=None, alias="SIGNALDECK_API_TOKEN")
     cors_allowed_origins: Annotated[list[str], NoDecode] = Field(
         default=[
             "http://127.0.0.1:4173",
@@ -68,14 +65,6 @@ class Settings(BaseSettings):
         if isinstance(value, str):
             return [item.strip() for item in value.split(",") if item.strip()]
         return value
-
-    @field_validator("api_token", mode="before")
-    @classmethod
-    def normalize_api_token(cls, value: object) -> str | None:
-        if value is None:
-            return None
-        normalized = str(value).strip()
-        return normalized or None
 
     @field_validator("runtime_mode", mode="before")
     @classmethod
@@ -109,12 +98,6 @@ class Settings(BaseSettings):
                 "value in production runtime mode"
             )
             raise ValueError(message)
-
-        if self.api_token is None:
-            logger.warning(
-                "SIGNALDECK_API_TOKEN is not configured in production runtime mode; "
-                "relying on reverse-proxy authentication."
-            )
 
         return self
 

@@ -100,9 +100,9 @@ resultLinks 参与工具 contract digest；旧工具缺省该字段时不自动�
 | --- | --- |
 | `/apps/<mountKey>/…` | 主站浏览器路由，承载插件内容及返回来源入口 |
 | `/_plugins/<mountKey>/…` | 网关运输路径，转发插件页面、静态资源及业务 API |
-| `/api/…` | Core HTTP API，保留原有身份与错误合同 |
+| `/api/…` | Core HTTP API，保留运行/命令身份与错误合同 |
 
-插件静态资源、请求和下载以自己的传输基址寻址，不能使用指向 Core 的根 `/api`。网关的业务 API 通过 `/api/plugin-auth` 复用现有 bearer-token 门禁，验证后剥离凭据再转发；下载使用带认证的请求。MCP、发布描述及内部接口不经公开插件路径开放。上游按请求解析，未启用或离线插件不能导致整个 Nginx 无法启动。同源插件共享浏览器信任，iframe 不是不可信代码沙箱。
+插件静态资源、请求和下载以自己的传输基址寻址，不能使用指向 Core 的根 `/api`。公开业务 API 和下载无需访问口令，网关剥离 Authorization 和 Cookie 后转发；MCP、发布描述及内部接口不经公开插件路径开放。上游按请求解析，未启用或离线插件不能导致整个 Nginx 无法启动。同源插件共享浏览器信任，iframe 不是不可信代码沙箱。
 
 已访问插件实例留在本标签页内，切换路由只隐藏内容；打开另一业务详情由插件解释路径，不通过重设 iframe src 销毁页面。停用或更新目录不能销毁旧实例，新菜单指向新发布。页面刷新重新装载深链接，未保存输入不承诺刷新恢复。Run 结果始终使用冻结的 pageUrl/resultLinks，不追随当前目录改写；旧服务下线时保留明确不可用状态和 Core 已确认结果，不把旧地址重定向到新版本。
 
@@ -116,7 +116,7 @@ resultLinks 参与工具 contract digest；旧工具缺省该字段时不自动�
 | 主站 → 插件 | `preferences`：`theme`, `expertMode`，可选 `returnTo` | 同步 light/dark/system、专家展示及返回上下文 |
 | 主站 → 插件 | `location`：`path` | 按插件自有语义恢复路径、query 和 fragment |
 
-iframe 从传输根入口启动，以 `embedded=1` 明确启用嵌入模式；主站在 ready 后发送业务位置。嵌入子页面使用 replaceState，用户可见历史由主站写入；独立模式继续使用自身导航。路径不得跳出当前挂载。消息不携带业务正文、草稿内容或访问口令，插件自行保存编辑内存和处理忙碌时的业务导航。
+iframe 从传输根入口启动，以 `embedded=1` 明确启用嵌入模式；主站在 ready 后发送业务位置。嵌入子页面使用 replaceState，用户可见历史由主站写入；独立模式继续使用自身导航。路径不得跳出当前挂载。消息不携带业务正文、草稿内容或凭据，插件自行保存编辑内存和处理忙碌时的业务导航。
 
 网关采用现有 Nginx 的变量上游及请求时解析方式，页面桥接采用浏览器 postMessage；选择这些现有机制避免增加 Core 业务代理或远程组件装载。配置语义参考 [Nginx proxy_pass](https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_pass)，消息边界参考 [MDN postMessage](https://developer.mozilla.org/en-US/docs/Web/API/Window/postMessage)。
 

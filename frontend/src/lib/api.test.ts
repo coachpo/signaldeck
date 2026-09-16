@@ -108,35 +108,48 @@ describe("api client", () => {
     expect(new Headers(init?.headers).get("Accept")).toBe("application/json");
   });
 
-  it("sends the stored API token as a bearer token", async () => {
-    const { listTemplates } = await loadApiModule();
-    localStorage.setItem("signaldeck.apiToken", "test-token");
-    fetchMock.mockResolvedValueOnce(jsonResponse([templateFixture], 200));
+  it("does not read or attach a token left in browser storage", async () => {
+    localStorage.setItem("signaldeck.apiToken", "obsolete-token");
+    const readStorage = vi.spyOn(Storage.prototype, "getItem");
+    const promptSpy = vi.spyOn(window, "prompt");
+    const { requestPlatform } = await loadApiModule();
+    fetchMock.mockResolvedValueOnce(jsonResponse({}, 200));
 
-    await expect(listTemplates()).resolves.toEqual([templateFixture]);
+    await expect(requestPlatform("/workflow-packages", {
+      headers: { "X-Request-Id": "request-one" },
+    })).resolves.toEqual({});
 
-    const { init } = getLastFetchCall(fetchMock);
-    expect(new Headers(init?.headers).get("Authorization")).toBe(
-      "Bearer test-token",
-    );
+    const headers = new Headers(getLastFetchCall(fetchMock).init?.headers);
+    expect(headers.get("Authorization")).toBeNull();
+    expect(headers.get("X-Request-Id")).toBe("request-one");
+    expect(readStorage).not.toHaveBeenCalled();
+    expect(promptSpy).not.toHaveBeenCalled();
   });
 
-  it("prompts once for an API token after a 401 and retries the request", async () => {
-    const { listTemplates } = await loadApiModule();
-    const promptSpy = vi.spyOn(window, "prompt").mockReturnValue("test-token");
-    fetchMock
-      .mockResolvedValueOnce(jsonResponse({ detail: "Unauthorized" }, 401))
-      .mockResolvedValueOnce(jsonResponse([templateFixture], 200));
+  it("returns a 401 as an API error without prompting or retrying", async () => {
+    const { ApiRequestError, requestPlatform } = await loadApiModule();
+    const promptSpy = vi.spyOn(window, "prompt");
+    const readStorage = vi.spyOn(Storage.prototype, "getItem");
+    const writeStorage = vi.spyOn(Storage.prototype, "setItem");
+    fetchMock.mockResolvedValueOnce(jsonResponse({
+      code: "upstream_unauthorized",
+      message: "Request denied",
+      details: [],
+    }, 401));
 
-    await expect(listTemplates()).resolves.toEqual([templateFixture]);
+    const request = requestPlatform("/workflow-packages");
+    await expect(request).rejects.toBeInstanceOf(ApiRequestError);
+    await expect(request).rejects.toMatchObject({
+      status: 401,
+      code: "upstream_unauthorized",
+      message: "Request denied",
+      details: [],
+    });
 
-    expect(promptSpy).toHaveBeenCalledTimes(1);
-    expect(promptSpy).toHaveBeenCalledWith("请输入访问口令以继续使用 SignalDeck");
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(localStorage.getItem("signaldeck.apiToken")).toBe("test-token");
-    expect(new Headers(fetchMock.mock.calls[1]?.[1]?.headers).get("Authorization")).toBe(
-      "Bearer test-token",
-    );
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(promptSpy).not.toHaveBeenCalled();
+    expect(readStorage).not.toHaveBeenCalled();
+    expect(writeStorage).not.toHaveBeenCalled();
   });
 
   it("sends a successful POST request for createTemplate", async () => {

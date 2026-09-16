@@ -182,8 +182,7 @@ def _quote_identifier(identifier: str) -> str:
 
 
 @pytest.fixture(autouse=True)
-def _isolate_api_token_env(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
-    monkeypatch.delenv("SIGNALDECK_API_TOKEN", raising=False)
+def _isolate_settings_cache() -> Iterator[None]:
     reset_settings_cache()
 
     yield

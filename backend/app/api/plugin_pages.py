@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Annotated
 from urllib.parse import urlsplit
 
-from fastapi import APIRouter, Depends, Response
+from fastapi import APIRouter, Depends
 
 from app.api.platform_dependencies import get_platform_store
 from app.domain.execution import ApplicationError
@@ -15,12 +15,6 @@ from app.infrastructure.platform_store import PlatformStore
 
 router = APIRouter(tags=["plugins"])
 Store = Annotated[PlatformStore, Depends(get_platform_store)]
-
-
-@router.get("/plugin-auth", status_code=204, include_in_schema=False)
-def plugin_auth() -> Response:
-    """Nginx auth_request shares the ordinary Core bearer-token middleware."""
-    return Response(status_code=204)
 
 
 @router.get("/plugin-pages", response_model=list[PluginPage])

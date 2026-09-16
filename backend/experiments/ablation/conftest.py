@@ -14,7 +14,7 @@ from pathlib import Path
 import pytest
 from sqlalchemy import text
 
-from tests.conftest import _isolate_api_token_env as _isolate_api_token_env
+from tests.conftest import _isolate_settings_cache as _isolate_settings_cache
 from tests.conftest import database_url as database_url
 from tests.conftest import session_factory as session_factory
 
