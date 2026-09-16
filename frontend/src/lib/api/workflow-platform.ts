@@ -5,6 +5,7 @@ import {
   toPathSegment as segment,
 } from "@/lib/api-client";
 import type {
+  ExecutionOptions,
   Json,
   Plugin,
   PluginRelease,
@@ -38,10 +39,11 @@ export const workflowPlatformApi = {
     workflowKey: string,
     parameters: Json,
     launchId: string,
+    executionOptions?: ExecutionOptions,
   ) =>
     requestPlatform<RunSummary>(`/workflow-packages/${segment(key)}/launches`, {
       method: "POST",
-      body: { workflowKey, parameters, launchId },
+      body: { workflowKey, parameters, launchId, executionOptions },
     }),
   runs: () => requestPlatform<{ items: RunSummary[] }>("/runs"),
   run: (id: string) => requestPlatform<RunDetail>(`/runs/${segment(id)}`),
@@ -98,6 +100,7 @@ export const workflowPlatformApi = {
           packageKey: body.packageKey,
           workflowKey: body.workflowKey,
           parameters: body.parameters,
+          executionOptions: body.executionOptions,
           cron: body.cron,
           timeZone: body.timeZone,
           overlapPolicy: body.overlapPolicy,

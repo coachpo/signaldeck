@@ -13,7 +13,7 @@ from pydantic import TypeAdapter
 from pydantic_ai.exceptions import ModelHTTPError, UnexpectedModelBehavior
 from pydantic_ai.messages import ModelMessage, ModelMessagesTypeAdapter, ModelResponse
 from pydantic_ai.models import Model, ModelRequestParameters
-from pydantic_ai.models.openai import OpenAIChatModel, OpenAIResponsesModel
+from pydantic_ai.models.openai import OpenAIResponsesModel
 from pydantic_ai.profiles.openai import OpenAIModelProfile
 from pydantic_ai.providers.openai import OpenAIProvider
 from pydantic_ai.settings import ModelSettings
@@ -25,9 +25,11 @@ from app.domain.execution import ExecutionEvidence
 from app.domain.model_diagnostics import model_binding_digest
 from app.domain.resources import ResolvedModelConfiguration
 from app.infrastructure.model_usage_capture import (
+    ModelBudgetFailure,
     ModelOutputLimitExceeded,
     ModelResponseFailure,
     ReportedModelUsage,
+    UsageTolerantChatModel,
 )
 from app.infrastructure.temporal_payloads import pack_value, unpack_value
 from app.infrastructure.temporal_ports import ArtifactValues, BoundCredentialReader, ModelEvidence
@@ -63,8 +65,12 @@ class GatewayModel(Model):
         confirmed = await asyncio.to_thread(store.get_evidence, model_id)
         if confirmed is not None and confirmed.status == "succeeded":
             return RESPONSE.validate_python(unpack_value(artifacts, confirmed.output))
-        if confirmed is not None and confirmed.error_code == "model_output_limit_exceeded":
-            raise ApplicationError("model_output_limit_exceeded", non_retryable=True)
+        if confirmed is not None and confirmed.error_code in {
+            "model_output_limit_exceeded",
+            "model_usage_unavailable",
+            "model_output_truncated",
+        }:
+            raise ApplicationError(confirmed.error_code, non_retryable=True)
         input_value = pack_value(
             artifacts,
             {
@@ -227,7 +233,9 @@ class GatewayModel(Model):
         if remaining <= 0:
             raise ApplicationError("deadline_exceeded", non_retryable=True)
         api_key = credentials.get("apiKey", "")
-        reported_usage = ReportedModelUsage(binding.api_style, settings.get("max_tokens"))
+        reported_usage = ReportedModelUsage(
+            binding.api_style, settings.get("max_tokens"), context.get("requireUsage", False)
+        )
         async with httpx2.AsyncClient(
             timeout=min(binding.timeout_seconds, remaining),
             event_hooks={"response": [reported_usage.observe]},
@@ -240,7 +248,9 @@ class GatewayModel(Model):
             )
             provider = OpenAIProvider(openai_client=client)
             model_type = (
-                OpenAIChatModel if binding.api_style == "chat_completions" else OpenAIResponsesModel
+                UsageTolerantChatModel
+                if binding.api_style == "chat_completions"
+                else OpenAIResponsesModel
             )
             model = model_type(
                 binding.model_id,
@@ -283,6 +293,22 @@ def model_failure(exc: Exception) -> tuple[str, bool, dict[str, Any]]:
             non_retryable,
             {
                 **metadata,
+                "usage": exc.usage,
+                "finishReason": exc.finish_reason,
+            },
+        )
+    if isinstance(exc, ModelBudgetFailure):
+        return (
+            exc.code,
+            True,
+            {
+                "failureType": "execution_contract",
+                "errorCategory": (
+                    "output_truncated"
+                    if exc.code == "model_output_truncated"
+                    else "usage_unavailable"
+                ),
+                "networkStarted": True,
                 "usage": exc.usage,
                 "finishReason": exc.finish_reason,
             },

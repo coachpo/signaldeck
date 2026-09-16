@@ -113,12 +113,15 @@ def test_temporal_output_limit_usage_replay_and_truncation(database_url, tmp_pat
                     cut.definition["agents"]["shared"]["budget"].update(
                         {"maxOutputTokens": 1, "maxModelRequests": 2}
                     )
+                    cut.definition["workflows"]["main"]["nodes"]["a"]["maxAttempts"] = 3
                     cut = recompile_spec(cut)
                     assert (await execute(cut))["status"] == "failed"
+                    assert len(truncated_calls) == 1
                     assert truncated_calls and all(
                         call["max_completion_tokens"] == 1 for call in truncated_calls
                     )
                     result = project_result(store.get_run(cut.run_id))
+                    assert result.error_category == "output_truncated"
                     assert result.content_status == "not_available"
                     assert result.body is None
                     assert all(section.value != '{"value":' for section in result.sections)

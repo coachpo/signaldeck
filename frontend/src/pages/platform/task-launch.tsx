@@ -15,12 +15,13 @@ import { WorkspacePageShell } from "@/components/shared/workspace-page-shell";
 import { PageContextBar } from "@/components/shared/page-context-bar";
 import { RequestError } from "./feedback";
 import { TaskConnections } from "./task-connections";
+import { TaskBudgetControls } from "./budget-controls";
 import { TaskPreparation } from "./task-preparation";
 import { LaunchInputs } from "./launch-inputs";
 import {
   inputFieldLabel,
 } from "./task-catalog";
-import type { Json, JsonObject, WorkflowDefinition } from "@/lib/types/workflow-platform";
+import type { AgentDefinition, ExecutionOptions, Json, JsonObject, WorkflowDefinition } from "@/lib/types/workflow-platform";
 import type {
   Preparation,
   ReuseInput,
@@ -32,6 +33,7 @@ const drafts = new Map<
   string,
   {
     parameters: Json;
+    executionOptions?: ExecutionOptions;
     hasParameters?: boolean;
     launchId: string;
     uncertain?: boolean;
@@ -50,6 +52,7 @@ export function TaskForm({
   packageHash,
   schema,
   workflow,
+  agents,
   initial,
   historical,
   preset,
@@ -62,6 +65,7 @@ export function TaskForm({
   packageHash: string;
   schema: JsonObject;
   workflow?: WorkflowDefinition;
+  agents?: Record<string, AgentDefinition>;
   initial: Json;
   historical?: ReuseInput;
   preset?: TaskPreset;
@@ -78,6 +82,7 @@ export function TaskForm({
     () =>
       drafts.get(draftKey) ?? {
         parameters: initial,
+        executionOptions: restored?.executionOptions ?? historical?.executionOptions ?? preset?.executionOptions,
         hasParameters: restored?.hasParameters ?? true,
         launchId: restored?.launchId ?? initialLaunchId,
         serverId: restored?.id ?? crypto.randomUUID(),
@@ -109,10 +114,16 @@ export function TaskForm({
     setSaved(false);
     setErrors({});
   }
+  function changeBudget(executionOptions: ExecutionOptions) {
+    const next = { ...draft, executionOptions, prepared: null, changed: true };
+    setDraft(next); drafts.set(draftKey, next);
+    setDraftChanged(true); setSaved(false);
+  }
   const body = {
     packageKey,
     workflowKey,
     parameters,
+    executionOptions: draft.executionOptions,
     revisionHash: uncertain && draft.prepared ? draft.prepared.packageHash : packageHash,
     ...((restored?.sourceRunId ?? historical?.sourceRunId) ? { sourceRunId: restored?.sourceRunId ?? historical?.sourceRunId } : {}),
   };
@@ -154,6 +165,7 @@ export function TaskForm({
       name: name.trim() || descriptor.title, packageKey, workflowKey, packageHash,
       sourceRunId: restored?.sourceRunId ?? historical?.sourceRunId ?? null,
       hasParameters: draft.hasParameters ?? true, parameters,
+      executionOptions: draft.executionOptions,
       jsonText: draft.jsonText ?? null, launchId: draft.launchId, pending,
       bindingToken: pending ? token : null,
     };
@@ -240,6 +252,7 @@ export function TaskForm({
         workflowKey,
         packageHash,
         parameters: favorite ? null : parameters,
+        executionOptions: favorite ? {} : draft.executionOptions,
         hasParameters: !favorite,
         isFavorite: favorite || preset?.isFavorite || false,
         isPinned: preset?.isPinned || false,
@@ -303,6 +316,7 @@ export function TaskForm({
             />
           </div>
         </fieldset>
+        {workflow && agents && <TaskBudgetControls agents={agents} workflow={workflow} value={draft.executionOptions} onChange={changeBudget} disabled={formBusy} />}
         {draft.hasParameters === false && <Button variant="outline" disabled={formBusy || dirty} onClick={() => change(parameters)}>使用上述输入</Button>}
         {preparation.isFetching && !uncertain && <p role="status">正在自动核对连接与本次设置…</p>}
         {prepared && (
@@ -352,6 +366,7 @@ export function TaskForm({
                     packageKey,
                     workflowKey,
                     parameters,
+                    executionOptions: draft.executionOptions,
                     name: descriptor?.title,
                   },
                 },

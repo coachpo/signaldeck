@@ -10,6 +10,7 @@ import {
   taskDefaults,
   taskConstraintErrors,
 } from "./task-catalog";
+import { TaskBudgetControls } from "./budget-controls";
 import { LaunchInputs } from "./launch-inputs";
 import { ScheduleTiming, AppliedSchedulePreview } from "./schedule-timing";
 import { InventoryStatePanel } from "@/components/shared/inventory-state-panel";
@@ -27,6 +28,7 @@ import {
 } from "@/hooks/use-workflow-platform";
 import { validateLaunchValueForSchema } from "@/lib/platform-authoring/schema/launch-input-state";
 import type {
+  ExecutionOptions,
   Json,
   Schedule,
   ScheduleConfig,
@@ -50,6 +52,7 @@ export interface ScheduleInput {
   packageKey: string;
   workflowKey: string;
   parameters: Json;
+  executionOptions?: ExecutionOptions;
   name?: string;
 }
 function ScheduleEditor({ schedule }: { schedule?: Schedule }) {
@@ -71,6 +74,7 @@ function ScheduleEditor({ schedule }: { schedule?: Schedule }) {
       packageKey: inherited?.packageKey ?? "",
       workflowKey: inherited?.workflowKey ?? "",
       parameters: inherited?.parameters ?? null,
+      executionOptions: inherited?.executionOptions,
       cron: "0 9 * * *",
       timeZone,
       overlapPolicy: "skip",
@@ -297,6 +301,7 @@ function ScheduleEditor({ schedule }: { schedule?: Schedule }) {
                       workflowKey: task.workflowKey,
                       name: current.name || `${task.title} · 自动执行`,
                       parameters: taskDefaults(task.workflow.inputSchema),
+                      executionOptions: {},
                     }));
                     setParametersDirty(false);
                   }
@@ -323,6 +328,7 @@ function ScheduleEditor({ schedule }: { schedule?: Schedule }) {
                 )}
               </>
             )}
+            {workflow && pkg && <TaskBudgetControls agents={pkg.definition.agents} workflow={workflow} value={draft.executionOptions} onChange={(value) => set("executionOptions", value)} disabled={creationUncertain || triggerUncertain || mutations.saveSchedule.isPending} />}
             <ScheduleTiming draft={draft} onChange={setDraft} />
             <p className="text-sm">
               上一次尚未结束时：{" "}

@@ -33,6 +33,7 @@ export function ResultRepeat({
         packageKey: original.packageKey,
         workflowKey: original.workflowKey,
         parameters: original.parameters,
+        executionOptions: original.executionOptions,
         revisionHash: original.packageHash,
         sourceRunId: result.runId,
       })

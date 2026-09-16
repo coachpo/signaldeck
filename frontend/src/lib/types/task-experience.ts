@@ -1,4 +1,4 @@
-import type { Json, JsonObject, ModelObservation, WorkflowDefinition } from "./workflow-platform";
+import type { AgentDefinition, ExecutionOptions, Json, JsonObject, ModelObservation, WorkflowDefinition } from "./workflow-platform";
 export interface Preparation {
   packageKey: string;
   workflowKey: string;
@@ -25,12 +25,14 @@ export interface Requirement {
   issue?: string | null;
 }
 export interface ReuseInput {
+  agents?: Record<string, AgentDefinition>;
   workflow: WorkflowDefinition;
   sourceRunId: string;
   packageKey: string;
   workflowKey: string;
   packageHash: string;
   parameters: Json;
+  executionOptions?: ExecutionOptions;
   inputSchema: JsonObject;
 }
 export interface TaskPreset {
@@ -40,6 +42,7 @@ export interface TaskPreset {
   workflowKey: string;
   packageHash: string;
   parameters: Json;
+  executionOptions?: ExecutionOptions;
   hasParameters: boolean;
   isFavorite: boolean;
   isPinned: boolean;
@@ -55,6 +58,7 @@ export type PresetWrite = Pick<
   | "workflowKey"
   | "packageHash"
   | "parameters"
+  | "executionOptions"
   | "hasParameters"
   | "isFavorite"
   | "isPinned"
@@ -63,6 +67,7 @@ export interface PrepareInput {
   packageKey: string;
   workflowKey: string;
   parameters: Json;
+  executionOptions?: ExecutionOptions;
   revisionHash?: string;
   sourceRunId?: string;
 }

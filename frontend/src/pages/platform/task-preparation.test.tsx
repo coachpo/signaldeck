@@ -24,6 +24,15 @@ it("shows current model observation without changing configuration readiness", (
   expect(screen.getByText(/配置已就绪/)).toBeVisible();
   expect(screen.getByText(/模型服务额度不足/)).toBeVisible();
 });
+it("identifies a budget-only change without describing it as a connection change", () => {
+  render(<MemoryRouter><TaskPreparation preparation={{
+    packageKey: "p", workflowKey: "w", packageHash: "h", ready: true, bindingToken: "b",
+    issues: [], changedBindings: ["effectiveAgentBudgets"], previousBindings: {}, effectiveSettings: {}, requirements: [],
+  }} /></MemoryRouter>);
+  expect(screen.getByText("用量与时间限制")).toBeVisible();
+  expect(screen.getByText(/本次设置已变化/)).toBeVisible();
+  expect(document.body.textContent).not.toMatch(/连接或业务范围已变化|effectiveAgentBudgets/);
+});
 it("shows business scope and previous settings without exposing platform bindings or issues", () => {
   render(<MemoryRouter><TaskPreparation preparation={{
     packageKey: "p", workflowKey: "w", packageHash: "h", ready: true, bindingToken: "b",

@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useModelUsage } from "@/hooks/use-model-usage";
 import type { ModelUsage, ModelUsageSummary } from "@/lib/types/model-usage";
-import type { Json } from "@/lib/types/workflow-platform";
+export { ModelBudgetSummary } from "./budget-summary";
 
 function count(value: number | null) {
   return value === null ? "未知" : value.toLocaleString();
@@ -65,27 +65,4 @@ export function ModelUsagePanel({ runId }: { runId?: string }) {
       <Button variant="outline" size="sm" onClick={() => void query.refetch()}>重新读取用量</Button>
     </InlineStatePanel> : query.data ? <ModelUsageDetails key={title} title={title} data={query.data} /> : <div key={title} role="status" aria-label={`正在读取${title}`}><Skeleton className="h-16 w-full" /></div>)}
   </ConsoleSection>;
-}
-
-export function ModelBudgetSummary({ settings }: { settings: Json }) {
-  if (!settings || typeof settings !== "object" || Array.isArray(settings)) return null;
-  const agents = settings.agents;
-  if (!agents || typeof agents !== "object" || Array.isArray(agents)) return null;
-  const rows = Object.entries(agents).flatMap(([key, value]) => {
-    if (!value || typeof value !== "object" || Array.isArray(value)) return [];
-    const strategy = value.strategy;
-    if (!strategy || typeof strategy !== "object" || Array.isArray(strategy) || strategy.kind !== "model") return [];
-    const budget = value.budget;
-    if (!budget || typeof budget !== "object" || Array.isArray(budget)) return [];
-    return [{ key, name: typeof value.name === "string" && value.name ? value.name : undefined, budget }];
-  });
-  if (!rows.length) return null;
-  return <section aria-label="模型使用限制" className="flex flex-col gap-2 text-sm">
-    <h3 className="font-medium">模型使用限制</h3>
-    <ul className="flex flex-col gap-2">
-      {rows.map(({ key, name, budget }, index) => <li key={key} className="break-words">
-        {name || `内容处理 ${index + 1}`}：总用量额度 {String(budget.maxTokens ?? "未设置")}；单次输出 {budget.maxOutputTokens === undefined ? "沿用剩余额度" : `${budget.maxOutputTokens} 计量单位（同时受剩余额度限制）`}；最多处理 {String(budget.maxModelRequests ?? "未设置")} 次；时限 {String(budget.deadlineSeconds ?? "未设置")} 秒。
-      </li>)}
-    </ul>
-  </section>;
 }

@@ -7,10 +7,12 @@ from typing import Any
 from uuid import uuid4
 
 from pydantic import JsonValue
-from sqlalchemy import Boolean, DateTime, String, null, select
+from sqlalchemy import Boolean, DateTime, ForeignKey, String, null, select
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, column_property, mapped_column
 
+from app.domain.budgets import ExecutionOptions, resolve_agent_budgets
+from app.domain.definitions import PackageDefinition
 from app.domain.execution import ApplicationError
 from app.domain.schema_contract import DomainValidationError, reject, validate_value
 from app.infrastructure.platform_models import PackagePointerRow, PackageRevisionRow, PlatformBase
@@ -32,6 +34,14 @@ class TaskPresetRow(PlatformBase):
     is_pinned: Mapped[bool] = mapped_column(Boolean)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class TaskPresetExecutionRow(PlatformBase):
+    __tablename__ = "platform_task_preset_execution"
+    preset_id: Mapped[str] = mapped_column(
+        ForeignKey("platform_task_presets.id", ondelete="CASCADE"), primary_key=True
+    )
+    execution_options: Mapped[dict[str, Any]] = mapped_column(JSONB)
 
 
 def validate_preset_parameters(schema: dict[str, Any], parameters: JsonValue) -> None:
@@ -68,6 +78,11 @@ class TaskPresetStore:
         self.platform = platform
 
     def _read(self, row: TaskPresetRow) -> TaskPresetRead:
+        with self.platform.session_factory() as session:
+            execution = session.get(TaskPresetExecutionRow, row.id)
+            options = ExecutionOptions.model_validate(
+                {} if execution is None else execution.execution_options
+            )
         has_parameters = row.parameters is not None or row.explicit_null
         current = self.platform.get_package(row.package_key)
         workflow = (
@@ -76,7 +91,17 @@ class TaskPresetStore:
         status = "unavailable"
         errors = []
         if workflow is not None:
+            assert current is not None
             status = "valid" if has_parameters else "not_applicable"
+            try:
+                resolve_agent_budgets(
+                    PackageDefinition.model_validate(current["definition"]),
+                    row.workflow_key,
+                    options,
+                )
+            except ApplicationError as exc:
+                status = "invalid"
+                errors = [{"code": exc.code, "path": "$.executionOptions", "message": exc.message}]
             if has_parameters:
                 try:
                     validate_preset_parameters(workflow["inputSchema"], row.parameters)
@@ -104,6 +129,7 @@ class TaskPresetStore:
                     )
                 },
                 "has_parameters": has_parameters,
+                "execution_options": options,
                 "current_package_hash": None if current is None else current["packageHash"],
                 "needs_revalidation": current is None or current["packageHash"] != row.package_hash,
                 "validation_status": status,
@@ -163,6 +189,11 @@ class TaskPresetStore:
             workflow = revision.definition["workflows"].get(workflow_key)
             if workflow is None:
                 raise ApplicationError("workflow_not_found", "Task is unavailable", status=404)
+            resolve_agent_budgets(
+                PackageDefinition.model_validate(revision.definition),
+                workflow_key,
+                payload.execution_options,
+            )
             if payload.has_parameters:
                 validate_preset_parameters(workflow["inputSchema"], payload.parameters)
             now = datetime.now(UTC)
@@ -184,6 +215,14 @@ class TaskPresetStore:
                 else deepcopy(payload.parameters) if payload.has_parameters else JSONB.NULL
             )
             row.updated_at = now
+            session.flush()
+            execution = session.get(TaskPresetExecutionRow, row.id)
+            if execution is None:
+                execution = TaskPresetExecutionRow(preset_id=row.id)
+                session.add(execution)
+            execution.execution_options = payload.execution_options.model_dump(
+                mode="json", by_alias=True
+            )
             saved_id = row.id
         return self.get(saved_id)
 

@@ -7,6 +7,8 @@ from typing import Literal
 
 from pydantic import Field, JsonValue
 
+from app.domain.budgets import ExecutionOptions
+from app.domain.definitions import Budget
 from app.schemas.common import CamelModel
 
 type RunStatus = Literal["queued", "running", "succeeded", "failed", "cancelled"]
@@ -40,6 +42,12 @@ class ResolvedRunSpec(CamelModel):
     definition: dict[str, JsonValue]
     plan: dict[str, JsonValue]
     parameters: JsonValue
+    execution_options: ExecutionOptions = Field(
+        default_factory=ExecutionOptions, exclude_if=lambda value: not value.agent_budgets
+    )
+    effective_agent_budgets: dict[str, Budget] = Field(
+        default_factory=dict, exclude_if=lambda value: not value
+    )
     model_bindings: dict[str, dict[str, JsonValue]] = Field(default_factory=dict)
     plugin_releases: list[dict[str, JsonValue]] = Field(default_factory=list)
     resource_bindings: dict[str, dict[str, JsonValue]] = Field(default_factory=dict)

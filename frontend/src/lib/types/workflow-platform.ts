@@ -1,6 +1,17 @@
 export type Json =
   null | boolean | number | string | Json[] | { [key: string]: Json };
 export type JsonObject = { [key: string]: Json };
+export interface AgentBudget {
+  maxModelRequests?: number;
+  maxToolCalls?: number;
+  maxTokens?: number | "unlimited";
+  maxOutputTokens?: number | "auto" | "provider_default";
+  deadlineSeconds?: number;
+  maxParallelTools?: number;
+}
+export interface ExecutionOptions {
+  agentBudgets?: Record<string, AgentBudget>;
+}
 export interface AgentDefinition {
   name?: string;
   inputSchema: JsonObject;
@@ -19,14 +30,7 @@ export interface AgentDefinition {
     { ttlSeconds: number; scope?: "resource"; key?: "release_input_resources" }
   >;
   resources?: string[];
-  budget?: {
-    maxModelRequests?: number;
-    maxToolCalls?: number;
-    maxTokens?: number;
-    maxOutputTokens?: number;
-    deadlineSeconds?: number;
-    maxParallelTools?: number;
-  };
+  budget?: AgentBudget;
 }
 export interface NodeDefinition {
   uses: string;
@@ -159,6 +163,8 @@ export interface RunDetail extends RunSummary {
     definition: PackageDefinition;
     plan: WorkflowPlan;
     parameters: Json;
+    executionOptions?: ExecutionOptions;
+    effectiveAgentBudgets?: Record<string, AgentBudget>;
     modelBindings: JsonObject;
     pluginReleases: JsonObject[];
     resourceBindings: JsonObject;
@@ -171,7 +177,7 @@ export interface RunDetail extends RunSummary {
   errorCode?: string | null;
   evidence: ExecutionEvidence[];
 }
-export type ModelErrorCategory = "quota" | "authentication" | "rate_limit" | "model" | "input" | "output_limit" | "unknown";
+export type ModelErrorCategory = "quota" | "authentication" | "rate_limit" | "model" | "input" | "output_limit" | "budget_exceeded" | "usage_unavailable" | "output_truncated" | "unknown";
 export interface ModelObservation {
   status: "not_observed" | "succeeded" | "failed" | "unknown";
   observedAt: string | null;
@@ -227,6 +233,7 @@ export interface ScheduleConfig {
   packageKey: string;
   workflowKey: string;
   parameters: Json;
+  executionOptions?: ExecutionOptions;
   cron: string;
   timeZone: string;
   overlapPolicy: "skip" | "buffer_one" | "allow";

@@ -33,6 +33,11 @@ def project_model_failure(
         )
         for e in failures
     }
+    if error_code == "agent_budget_exceeded" or (
+        error_code == "workflow_nodes_failed"
+        and any(code == "agent_budget_exceeded" for _, code in failed_nodes)
+    ):
+        categories.add("budget_exceeded")
     if len(categories) == 1:
         category = categories.pop()
         if category in MODEL_ERROR_CATEGORIES:

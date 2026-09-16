@@ -6,14 +6,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import type { AgentDefinition } from "@/lib/types/workflow-platform";
+import { BudgetControls } from "./budget-controls";
 import { MappingEditor } from "./package-mapping";
 import { MultipleChoice, NumberProperty, SavedChoice, type AuthoringCatalog, type PropertyEdit } from "./package-controls";
-
-const budgets = [
-  ["maxModelRequests", "最多思考次数", 1000], ["maxToolCalls", "最多服务操作次数", 10000],
-  ["maxTokens", "总模型用量上限（模型计量单位）", undefined], ["maxOutputTokens", "单次回答上限（模型计量单位）", undefined],
-  ["deadlineSeconds", "最长等待（秒）", 86400], ["maxParallelTools", "同时进行的服务操作", 128],
-] as const;
 
 export function AgentProperties({ agent, edit, catalog }: { agent: AgentDefinition; edit: PropertyEdit; catalog: AuthoringCatalog }) {
   const strategy = agent.strategy;
@@ -46,7 +41,7 @@ export function AgentProperties({ agent, edit, catalog }: { agent: AgentDefiniti
     }} emptyText="还没有可用的服务操作。添加服务后可在这里选择。" />
     {strategy.kind === "deterministic" && <p className="text-sm text-muted-foreground">直接执行的服务操作会保持选中；要移除它，请先更换上方的完成方式或操作。</p>}
     <MultipleChoice label="允许使用的连接" value={agent.resources} options={catalog.connections} onChange={(v) => edit(["resources"], v)} emptyText="没有额外连接。AI 服务在上方单独选择。" />
-    <Field label="用量与等待限制" description="留空使用默认限制。模型按自身计量单位统计用量，实际可处理的文字量因内容而异。"><div className="grid gap-3 sm:grid-cols-2">{budgets.map(([name, label, max]) => <NumberProperty key={name} label={label} value={agent.budget?.[name]} max={max} onChange={(v) => edit(["budget", name], v)} />)}</div></Field>
+    <Field label="用量与时间限制" description="沿用默认会恢复平台默认；累计用量是响应后检查的停止线，一次回复可能超过额度。"><BudgetControls value={agent.budget} onChange={(value) => edit(["budget"], value)} onFieldChange={(key, value) => edit(["budget", key], value)} /></Field>
     <Field label="复用近期查询结果" description="仅适用于查询操作。同样的信息与连接可以在指定时间内复用；过期后重新查询。">
       {(agent.tools ?? []).map((key, index) => {
         const item = catalog.tools.find((candidate) => candidate.value === key);

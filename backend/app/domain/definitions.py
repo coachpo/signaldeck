@@ -20,8 +20,10 @@ TerminalState = Literal["succeeded", "failed", "skipped", "blocked", "cancelled"
 class Budget(CamelModel):
     max_model_requests: int = Field(default=12, ge=1, le=1000)
     max_tool_calls: int = Field(default=32, ge=1, le=10000)
-    max_tokens: int = Field(default=100000, ge=1)
-    max_output_tokens: int | None = Field(default=None, ge=1, exclude_if=lambda v: v is None)
+    max_tokens: Annotated[int, Field(strict=True, ge=1)] | Literal["unlimited"] = 100000
+    max_output_tokens: (
+        Annotated[int, Field(strict=True, ge=1)] | Literal["auto", "provider_default"] | None
+    ) = Field(default=None, exclude_if=lambda v: v is None)
 
     @field_validator("max_output_tokens", mode="before")
     @classmethod

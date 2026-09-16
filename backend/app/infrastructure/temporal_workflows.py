@@ -144,9 +144,10 @@ class SignalDeckWorkflow:
             )
             node = self.definition["nodes"][node_id]
             agent = self.spec["definition"]["agents"][node["uses"]]
+            budget = self.spec.get("effectiveAgentBudgets", {}).get(node["uses"], agent["budget"])
             deadline = min(
                 datetime.fromisoformat(self.spec["deadline"]),
-                workflow.now() + timedelta(seconds=agent["budget"]["deadlineSeconds"]),
+                workflow.now() + timedelta(seconds=budget["deadlineSeconds"]),
             ).isoformat()
             for attempt in range(1, node["maxAttempts"] + 1):
                 invocation_id = f"{self.spec['runId']}:{node_id}:agent:{attempt}"
@@ -156,6 +157,7 @@ class SignalDeckWorkflow:
                         "runId": self.spec["runId"],
                         "nodeId": node_id,
                         "agent": agent,
+                        "effectiveBudget": budget,
                         **self._agent_bindings(agent),
                         "input": node_input,
                         "attempt": attempt,
@@ -169,7 +171,13 @@ class SignalDeckWorkflow:
                 result = await await_cancel_once(child)
                 if (
                     result["status"] != "failed"
-                    or result.get("errorCode") == "model_output_limit_exceeded"
+                    or result.get("errorCode")
+                    in {
+                        "model_output_limit_exceeded",
+                        "agent_budget_exceeded",
+                        "model_usage_unavailable",
+                        "model_output_truncated",
+                    }
                     or not self._can_restart(agent)
                 ):
                     break

@@ -9,6 +9,7 @@ from pydantic import Field
 from app.api.platform_dependencies import get_artifacts, get_platform_store, get_published_core
 from app.core.config import get_settings
 from app.db.engine import get_session_factory
+from app.domain.budgets import resolve_agent_budgets
 from app.domain.compiler import compile_package
 from app.domain.execution import ApplicationError
 from app.domain.schedules import (
@@ -79,6 +80,7 @@ def _validate_definition(payload: ScheduleDefinition) -> None:
     if workflow is None:
         raise ApplicationError("workflow_not_found", "Workflow is unavailable", status=404)
     validate_value(workflow.input_schema, payload.parameters, "$.parameters")
+    resolve_agent_budgets(compiled.package, payload.workflow_key, payload.execution_options)
 
 
 @router.get("", response_model=ScheduleList)
@@ -132,7 +134,7 @@ async def update_schedule(
     # Timing/pause repair remains available when a referenced task was removed.
     if existing is None or any(
         getattr(existing, field) != getattr(payload, field)
-        for field in ("package_key", "workflow_key", "parameters")
+        for field in ("package_key", "workflow_key", "parameters", "execution_options")
     ):
         _validate_definition(payload)
     return await service.save(payload, schedule_id)

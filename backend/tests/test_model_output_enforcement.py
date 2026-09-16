@@ -131,6 +131,13 @@ def test_gateway_checks_reported_usage_and_replays_violation_without_network(
                 assert store.rows["model"].metadata["finishReason"] == (
                     None if malformed and style == "chat_completions" else "stop"
                 )
+            elif output_tokens is None:
+                for _ in range(2):
+                    with pytest.raises(ApplicationError) as error:
+                        await call()
+                    assert error.value.message == "model_usage_unavailable"
+                    assert error.value.non_retryable
+                assert store.rows["model"].status == "failed"
             elif malformed:
                 with pytest.raises(ApplicationError) as error:
                     await call()
@@ -250,7 +257,7 @@ def test_gateway_preserves_raw_counter_presence_and_total_reasoning(
             elif error is not None:
                 # SDKs may reject malformed counters; they must not reinterpret
                 # them as provider-reported integers or claim an output violation.
-                assert error.message in {"model_request_failed", "model_response_invalid"}
+                assert error.message == "model_usage_unavailable"
             assert len(calls) == 1
             assert calls[0]["max_completion_tokens"] == 12
             for key in ("model", "model:attempt:1"):

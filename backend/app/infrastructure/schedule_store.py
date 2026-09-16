@@ -131,7 +131,12 @@ class ScheduleStore:
                 )
                 session.add(row)
             elif create_only:
-                if row.definition != payload:
+                if (
+                    ScheduleDefinition.model_validate(row.definition).model_dump(
+                        mode="json", by_alias=True
+                    )
+                    != payload
+                ):
                     raise ApplicationError(
                         "schedule_identity_conflict",
                         "This creation request already has different settings",

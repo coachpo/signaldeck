@@ -13,9 +13,11 @@ it("inherits business input and keeps one creation identity after an uncertain r
         key: "research_notes",
         name: "Notes",
         definition: {
+          agents: { writer: { name: "写作助手", inputSchema: {}, outputSchema: {}, strategy: { kind: "model", modelRef: "model", prompt: "write" } } },
           workflows: {
             capture: {
               name: "Capture",
+              nodes: { write: { uses: "writer", inputMapping: {} } },
               inputSchema: {
                 type: "object",
                 properties: {
@@ -64,6 +66,7 @@ it("inherits business input and keeps one creation identity after an uncertain r
                 workflowKey: "capture",
                 name: "保存会议原文",
                 parameters: { title: "会议", text: "原文内容" },
+                executionOptions: { agentBudgets: { writer: { maxTokens: "unlimited", maxOutputTokens: "provider_default" } } },
               },
             },
           },
@@ -95,6 +98,7 @@ it("inherits business input and keeps one creation identity after an uncertain r
   fireEvent.click(screen.getByRole("button", { name: "启用自动执行" }));
   await waitFor(() => expect(submitted).toHaveLength(2));
   expect(submitted[1]).toEqual(submitted[0]);
+  expect(submitted[0].executionOptions).toEqual({ agentBudgets: { writer: { maxTokens: "unlimited", maxOutputTokens: "provider_default" } } });
   expect(submitted[0].requestId).toEqual(expect.any(String));
   expect(submitted[0].parameters).toEqual({ title: "会议", text: "原文内容" });
 });

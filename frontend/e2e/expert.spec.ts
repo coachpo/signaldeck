@@ -21,10 +21,10 @@ test("expert authors with named controls, keeps session drafts and fixes invalid
   await page.goto(`/workflow-packages/${key}`);
   await page.getByRole("button", { name: "Reusable analyst", exact: true }).click();
   await page.getByLabel("助手任务说明", { exact: true }).fill(userInstructions);
-  await page.getByLabel("总模型用量上限（模型计量单位）", { exact: true }).fill("4567");
+  await page.getByLabel("累计模型用量数值", { exact: true }).fill("4567");
   await roundtrip(page);
   await expect(page.getByLabel("助手任务说明", { exact: true })).toHaveValue(userInstructions);
-  await expect(page.getByLabel("总模型用量上限（模型计量单位）", { exact: true })).toHaveValue("4567");
+  await expect(page.getByLabel("累计模型用量数值", { exact: true })).toHaveValue("4567");
   await page.getByRole("link", { name: "开始任务", exact: true }).click();
   await page.getByRole("button", { name: "保留草稿并离开", exact: true }).click();
   await expect(page).toHaveURL(`/workflow-packages/${key}/run`);

@@ -7,6 +7,7 @@ from typing import Any
 
 from pydantic import Field, JsonValue
 
+from app.domain.budgets import ExecutionOptions
 from app.domain.definitions import PackageDefinition, WorkflowPlan
 from app.domain.plugin_catalog import PluginObservation
 from app.domain.tool_contracts import PluginRelease
@@ -50,6 +51,7 @@ class PackageList(CamelModel):
 
 
 class LaunchRequest(CamelModel):
+    execution_options: ExecutionOptions = Field(default_factory=ExecutionOptions)
     revision_hash: str | None = None
     binding_token: str | None = None
     workflow_key: str = Field(min_length=1, max_length=120)

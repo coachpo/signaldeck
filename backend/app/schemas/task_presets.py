@@ -5,11 +5,13 @@ from typing import Any, Literal, Self
 
 from pydantic import Field, JsonValue, model_validator
 
+from app.domain.budgets import ExecutionOptions
 from app.schemas.common import CamelModel
 
 
 class TaskPresetInput(CamelModel):
     parameters: JsonValue = None
+    execution_options: ExecutionOptions = Field(default_factory=ExecutionOptions)
     has_parameters: bool = False
 
     @model_validator(mode="before")

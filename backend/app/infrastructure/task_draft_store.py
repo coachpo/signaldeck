@@ -68,6 +68,7 @@ class TaskDraftStore:
                 "current_package_hash": current_hash,
                 "needs_revalidation": current_hash != payload["package_hash"],
                 "workflow": package["definition"]["workflows"][payload["workflow_key"]],
+                "agents": package["definition"]["agents"],
             }
         )
 
@@ -114,7 +115,14 @@ class TaskDraftStore:
         with self.platform.session_factory() as session, session.begin():
             lock_identity(session, "draft:" + identity)
             row = session.get(TaskDraftRow, identity, with_for_update=True)
-            if row is not None and row.payload == data:
+            stored = (
+                None
+                if row is None
+                else TaskDraftWrite.model_validate(
+                    {**row.payload, "revision": row.revision}
+                ).model_dump(mode="json", exclude={"revision"})
+            )
+            if row is not None and stored == data:
                 return self._read(row)
             if payload.revision != (0 if row is None else row.revision):
                 raise ApplicationError(
@@ -123,9 +131,8 @@ class TaskDraftStore:
                     status=409,
                 )
             if row is not None and row.payload["pending"]:
-                stable = {
-                    k: v for k, v in row.payload.items() if k not in {"pending", "binding_token"}
-                }
+                assert stored is not None
+                stable = {k: v for k, v in stored.items() if k not in {"pending", "binding_token"}}
                 if stable != {
                     k: v for k, v in data.items() if k not in {"pending", "binding_token"}
                 }:

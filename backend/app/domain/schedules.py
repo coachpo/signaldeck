@@ -6,6 +6,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pydantic import Field, JsonValue, field_validator
 
+from app.domain.budgets import ExecutionOptions
 from app.schemas.common import CamelModel
 
 
@@ -47,6 +48,7 @@ class ScheduleDefinition(ScheduleCalendar):
     package_key: str = Field(min_length=1)
     workflow_key: str = Field(min_length=1)
     parameters: JsonValue = Field(default_factory=dict)
+    execution_options: ExecutionOptions = Field(default_factory=ExecutionOptions)
     overlap_policy: Literal["skip", "buffer_one", "allow"] = "skip"
     catchup_window_seconds: int = Field(default=60, ge=10)
     paused: bool = False

@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { workflowPlatformApi as api } from "@/lib/api/workflow-platform";
 import { queryKeys } from "@/lib/query-keys";
 import type {
+  ExecutionOptions,
   Json,
   PluginRelease,
   RunSummary,
@@ -103,12 +104,14 @@ export function usePlatformMutations() {
         workflowKey,
         parameters,
         launchId,
+        executionOptions,
       }: {
         key: string;
         workflowKey: string;
         parameters: Json;
         launchId: string;
-      }) => api.launch(key, workflowKey, parameters, launchId),
+        executionOptions?: ExecutionOptions;
+      }) => api.launch(key, workflowKey, parameters, launchId, executionOptions),
       onSuccess: () => invalidate(keys.runs.all),
     }),
     cancel: useMutation({

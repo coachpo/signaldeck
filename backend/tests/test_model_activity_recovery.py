@@ -90,6 +90,7 @@ def test_slow_model_heartbeat_liveness_and_recovery(
                 "object": "chat.completion",
                 "created": 0,
                 "model": "controlled-model",
+                "usage": {"prompt_tokens": 3, "completion_tokens": 2, "total_tokens": 5},
                 "choices": [
                     {
                         "index": 0,

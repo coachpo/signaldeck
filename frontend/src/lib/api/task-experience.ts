@@ -28,6 +28,7 @@ export const taskExperienceApi = {
           method: "POST",
           body: {
             parameters: body.parameters,
+            executionOptions: body.executionOptions,
             launchId: body.launchId,
             bindingToken: body.bindingToken,
           },
@@ -48,6 +49,7 @@ export const taskExperienceApi = {
               name: fields.name,
               packageHash: fields.packageHash,
               parameters: fields.parameters,
+              executionOptions: fields.executionOptions,
               hasParameters: fields.hasParameters,
               isFavorite: fields.isFavorite,
               isPinned: fields.isPinned,

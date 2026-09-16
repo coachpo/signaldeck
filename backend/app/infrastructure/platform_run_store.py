@@ -53,6 +53,8 @@ class PlatformRunStore(PlatformProjectionStore):
         intent = {
             key: payload[key] for key in ("packageKey", "workflowKey", "parameters", "origin")
         }
+        if spec.execution_options.agent_budgets:
+            intent["executionOptions"] = payload["executionOptions"]
         digest = canonical_digest(intent)
         with self.session_factory() as session, session.begin():
             lock_identity(session, "launch:" + launch_id)

@@ -76,6 +76,7 @@ export function TaskPage() {
       packageHash={restored?.packageHash ?? historical?.packageHash ?? pkg!.packageHash}
       schema={schema}
       workflow={restored?.workflow ?? historical?.workflow ?? workflow}
+      agents={restored?.agents ?? historical?.agents ?? pkg?.definition.agents}
       restored={restored}
       initial={
         restored ? restored.parameters : historical ? historical.parameters : preset?.hasParameters ? preset.parameters : taskDefaults(schema)

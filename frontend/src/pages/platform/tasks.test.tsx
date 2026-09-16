@@ -333,18 +333,22 @@ it("lets an explicit binding rejection be repaired and prepared again", async ()
 
 it("preserves explicit false and omitted schema/2 defaults when editing and saving a preset", async () => {
   mocks.schema = {type:"object",properties:{title:{type:"string",title:"标题"},includeRisk:{type:"boolean","x-signaldeck-schema":"signaldeck.schema/2",default:true},reportId:{type:"string","x-signaldeck-schema":"signaldeck.schema/2",default:"suggestion"}},required:["title","includeRisk"]};
-  mocks.preset = {id:`exact-${mocks.hash}`,name:"Explicit inputs",packageKey:"research_notes",workflowKey:"capture",packageHash:`test-${mocks.hash}`,parameters:{title:"old",includeRisk:false},hasParameters:true,isFavorite:false,isPinned:false,currentPackageHash:`test-${mocks.hash}`,needsRevalidation:false,validationStatus:"valid",validationErrors:[]};
+  mocks.preset = {id:`exact-${mocks.hash}`,name:"Explicit inputs",executionOptions:{agentBudgets:{writer:{maxTokens:"unlimited",maxOutputTokens:"provider_default"}}},packageKey:"research_notes",workflowKey:"capture",packageHash:`test-${mocks.hash}`,parameters:{title:"old",includeRisk:false},hasParameters:true,isFavorite:false,isPinned:false,currentPackageHash:`test-${mocks.hash}`,needsRevalidation:false,validationStatus:"valid",validationErrors:[]};
   render(<Page path={`/tasks/new?presetId=${mocks.preset.id}`} />);
   fireEvent.change(screen.getByLabelText("标题"),{target:{value:"edited"}});
   fireEvent.click(screen.getByText("保存常用输入或收藏任务（可选）"));
   fireEvent.click(screen.getByRole("button",{name:"更新此配置"}));
   await waitFor(()=>expect(mocks.save).toHaveBeenCalledTimes(1));
   expect(mocks.save.mock.calls[0][0].parameters).toEqual({title:"edited",includeRisk:false});
+  expect(mocks.save.mock.calls[0][0].executionOptions).toEqual(mocks.preset.executionOptions);
   await waitFor(()=>expect(mocks.prepare).toHaveBeenCalled());
   expect(mocks.prepare.mock.calls.at(-1)![0].parameters).toEqual({title:"edited",includeRisk:false});
+  expect(mocks.prepare.mock.calls.at(-1)![0].executionOptions).toEqual(mocks.preset.executionOptions);
 });
 
 it("commits pending identity before launch and restores it after a lost response in a new editor", async () => {
+  const executionOptions = { agentBudgets: { writer: { maxTokens: "unlimited" as const, maxOutputTokens: "provider_default" as const } } };
+  mocks.preset = { id: `pending-budget-${mocks.hash}`, name: "Budget", packageKey: "research_notes", workflowKey: "capture", packageHash: `test-${mocks.hash}`, parameters: { title: "标题", text: "原文" }, executionOptions, hasParameters: true, isFavorite: false, isPinned: false, currentPackageHash: `test-${mocks.hash}`, needsRevalidation: false, validationStatus: "valid", validationErrors: [] };
   let stored: Record<string, unknown> | undefined;
   mocks.saveDraft.mockImplementation(async (input) => {
     stored = { ...input, revision: input.revision + 1, workflow: { name: "Recovered", inputSchema: { type: "object", properties: { title: { type: "string", title: "标题" }, text: { type: "string", title: "原文" } }, required: ["title", "text"] } } };
@@ -355,11 +359,13 @@ it("commits pending identity before launch and restores it after a lost response
     expect(stored?.pending).toBe(true);
     throw new Error("Response lost");
   });
-  const first = render(<Page />);
+  const first = render(<Page path={`/tasks/new?presetId=${mocks.preset.id}`} />);
   await prepare();
   fireEvent.click(screen.getByRole("button", { name: "开始任务" }));
   await waitFor(() => expect(mocks.launch).toHaveBeenCalledTimes(1));
   const original = mocks.launch.mock.calls[0][0];
+  expect(original.executionOptions).toEqual(executionOptions);
+  expect(stored?.executionOptions).toEqual(executionOptions);
   await waitFor(() => expect(screen.getByLabelText("Current route").textContent).toBe(`/tasks/new?draftId=${stored!.id}`));
   const refreshPath = screen.getByLabelText("Current route").textContent!;
   first.unmount();

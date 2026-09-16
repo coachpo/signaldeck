@@ -16,6 +16,7 @@ with workflow.unsafe.imports_passed_through():
 
     from app.application.dispatch import AdmissionRejected, CommandDispatcher
     from app.application.launch import LaunchService
+    from app.domain.budgets import ExecutionOptions
     from app.domain.execution import ApplicationError, LaunchOrigin
     from app.domain.schedules import ScheduleFireRecord
     from app.domain.schema_contract import DomainValidationError
@@ -123,6 +124,9 @@ class TemporalScheduleActivities:
                 definition["workflowKey"],
                 definition["parameters"],
                 launch_id=launch_id,
+                execution_options=ExecutionOptions.model_validate(
+                    definition.get("executionOptions", {})
+                ),
                 origin=LaunchOrigin(
                     kind="schedule",
                     schedule_id=command["scheduleId"],

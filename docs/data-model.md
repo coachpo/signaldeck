@@ -12,6 +12,7 @@ v2 数据模型替换旧 workflow/step/extension 表合同；本文不描述旧�
 | `platform_packages` | 当前包指针：每个 `package_key` 指向一个已有内容 hash。历史修订不随指针更新而改写。 |
 | `platform_task_drafts` | 显式任务草稿：ID、乐观 revision、闭合草稿 payload 和更新时间。与 Run、输出和计划独立；保留原包修订和来源 Run、已应用 JSON、hasParameters、未应用 jsonText、稳定 launchId、pending 与绑定 token。 |
 | `platform_task_presets` | 可选命名输入组合及任务收藏：稳定 ID、名称、package/workflow key、校验时 package hash、JSON 输入 parameters、收藏/置顶和时间戳。与包、运行、计划无级联删除关系；不充当执行定义。 |
+| `platform_task_preset_execution` | 常用配置的预算覆盖附属表，以 preset ID 关联闭合 executionOptions；与配置同事务保存，删除配置时清除，不改变业务 parameters。 |
 | `platform_resources` | model/tool 资源；非敏感 config、加密且默认 deferred 的 credentials、presence 和 credential revision。 |
 | `platform_plugin_releases` | `(plugin_id, artifact_digest)` 主键；保存不可变发布描述及工具契约。 |
 | `platform_plugins` | 插件当前发布指针和 enabled 状态；不保存插件业务实例。 |
@@ -40,11 +41,13 @@ API 使用 `hasParameters` 区分命名业务输入与无输入收藏：为 `tru
 
 保存与删除配置均不创建运行或计划，也不改写包、既有运行快照或结果。配置仅提供重新填入业务表单的输入来源，执行仍通过 Workflow Package/v2 和既有启动边界完成。
 
+预算覆盖保存在独立的 `platform_task_preset_execution` 表；初始化 `create_all` 可创建该表，不给已有 presets 表加列，也不重写旧 parameters 或收藏语义。没有附属记录时视为未覆盖。保存校验所选工作流的助手，读取随当前定义重校验，不静默删除失效覆盖。预算和业务输入分别通过闭合合同保存。
+
 ## 计划与限流/缓存
 
 | 表 | 用途 |
 | --- | --- |
-| `platform_schedules` | JSON schedule definition、期望修订、已同步修订、删除意图、同步错误和更新时间。定义包含 cron、timezone、overlap、catchup window 和参数。 |
+| `platform_schedules` | JSON schedule definition、期望修订、已同步修订、删除意图、同步错误和更新时间。定义包含 cron、timezone、overlap、catchup window、参数和独立预算覆盖。 |
 | `platform_schedule_triggers` | `(schedule_id, trigger_id)` 主键；手动触发的稳定时间身份、请求时间、投递时间和错误。同 schedule 的 identity time 唯一。 |
 | `platform_schedule_fires` | 每次实际 fire 的 trigger、schedule、Temporal workflow/run 身份、scheduled time、Core Run ID、状态和错误。 |
 | `platform_io_resource_permits` | 跨 Worker 的外部 I/O 并发许可与过期时间。 |
@@ -59,13 +62,15 @@ API 使用 `hasParameters` 区分命名业务输入与无输入收藏：为 `tru
 
 ## 快照与凭据版本
 
-`ResolvedRunSpec` 保存完整 package definition、所选 Workflow plan、参数、模型/资源非敏感配置、credential revision、所需 plugin releases、tool alias、Core digest、deadline 和 origin。启动时这些值与 Run 和 start command 同事务提交；不存在必须在后续事务补齐的独立 snapshot 行。
+`ResolvedRunSpec` 保存完整 package definition、所选 Workflow plan、参数、模型/资源非敏感配置、credential revision、所需 plugin releases、tool alias、Core digest、deadline 和 origin。预算另外保存用户选择 `executionOptions.agentBudgets` 和已解析的 `effectiveAgentBudgets`；不改 package definition 或 packageHash。启动时这些值与 Run 和 start command 同事务提交；不存在必须在后续事务补齐的独立 snapshot 行。
 
 资源读取只选择 config、presence 和 revision，不解密 credentials。[`EncryptedJSONB`](../backend/app/infrastructure/secret_storage.py) 通过应用加密密钥保护凭据；普通参数、定义、证据和配置不是加密凭据字段。原始凭据不得放进 package YAML 或普通参数。
 
 编辑资源配置而不提交 credentials 会保留凭据 revision；显式写入新的 credentials 会生成新 revision。I/O 使用 `resolve_bound_credentials` 核对固定 revision；旧 revision 被轮换后不再可用，返回 `resource_binding_changed`。系统没有历史凭据归档，也不允许旧 Run 默默使用当前新凭据。历史快照和证据读取仍不依赖解密或外部服务。
 
 新 Run 默认使用当前包及绑定；rerun 使用原包修订和参数，但重新解析当前资源/插件/Core 并生成新 deadline 与 Run ID，origin 保存 `sourceRunId`。修改输入复用同样固定原包修订，保存用户修改后的参数，origin.kind 为 `reuse` 且记录 `sourceRunId`。新运行不继承原运行结果。schedule origin 还保存 schedule、trigger 和 scheduled time。
+
+Rerun 继承原运行有效预算；旧快照缺少独立预算字段时从原冻结定义恢复。reuse 省略执行选项时同样继承原预算，显式覆盖才改变本次选择，显式空对象恢复原包默认。准备标识包含覆盖和有效预算；同一 launchId 改变预算返回身份冲突。重复安排在 JSON definition 中保存覆盖，每次触发结合当时包定义重新解析并冻结；失效助手引用拒绝启动。草稿在已有 JSON payload 保存覆盖，并与输入一起受 revision、pending 和原启动身份保护。
 
 ## 执行证据与内容寻址存储
 
@@ -123,3 +128,5 @@ Finance 的普通 report API 与 Agent report 写入有不同生命周期：Agen
 ## 模型用量读投影
 
 收到模型响应时（包括已报告输出超限而拒绝的响应），模型及对应网络尝试的 `metadata.usage` 仅保存供应商实际报告的 `inputTokens`/`outputTokens`（缺少时为null）。同一逻辑模型 ID 的网络重试、确认副本和恢复不重复计数；失败网络未报告的消耗不推断。实际请求的 `outputTokenLimit`、`outputTokenLimitParameter` 与闭合结束原因 `finishReason` 保存在调用证据；供应商已报告输出超过请求上限时保存 `model_output_limit_exceeded` 失败、`output_limit` 安全类别及 usage（聚合运行失败保留此分类），恢复仍拒绝该响应，不将其文本变为成功输出。旧 SDK 输出的默认零值没有存在性依据时保留未知。运行汇总和按调用首次开始时间归属的当地日汇总读取现有证据，不新增计费表；按冻结模型配置分组，保留用量及耗时覆盖数量。
+
+有限累计预算要求输入和输出计量完整，只有数值输出限制时要求输出计量；必要计量缺失保存 `model_usage_unavailable`，明确截断保存 `model_output_truncated`。这些失败保留已报告计数及结束原因，恢复读取原失败，不再次发起同一网络调用。未发送输出上限时不伪造请求限制；不限额也不把缺失计量记成零。Agent 累计额度或次数耗尽记录 `agent_budget_exceeded`，结果投影区别于供应商账户额度不足。

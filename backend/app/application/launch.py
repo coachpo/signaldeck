@@ -8,6 +8,7 @@ from uuid import uuid4
 
 from pydantic import JsonValue
 
+from app.domain.budgets import ExecutionOptions, resolve_agent_budgets
 from app.domain.compiler import compile_package, validate_agent_tool_contract
 from app.domain.definitions import CompiledPackage, DeterministicStrategy, ModelStrategy
 from app.domain.execution import (
@@ -59,7 +60,9 @@ class LaunchService:
         origin: LaunchOrigin | None = None,
         revision_hash: str | None = None,
         binding_token: str | None = None,
+        execution_options: ExecutionOptions | None = None,
     ) -> RunSummary:
+        execution_options = execution_options or ExecutionOptions()
         if launch_id is not None:
             previous = self.store.get_run_by_launch_id(launch_id)
             if previous is not None:
@@ -76,6 +79,7 @@ class LaunchService:
                         "package_key": package_key,
                         "workflow_key": workflow_key,
                         "parameters": parameters,
+                        "execution_options": execution_options,
                         "origin": origin or LaunchOrigin(),
                     }
                 )
@@ -94,6 +98,7 @@ class LaunchService:
             raise ApplicationError("workflow_not_found", "Workflow is unavailable", status=404)
         workflow = compiled.package.workflows[workflow_key]
         validate_value(workflow.input_schema, parameters, "$.parameters")
+        effective_budgets = resolve_agent_budgets(compiled.package, workflow_key, execution_options)
         models, resources, releases = self._resolve(compiled, workflow_key)
         if binding_token is not None and binding_token != canonical_digest(
             binding_value(
@@ -103,6 +108,11 @@ class LaunchService:
                 models,
                 resources,
                 [release.model_dump(mode="json", by_alias=True) for release in releases],
+                execution_options.model_dump(mode="json", by_alias=True),
+                {
+                    key: budget.model_dump(mode="json", by_alias=True)
+                    for key, budget in effective_budgets.items()
+                },
             )
         ):
             raise ApplicationError(
@@ -124,6 +134,8 @@ class LaunchService:
             definition=compiled.package.model_dump(mode="json", by_alias=True),
             plan=compiled.plans[workflow_key].model_dump(mode="json", by_alias=True),
             parameters=parameters,
+            execution_options=execution_options,
+            effective_agent_budgets=effective_budgets,
             model_bindings=models,
             resource_bindings=resources,
             plugin_releases=[

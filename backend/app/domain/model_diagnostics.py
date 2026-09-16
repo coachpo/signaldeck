@@ -6,7 +6,16 @@ from typing import Literal
 from app.schemas.common import CamelModel
 
 ModelErrorCategory = Literal[
-    "quota", "authentication", "rate_limit", "model", "input", "output_limit", "unknown"
+    "quota",
+    "authentication",
+    "rate_limit",
+    "model",
+    "input",
+    "output_limit",
+    "budget_exceeded",
+    "usage_unavailable",
+    "output_truncated",
+    "unknown",
 ]
 MODEL_ERROR_CATEGORIES = {
     "quota",
@@ -15,6 +24,9 @@ MODEL_ERROR_CATEGORIES = {
     "model",
     "input",
     "output_limit",
+    "budget_exceeded",
+    "usage_unavailable",
+    "output_truncated",
     "unknown",
 }
 

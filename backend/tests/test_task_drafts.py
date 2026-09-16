@@ -29,6 +29,7 @@ def test_draft_roundtrip_conflict_and_identity(
             "parameters": parameters,
             "jsonText": '{"incomplete": [',
             "launchId": "stable-original",
+            "executionOptions": {"agentBudgets": {"echo": {"maxToolCalls": 17}}},
         }
         saved = client.put("/api/task-drafts/draft-a", json=payload)
         assert saved.status_code == 200, saved.text
@@ -56,6 +57,8 @@ def test_draft_roundtrip_conflict_and_identity(
     with client_for(PlatformStore(session_factory)) as client:
         restored = client.get("/api/task-drafts/draft-a").json()
         assert restored["launchId"] == "stable-original"
+        assert restored["executionOptions"] == payload["executionOptions"]
+        assert "echo" in restored["agents"]
         assert restored["pending"] is True
         assert restored["parameters"] == parameters
         assert client.delete("/api/task-drafts/draft-a?revision=1").status_code == 409

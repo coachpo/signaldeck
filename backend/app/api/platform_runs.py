@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, Query
 from app.api.platform_dependencies import get_launch_service, get_platform_store
 from app.application.launch import LaunchService
 from app.application.result_projection import project_result
+from app.domain.budgets import ExecutionOptions, effective_execution_options
 from app.domain.definitions import PackageDefinition
 from app.domain.execution import ApplicationError, LaunchOrigin, RunDetail, RunSummary
 from app.infrastructure.platform_store import PlatformStore
@@ -108,6 +109,21 @@ def cancel_run(run_id: str, store: Store) -> RunSummary:
     return store.request_cancel(run_id)
 
 
+def _repeat_options(
+    store: PlatformStore, original: RunDetail, launch_id: str | None, kind: str
+) -> ExecutionOptions:
+    previous = store.get_run_by_launch_id(launch_id) if launch_id is not None else None
+    if (
+        previous is not None
+        and previous.origin.kind == kind
+        and previous.origin.source_run_id == original.id
+    ):
+        # Recover the accepted command's intent, including pre-budget snapshots.
+        # Rebuilding inherited overrides would change the identity of an uncertain retry.
+        return previous.spec.execution_options
+    return effective_execution_options(original.spec)
+
+
 @router.post("/{run_id}/rerun", response_model=RunSummary, status_code=201)
 def rerun(
     run_id: str,
@@ -124,6 +140,7 @@ def rerun(
         origin=LaunchOrigin(kind="rerun", source_run_id=run_id),
         revision_hash=original.package_hash,
         binding_token=payload.binding_token,
+        execution_options=_repeat_options(store, original, payload.launch_id, "rerun"),
     )
 
 
@@ -146,6 +163,8 @@ def reuse_input(run_id: str, store: Store) -> ReuseRead:
         parameters=original.spec.parameters,
         input_schema=workflow.input_schema,
         workflow=workflow,
+        agents=PackageDefinition.model_validate(original.spec.definition).agents,
+        execution_options=effective_execution_options(original.spec),
     )
 
 
@@ -165,4 +184,9 @@ def launch_reused_input(
         origin=LaunchOrigin(kind="reuse", source_run_id=run_id),
         revision_hash=original.package_hash,
         binding_token=payload.binding_token,
+        execution_options=(
+            payload.execution_options
+            if payload.execution_options is not None
+            else _repeat_options(store, original, payload.launch_id, "reuse")
+        ),
     )

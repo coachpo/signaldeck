@@ -11,7 +11,7 @@ export type ScheduleDraft = {
 export const scheduleDrafts = new Map<string, ScheduleDraft>();
 export function scheduleConfigKey(value: ScheduleConfig) {
   return JSON.stringify({ name: value.name, packageKey: value.packageKey, workflowKey: value.workflowKey,
-    parameters: value.parameters, cron: value.cron, timeZone: value.timeZone,
+    parameters: value.parameters, executionOptions: value.executionOptions, cron: value.cron, timeZone: value.timeZone,
     overlapPolicy: value.overlapPolicy, catchupWindowSeconds: value.catchupWindowSeconds, paused: value.paused });
 }
 export const scheduleTriggerDrafts = new Map<string, string>();

@@ -1,4 +1,4 @@
-import type { Json, WorkflowDefinition } from "./workflow-platform";
+import type { AgentDefinition, ExecutionOptions, Json, WorkflowDefinition } from "./workflow-platform";
 export interface TaskDraftWrite {
   revision: number;
   name: string;
@@ -8,6 +8,7 @@ export interface TaskDraftWrite {
   sourceRunId: string | null;
   hasParameters: boolean;
   parameters: Json;
+  executionOptions?: ExecutionOptions;
   jsonText: string | null;
   launchId: string;
   pending: boolean;
@@ -19,4 +20,5 @@ export interface TaskDraft extends TaskDraftWrite {
   currentPackageHash: string | null;
   needsRevalidation: boolean;
   workflow: WorkflowDefinition;
+  agents?: Record<string, AgentDefinition>;
 }

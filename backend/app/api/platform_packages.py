@@ -111,6 +111,7 @@ def launch_package(
         launch_id=payload.launch_id,
         revision_hash=payload.revision_hash,
         binding_token=payload.binding_token,
+        execution_options=payload.execution_options,
     )
 
 
@@ -128,6 +129,7 @@ def prepare_package(
         payload.parameters,
         payload.revision_hash,
         payload.source_run_id,
+        payload.execution_options,
     )
     installed = {item["pluginId"]: item for item in store.list_plugins()}
     health = PluginHealthReader(store.session_factory)

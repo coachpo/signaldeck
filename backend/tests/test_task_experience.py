@@ -731,3 +731,34 @@ def test_preparation_reports_last_failed_observation_without_claiming_live_healt
     plugin = next(item for item in prepared["requirements"] if item["kind"] == "plugin")
     assert plugin["observation"] == "failed" and plugin["observedAt"]
     assert plugin["observationError"] == "transport_unavailable"
+
+
+def test_budget_overrides_survive_reuse_rerun_and_allow_explicit_reset(platform):
+    client, store, _ = platform
+    configured(client, store)
+    original = client.post(
+        "/api/workflow-packages/api-package/launches",
+        json={
+            "workflowKey": "main",
+            "parameters": {"text": "original"},
+            "launchId": "budget-original",
+            "executionOptions": {"agentBudgets": {"echo": {"maxToolCalls": 17}}},
+        },
+    )
+    assert original.status_code == 201, original.text
+    run_id = original.json()["id"]
+    reusable = client.get(f"/api/runs/{run_id}/reuse").json()
+    assert reusable["executionOptions"]["agentBudgets"]["echo"]["maxToolCalls"] == 17
+    assert "echo" in reusable["agents"]
+    for action, extra, expected in [
+        ("rerun", {}, 17),
+        ("reuse", {"parameters": {"text": "changed"}}, 17),
+        ("reuse", {"parameters": {"text": "reset"}, "executionOptions": {}}, 32),
+    ]:
+        launched = client.post(
+            f"/api/runs/{run_id}/{action}",
+            json={"launchId": f"budget-{action}-{expected}", **extra},
+        )
+        assert launched.status_code == 201, launched.text
+        detail = client.get(f'/api/runs/{launched.json()["id"]}').json()
+        assert detail["spec"]["effectiveAgentBudgets"]["echo"]["maxToolCalls"] == expected

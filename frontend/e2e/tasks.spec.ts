@@ -71,11 +71,11 @@ test("UX01/03/06: four ordinary tasks execute with real plugins and retain reusa
         .getByLabel("标题", { exact: true })
         .fill(`${scenario.title} ${observationId}`);
       await page
-        .getByLabel("原文", { exact: true })
+        .getByLabel(scenario.workflow === "research" ? "本次资料" : "原文", { exact: true })
         .fill(originalText);
       if (scenario.workflow === "research") {
         await page.getByLabel("查找已有笔记", { exact: true }).fill("Original");
-        await page.getByLabel("整理并总结原文", { exact: true }).check();
+        await page.getByLabel("整理事实、变化与待核实问题", { exact: true }).check();
       }
     } else {
       await page
@@ -85,7 +85,7 @@ test("UX01/03/06: four ordinary tasks execute with real plugins and retain reusa
         await page.getByRole("button", { name: "添加项目", exact: true }).click();
         await page.getByLabel("研究对象", { exact: true }).fill("MSFT");
         await expect(
-          page.getByLabel("包含风险分析", { exact: true }),
+          page.getByLabel("包含独立风险复核", { exact: true }),
         ).toBeChecked();
       }
     }
@@ -143,7 +143,7 @@ test("UX01/03/06: four ordinary tasks execute with real plugins and retain reusa
         .getByLabel("确认使用以上服务、账户、业务范围及保存位置")
         .check();
       await connection.getByRole("button", { name: "保存连接" }).click();
-      await expect(page.getByLabel("原文", { exact: true })).toHaveValue(
+      await expect(page.getByLabel("本次资料", { exact: true })).toHaveValue(
         originalText,
       );
     }

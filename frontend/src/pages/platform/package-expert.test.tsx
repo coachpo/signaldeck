@@ -20,7 +20,8 @@ describe("business workflow authoring", () => {
     render(<Editor initial={source} />);
     fireEvent.click(screen.getByRole("button", { name: "Assistant" }));
     fireEvent.change(screen.getByLabelText("助手任务说明"), { target: { value: "Keep exact business input." } });
-    fireEvent.change(screen.getByLabelText("总模型用量上限（模型计量单位）"), { target: { value: "9876" } });
+    choose("累计模型用量方式", "指定额度");
+    fireEvent.change(screen.getByLabelText("累计模型用量数值"), { target: { value: "9876" } });
     fireEvent.click(screen.getByRole("checkbox", { name: "My account" }));
     expect(definition().agents.assistant.budget?.maxTokens).toBe(9876);
     expect(definition().agents.assistant.resources).toEqual(["approved-account"]);
@@ -28,8 +29,8 @@ describe("business workflow authoring", () => {
     expect(definition().agents.assistant.inputSchema).toEqual(parseDefinition(source).agents.assistant.inputSchema);
     expect(definition().workflows).toEqual(parseDefinition(source).workflows);
     expect(screen.getByLabelText("source")).toHaveTextContent("# retain author comment");
-    fireEvent.change(screen.getByLabelText("总模型用量上限（模型计量单位）"), { target: { value: "" } });
-    expect(definition().agents.assistant.budget).not.toHaveProperty("maxTokens");
+    fireEvent.change(screen.getByLabelText("累计模型用量数值"), { target: { value: "" } });
+    expect(definition().agents.assistant.budget?.maxTokens).toBeUndefined();
   });
 
   it("adds reusable assistants, workflows and steps using generated identities", () => {

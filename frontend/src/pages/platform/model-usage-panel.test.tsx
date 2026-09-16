@@ -52,8 +52,10 @@ it("shows independent effective output limits without changing omitted settings"
     save: { strategy: { kind: "deterministic" }, budget: { maxTokens: 500 } },
   } };
   render(<ModelBudgetSummary settings={settings} />);
-  expect(screen.getByText(/内容处理 1：总用量额度 900；单次输出 100 计量单位/)).toBeVisible();
-  expect(screen.getByText(/内容处理 2：总用量额度 800；单次输出 沿用剩余额度/)).toBeVisible();
+  expect(screen.getByText("900")).toBeVisible();
+  expect(screen.getByText("100")).toBeVisible();
+  expect(screen.getByText("800")).toBeVisible();
+  expect(screen.getAllByText("按剩余额度")).toHaveLength(2);
   expect(screen.queryByText(/save：/)).not.toBeInTheDocument();
   expect(settings.agents.reader.budget).not.toHaveProperty("maxOutputTokens");
 });

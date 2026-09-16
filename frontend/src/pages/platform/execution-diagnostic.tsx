@@ -9,10 +9,17 @@ const modelGuidance: Record<ModelErrorCategory, string> = {
   model: "请求的模型不可用。请核对连接中的模型名称和账户可用模型。",
   input: "模型服务不接受本次输入。请检查输入长度、格式和模型支持的请求设置。",
   output_limit: outputLimitGuidance,
+  budget_exceeded: "本次助手的用量或调用次数已达到限制，已停止后续调用。请核对已发生的用量，调整限制后重新运行。",
+  usage_unavailable: "无法核验用量：模型服务未报告完整计量，已停止后续调用。请检查服务的用量报告支持情况。",
+  output_truncated: "回答未完整生成：模型服务报告输出被截断。请调整单次输出限制或检查模型服务的长度限制后重新运行。",
   unknown: "模型调用失败，具体原因未知。请查看执行过程并核对供应商状态。",
 };
 const codeGuidance: Record<string, string> = {
   model_output_limit_exceeded: outputLimitGuidance,
+  agent_budget_exceeded: modelGuidance.budget_exceeded,
+  model_usage_unavailable: modelGuidance.usage_unavailable,
+  model_output_truncated: modelGuidance.output_truncated,
+  agent_deadline_exceeded: "助手执行已超过最长执行时间。请检查服务响应情况或调整时限后重新运行。",
   agent_output_invalid: "模型没有按任务要求提供可用结果。可以重试，或检查助手的结果要求。",
   package_not_found: "找不到任务定义。请检查安排使用的任务是否仍存在，并重新选择有效任务。",
   workflow_not_found: "找不到工作流。请检查安排中的任务选择。",

@@ -5,13 +5,15 @@ from typing import Any, Literal
 
 from pydantic import Field, JsonValue
 
-from app.domain.definitions import WorkflowDefinition
+from app.domain.budgets import ExecutionOptions
+from app.domain.definitions import AgentDefinition, WorkflowDefinition
 from app.domain.execution import LaunchOrigin, RunStatus
 from app.domain.model_diagnostics import ModelErrorCategory, ModelObservation
 from app.schemas.common import CamelModel
 
 
 class PrepareRequest(CamelModel):
+    execution_options: ExecutionOptions = Field(default_factory=ExecutionOptions)
     workflow_key: str = Field(min_length=1, max_length=120)
     parameters: JsonValue = Field(default_factory=dict)
     revision_hash: str | None = None
@@ -46,6 +48,7 @@ class PreparationRead(CamelModel):
 
 
 class ReuseRead(CamelModel):
+    execution_options: ExecutionOptions = Field(default_factory=ExecutionOptions)
     source_run_id: str
     package_key: str
     workflow_key: str
@@ -53,9 +56,11 @@ class ReuseRead(CamelModel):
     parameters: JsonValue
     input_schema: dict[str, Any]
     workflow: WorkflowDefinition
+    agents: dict[str, AgentDefinition]
 
 
 class ReuseRequest(CamelModel):
+    execution_options: ExecutionOptions | None = None
     parameters: JsonValue
     launch_id: str = Field(min_length=1, max_length=200)
     binding_token: str | None = None

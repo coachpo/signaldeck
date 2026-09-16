@@ -5,7 +5,8 @@ from typing import Self
 
 from pydantic import Field, JsonValue, model_validator
 
-from app.domain.definitions import WorkflowDefinition
+from app.domain.budgets import ExecutionOptions
+from app.domain.definitions import AgentDefinition, WorkflowDefinition
 from app.schemas.common import CamelModel
 
 
@@ -18,6 +19,7 @@ class TaskDraftWrite(CamelModel):
     source_run_id: str | None = None
     has_parameters: bool = True
     parameters: JsonValue = None
+    execution_options: ExecutionOptions = Field(default_factory=ExecutionOptions)
     json_text: str | None = Field(default=None, max_length=1000000)
     launch_id: str = Field(min_length=1, max_length=200)
     pending: bool = False
@@ -40,6 +42,7 @@ class TaskDraftRead(TaskDraftWrite):
     current_package_hash: str | None
     needs_revalidation: bool
     workflow: WorkflowDefinition
+    agents: dict[str, AgentDefinition]
 
 
 class TaskDraftList(CamelModel):

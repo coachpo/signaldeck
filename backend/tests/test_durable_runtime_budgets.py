@@ -8,6 +8,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from temporalio.testing import WorkflowEnvironment
 
+from app.application.result_projection import project_result
+from app.domain.definitions import Budget
 from app.infrastructure.artifact_store import ArtifactStore
 from app.infrastructure.platform_store import PlatformStore
 from app.infrastructure.temporal_payloads import create_data_converter
@@ -66,6 +68,57 @@ def test_model_tool_budgets_are_invocation_local(database_url, tmp_path):
                     assert len(calls) == before_models + 1
                     assert len(events) == before_tools
                     assert len([e for e in detail.evidence if e.kind == "model"]) == 1
+
+                # Exact exhaustion stops before the next request, even when a
+                # node permits fresh attempts; only the frozen override is used.
+                for output_mode in ("auto", "provider_default"):
+                    spec = make_spec(kind="model", model_url=url, model_store=store)
+                    spec.definition["workflows"]["main"]["nodes"]["a"]["maxAttempts"] = 3
+                    spec = recompile_spec(spec).model_copy(
+                        update={
+                            "effective_agent_budgets": {
+                                "shared": Budget(max_tokens=16, max_output_tokens=output_mode)
+                            }
+                        }
+                    )
+                    before_models, before_tools = len(calls), len(events)
+                    result, detail = await execute(spec)
+                    assert result["status"] == "failed"
+                    assert len(calls) == before_models + 1
+                    assert len(events) == before_tools
+                    assert not [e for e in detail.evidence if e.kind == "tool"]
+                    assert project_result(detail).error_category == "budget_exceeded"
+                    assert len([e for e in detail.evidence if e.kind == "agent"]) == 1
+                    if output_mode == "auto":
+                        assert calls[-1]["max_completion_tokens"] == 16
+                    else:
+                        assert "max_completion_tokens" not in calls[-1]
+
+                for total_mode, output_mode in (
+                    ("unlimited", "auto"),
+                    ("unlimited", "provider_default"),
+                    ("unlimited", 12),
+                    (32, "provider_default"),
+                ):
+                    spec = make_spec(kind="model", model_url=url, model_store=store)
+                    spec = spec.model_copy(
+                        update={
+                            "effective_agent_budgets": {
+                                "shared": Budget(
+                                    max_tokens=total_mode, max_output_tokens=output_mode
+                                )
+                            }
+                        }
+                    )
+                    before_models = len(calls)
+                    result, _ = await execute(spec)
+                    assert result["status"] == "succeeded"
+                    assert len(calls) == before_models + 2
+                    for call in calls[before_models:]:
+                        if isinstance(output_mode, int):
+                            assert call["max_completion_tokens"] == output_mode
+                        else:
+                            assert "max_completion_tokens" not in call
 
                 specs = []
                 for tag in ["one", "two"]:

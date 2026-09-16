@@ -20,6 +20,7 @@ from app.domain.resources import ModelConfiguration
 from app.domain.schema_contract import DomainValidationError
 from app.infrastructure.artifact_store import ArtifactStore
 from app.infrastructure.model_runtime import GatewayModel
+from app.infrastructure.model_usage_capture import ModelBudgetFailure
 from app.infrastructure.temporal_agent import model_settings
 from tests.fake_openai_provider import _response
 from tests.test_dag_compiler import package
@@ -83,6 +84,8 @@ def context(budget):
         ({"maxTokens": 100}, 50),
         ({"maxTokens": 100, "maxOutputTokens": 80}, 50),
         ({"maxTokens": 100, "maxOutputTokens": 12}, 12),
+        ({"maxTokens": 100, "maxOutputTokens": "auto"}, 50),
+        ({"maxTokens": "unlimited", "maxOutputTokens": 12}, 12),
     ],
 )
 def test_output_limit_is_independent_and_capped_by_remaining_total(budget, expected):
@@ -92,7 +95,21 @@ def test_output_limit_is_independent_and_capped_by_remaining_total(budget, expec
 def test_exhausted_explicit_budget_cannot_request_an_extra_token():
     with pytest.raises(UsageLimitExceeded):
         model_settings(context({"maxTokens": 50, "maxOutputTokens": 12}))
-    assert model_settings(context({"maxTokens": 50}))["max_tokens"] == 1
+    with pytest.raises(UsageLimitExceeded):
+        model_settings(context({"maxTokens": 50}))
+
+
+@pytest.mark.parametrize("total", [100, "unlimited"])
+@pytest.mark.parametrize("mode", ["auto", "provider_default"])
+def test_output_policy_omission_and_frozen_budget(total, mode):
+    ctx = context({"maxTokens": 500, "maxOutputTokens": 99})
+    ctx.deps["effectiveBudget"] = {"maxTokens": total, "maxOutputTokens": mode}
+    settings = model_settings(ctx)
+    if total == 100 and mode == "auto":
+        assert settings["max_tokens"] == 50
+    else:
+        assert "max_tokens" not in settings
+    assert settings["signaldeck_context"]["requireUsage"] == (total == 100)
 
 
 def test_output_limit_changes_only_new_frozen_runs(platform):
@@ -190,8 +207,9 @@ def test_provider_capability_is_closed_and_protocol_specific(style, capabilities
     ],
 )
 @pytest.mark.parametrize("report_usage", [True, False])
+@pytest.mark.parametrize("output_mode", [12, "provider_default", "auto"])
 def test_actual_adapter_wire_output_cap_and_usage_presence(
-    tmp_path, style, field, explicit, report_usage
+    tmp_path, style, field, explicit, report_usage, output_mode
 ):
     async def scenario():
         app = FastAPI()
@@ -227,35 +245,49 @@ def test_actual_adapter_wire_output_cap_and_usage_presence(
             None, lambda *_: {"apiKey": "controlled-key"}, ArtifactStore(tmp_path / "artifacts")
         )
         async with serve_app(app) as url:
-            _, usage = await gateway._request_io(
-                [ModelRequest(parts=[UserPromptPart("hello")])],
-                {
-                    "max_tokens": model_settings(
-                        context({"maxTokens": 100, "maxOutputTokens": 12})
-                    )["max_tokens"]
-                },
-                ModelRequestParameters(),
-                {
-                    "resourceId": "model",
-                    "binding": {
-                        "baseUrl": url + "/v1",
-                        "modelId": "test",
-                        "apiStyle": style,
-                        "credentialRevision": "one",
-                        **(
-                            {"providerCapabilities": {"outputTokenLimitParameter": field}}
-                            if explicit
-                            else {}
-                        ),
+
+            async def request():
+                return await gateway._request_io(
+                    [ModelRequest(parts=[UserPromptPart("hello")])],
+                    {
+                        key: value
+                        for key, value in model_settings(
+                            context({"maxTokens": "unlimited", "maxOutputTokens": output_mode})
+                        ).items()
+                        if key != "signaldeck_context"
                     },
-                    "deadline": (datetime.now(UTC) + timedelta(seconds=30)).isoformat(),
-                },
-            )
+                    ModelRequestParameters(),
+                    {
+                        "resourceId": "model",
+                        "binding": {
+                            "baseUrl": url + "/v1",
+                            "modelId": "test",
+                            "apiStyle": style,
+                            "credentialRevision": "one",
+                            **(
+                                {"providerCapabilities": {"outputTokenLimitParameter": field}}
+                                if explicit
+                                else {}
+                            ),
+                        },
+                        "deadline": (datetime.now(UTC) + timedelta(seconds=30)).isoformat(),
+                    },
+                )
+
+            if not report_usage and isinstance(output_mode, int):
+                with pytest.raises(ModelBudgetFailure) as failure:
+                    await request()
+                assert failure.value.code == "model_usage_unavailable"
+                usage = failure.value.usage
+            else:
+                _, usage = await request()
         assert len(calls) == 1
-        assert calls[0][field] == 12
-        assert set(calls[0]) & {"max_tokens", "max_completion_tokens", "max_output_tokens"} == {
-            field
-        }
+        limits = set(calls[0]) & {"max_tokens", "max_completion_tokens", "max_output_tokens"}
+        if isinstance(output_mode, int):
+            assert calls[0][field] == output_mode
+            assert limits == {field}
+        else:
+            assert limits == set()
         assert usage == (
             {"inputTokens": 3, "outputTokens": 0}
             if report_usage

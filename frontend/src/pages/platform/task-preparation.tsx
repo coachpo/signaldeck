@@ -40,7 +40,7 @@ export function ConnectionSummary({ config, schema }: { config: JsonObject; sche
   </div>;
 }
 const observationLabels = { not_observed: "尚未使用，是否可用待确认", succeeded: "最近使用成功", failed: "最近使用失败", unknown: "最近结果未确认" };
-const changeLabels: Record<string, string> = { models: "模型服务", resources: "业务服务或使用范围", plugins: "扩展服务" };
+const changeLabels: Record<string, string> = { models: "模型服务", resources: "业务服务或使用范围", plugins: "扩展服务", effectiveAgentBudgets: "用量与时间限制" };
 function PreviousConnections({ bindings }: { bindings: JsonObject }) {
   const rows = ["models", "resources"].flatMap((kind) => {
     const entries = bindings[kind] && object(bindings[kind]);
@@ -55,7 +55,7 @@ export function TaskPreparation({ preparation }: { preparation: Preparation }) {
     <p className="text-sm">{preparation.ready ? "配置已就绪；服务是否可用以实际执行结果为准。确认以下设置后即可开始。" : "尚需完成以下准备。填写的业务信息会保留。"}</p>
     {[...new Set(preparation.issues)].map((issue) => <Issue key={issue} code={issue} />)}
     {preparation.changedBindings.length > 0 && <div role="alert" className="flex flex-col gap-2">
-      <strong>与上次相比，连接或业务范围已变化，请核对后确认开始。</strong>
+      <strong>{preparation.changedBindings.includes("effectiveAgentBudgets") ? "与上次相比，本次设置已变化，请核对后确认开始。" : "与上次相比，连接或业务范围已变化，请核对后确认开始。"}</strong>
       <p>{preparation.changedBindings.map((kind) => changeLabels[kind] ?? "服务设置").join("、")}</p>
       <PreviousConnections bindings={preparation.previousBindings} />
     </div>}

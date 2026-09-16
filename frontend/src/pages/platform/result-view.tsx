@@ -1,4 +1,5 @@
 import { useDisplayMode } from "@/hooks/use-display-mode";
+import { ModelBudgetSummary } from "./budget-summary";
 import { ModelUsagePanel } from "./model-usage-panel";
 import { ResultMetadataControls } from "./result-metadata";
 import { ResultExport } from "./result-export";
@@ -124,7 +125,7 @@ function ResultContent({ result }: { result: RunResult }) {
           <ExecutionDiagnostic code={result.errorCode} category={result.errorCategory} />
           <Button asChild variant="outline">
             <Link to={`/tasks/new?fromRun=${encodeURIComponent(result.runId)}`}>
-              保留输入并检查连接
+              {["agent_budget_exceeded", "model_output_limit_exceeded", "model_output_truncated"].includes(result.errorCode ?? "") || ["budget_exceeded", "output_truncated", "output_limit"].includes(result.errorCategory ?? "") ? "调整后重新运行" : "保留输入并检查连接"}
             </Link>
           </Button>
         </InlineStatePanel>
@@ -253,6 +254,7 @@ function ResultContent({ result }: { result: RunResult }) {
           </ul>
         </section>
       )}
+      {snapshot.data?.spec.effectiveAgentBudgets && <ModelBudgetSummary frozen settings={{ agents: Object.fromEntries(Object.entries(snapshot.data.spec.effectiveAgentBudgets).map(([key, budget]) => [key, { name: snapshot.data?.spec.definition.agents[key]?.name ?? "", budget: { ...budget } }])) }} />}
       <ModelUsagePanel runId={result.runId} />
       <div className="flex flex-wrap gap-2">
         {result.readUnknownEvidenceIds?.map((id) => (
@@ -285,6 +287,7 @@ function ResultContent({ result }: { result: RunResult }) {
                     packageKey: original.data.packageKey,
                     workflowKey: original.data.workflowKey,
                     parameters: original.data.parameters,
+                    executionOptions: original.data.executionOptions,
                     name: result.title,
                   }
                 : undefined,

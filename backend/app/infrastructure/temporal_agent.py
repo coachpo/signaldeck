@@ -129,12 +129,16 @@ class ToolConcurrency(AbstractCapability[dict[str, Any]]):
 
     async def for_run(self, ctx: RunContext[dict[str, Any]]) -> ToolConcurrency:
         bound = ToolConcurrency()
-        bound.semaphore = asyncio.Semaphore(ctx.deps["agent"]["budget"]["maxParallelTools"])
+        budget = ctx.deps.get("effectiveBudget", ctx.deps["agent"]["budget"])
+        bound.semaphore = asyncio.Semaphore(budget["maxParallelTools"])
         return bound
 
     async def wrap_tool_execute(
-        self, ctx: RunContext, *, call: Any, tool_def: Any, args: Any, handler: Any
+        self, ctx: RunContext[dict[str, Any]], *, call: Any, tool_def: Any, args: Any, handler: Any
     ) -> Any:
+        budget = ctx.deps.get("effectiveBudget", ctx.deps["agent"]["budget"])
+        if isinstance(budget["maxTokens"], int) and ctx.usage.total_tokens >= budget["maxTokens"]:
+            raise UsageLimitExceeded("Agent token budget exhausted")
         async with self.semaphore:
             return await handler(args)
 
@@ -142,17 +146,21 @@ class ToolConcurrency(AbstractCapability[dict[str, Any]]):
 def model_settings(ctx: RunContext[dict[str, Any]]) -> ModelSettings:
     deps = ctx.deps
     strategy = deps["agent"]["strategy"]
-    budget = deps["agent"]["budget"]
-    remaining = budget["maxTokens"] - ctx.usage.total_tokens
-    output_limit = max(1, remaining)
-    if "maxOutputTokens" in budget:
-        if remaining <= 0:
-            raise UsageLimitExceeded("Agent token budget exhausted")
-        output_limit = min(remaining, budget["maxOutputTokens"])
+    budget = deps.get("effectiveBudget", deps["agent"]["budget"])
+    total_limit = budget["maxTokens"]
+    remaining = total_limit - ctx.usage.total_tokens if isinstance(total_limit, int) else None
+    if remaining is not None and remaining <= 0:
+        raise UsageLimitExceeded("Agent token budget exhausted")
+    output_mode = budget.get("maxOutputTokens", "auto")
+    output_limit = None
+    if isinstance(output_mode, int):
+        output_limit = min(remaining, output_mode) if remaining is not None else output_mode
+    elif output_mode == "auto":
+        output_limit = remaining
     return cast(
         ModelSettings,
         {
-            "max_tokens": output_limit,
+            **({"max_tokens": output_limit} if output_limit is not None else {}),
             "signaldeck_context": {
                 "runId": deps["runId"],
                 "nodeId": deps["nodeId"],
@@ -161,6 +169,7 @@ def model_settings(ctx: RunContext[dict[str, Any]]) -> ModelSettings:
                 "resourceId": strategy["modelRef"],
                 "binding": deps["modelBinding"],
                 "deadline": deps["deadline"],
+                "requireUsage": remaining is not None,
             },
         },
     )
@@ -255,7 +264,7 @@ class AgentWorkflow:
                     output = await io("deterministic_agent", payload, timeout=remaining)
                 else:
                     prompt = await io("agent_prompt", payload)
-                    budget = definition["budget"]
+                    budget = payload.get("effectiveBudget", definition["budget"])
                     response = await await_cancel_once(
                         asyncio.create_task(
                             WORKFLOW_AGENT.run(
@@ -264,7 +273,11 @@ class AgentWorkflow:
                                 usage_limits=UsageLimits(
                                     request_limit=budget["maxModelRequests"],
                                     tool_calls_limit=budget["maxToolCalls"],
-                                    total_tokens_limit=budget["maxTokens"],
+                                    total_tokens_limit=(
+                                        budget["maxTokens"]
+                                        if isinstance(budget["maxTokens"], int)
+                                        else None
+                                    ),
                                 ),
                             )
                         )
@@ -273,6 +286,8 @@ class AgentWorkflow:
                 result = {"status": "succeeded", "output": output}
             if deadline_timeout.expired():
                 result = {"status": "timed_out", "errorCode": "agent_deadline_exceeded"}
+        except UsageLimitExceeded:
+            result = {"status": "failed", "errorCode": "agent_budget_exceeded"}
         except TimeoutError:
             result = {"status": "timed_out", "errorCode": "agent_deadline_exceeded"}
         except asyncio.CancelledError:

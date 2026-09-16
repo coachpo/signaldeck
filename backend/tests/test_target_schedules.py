@@ -724,3 +724,27 @@ def test_creation_identity_survives_failed_sync_without_duplicate_schedule(store
             await service.delete(saved.id)
 
     asyncio.run(scenario())
+
+
+def test_schedule_budget_options_survive_persistence_and_fire(stores):
+    store, schedules, _ = stores
+    configured = definition(execution_options={"agentBudgets": {"worker": {"maxToolCalls": 19}}})
+    saved = schedules.save(configured, "budget-schedule")
+    restored = schedules.get(saved.id)
+    assert restored.execution_options == configured.execution_options
+    activities = TemporalScheduleActivities(
+        LaunchService(store, StaticCore()), store, None, schedules
+    )
+    launched = activities._launch_fire(
+        {
+            "scheduleId": saved.id,
+            "triggerId": "budget-trigger",
+            "scheduledAt": datetime.now(UTC).isoformat(),
+            "engineWorkflowId": "budget-fire",
+            "engineRunId": "budget-engine-run",
+            "definition": configured.model_dump(mode="json", by_alias=True),
+        }
+    )
+    run = store.get_run(launched["runId"])
+    assert run.spec.effective_agent_budgets["worker"].max_tool_calls == 19
+    assert run.spec.execution_options == configured.execution_options

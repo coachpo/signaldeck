@@ -192,3 +192,31 @@ def test_presets_preserve_all_json_roots_and_distinguish_bookmarks(
         assert restored.status_code == 200, restored.text
         assert restored.json()["parameters"] == parameters
         assert restored.json()["hasParameters"] is True
+
+
+def test_preset_budget_options_roundtrip_and_invalid_agent(session_factory):
+    store = PlatformStore(session_factory)
+    store.initialize()
+    with client_for(store) as client:
+        package = client.post("/api/workflow-packages", json={"manifestSource": source()}).json()
+        payload = {
+            "name": "Budget bookmark",
+            "packageKey": package["key"],
+            "workflowKey": "main",
+            "packageHash": package["packageHash"],
+            "executionOptions": {"agentBudgets": {"echo": {"maxToolCalls": 17}}},
+        }
+        saved = client.post("/api/task-presets", json=payload)
+        assert saved.status_code == 201, saved.text
+        identity = saved.json()["id"]
+        assert (
+            client.get(f"/api/task-presets/{identity}").json()["executionOptions"]
+            == payload["executionOptions"]
+        )
+        invalid = client.post(
+            "/api/task-presets",
+            json={**payload, "executionOptions": {"agentBudgets": {"absent": {"maxToolCalls": 5}}}},
+        )
+        assert invalid.status_code == 400
+        assert invalid.json()["code"] == "budget_agent_unavailable"
+        assert client.delete(f"/api/task-presets/{identity}").status_code == 204

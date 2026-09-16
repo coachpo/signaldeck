@@ -44,3 +44,12 @@ it("does not turn absent current-version observations into an online claim", () 
   expect(screen.getByText(/不代表此刻一定可用/)).toBeVisible();
   expect(screen.queryByRole("link")).not.toBeInTheDocument();
 });
+it.each([
+  ["budget_exceeded", "用量或调用次数已达到限制"],
+  ["usage_unavailable", "无法核验用量"],
+  ["output_truncated", "回答未完整生成"],
+] as const)("explains %s independently from provider account quota", (category, message) => {
+  render(<ExecutionDiagnostic code="workflow_nodes_failed" category={category} />);
+  expect(screen.getByText(new RegExp(message))).toBeVisible();
+  expect(screen.queryByText(/账户余额/)).not.toBeInTheDocument();
+});

@@ -5,6 +5,7 @@ from typing import Literal
 from pydantic import JsonValue, ValidationError
 
 from app.application.launch import LaunchService
+from app.domain.budgets import ExecutionOptions, resolve_agent_budgets
 from app.domain.compiler import compile_package
 from app.domain.definitions import ModelStrategy
 from app.domain.execution import ApplicationError
@@ -21,6 +22,7 @@ def prepare_task(
     parameters: JsonValue,
     revision_hash: str | None = None,
     source_run_id: str | None = None,
+    execution_options: ExecutionOptions | None = None,
 ) -> PreparationRead:
     revision = service.store.get_package(package_key, revision_hash)
     if revision is None:
@@ -32,6 +34,8 @@ def prepare_task(
     if workflow is None:
         raise ApplicationError("workflow_not_found", "Workflow is unavailable", status=404)
     validate_value(workflow.input_schema, parameters, "$.parameters")
+    execution_options = execution_options or ExecutionOptions()
+    effective_budgets = resolve_agent_budgets(compiled.package, workflow_key, execution_options)
     agents = {node.uses: compiled.package.agents[node.uses] for node in workflow.nodes.values()}
     required: dict[str, Literal["model", "tool"]] = {}
     plugins: set[str] = set()
@@ -96,7 +100,26 @@ def prepare_task(
                     ),
                     "tools": list(agent.tools),
                     "resources": list(agent.resources),
-                    "budget": agent.budget.model_dump(mode="json", by_alias=True),
+                    "budget": effective_budgets[key].model_dump(mode="json", by_alias=True),
+                    "budgetSources": {
+                        field: (
+                            "task"
+                            if field
+                            in (
+                                execution_options.agent_budgets[key].model_dump(
+                                    mode="json", by_alias=True
+                                )
+                                if key in execution_options.agent_budgets
+                                else {}
+                            )
+                            else (
+                                "workflow"
+                                if field in revision["definition"]["agents"][key].get("budget", {})
+                                else "platform"
+                            )
+                        )
+                        for field in effective_budgets[key].model_dump(mode="json", by_alias=True)
+                    },
                 }
                 for key, agent in agents.items()
             },
@@ -123,6 +146,11 @@ def prepare_task(
         models,
         resources,
         [item.model_dump(mode="json", by_alias=True) for item in releases],
+        execution_options.model_dump(mode="json", by_alias=True),
+        {
+            key: budget.model_dump(mode="json", by_alias=True)
+            for key, budget in effective_budgets.items()
+        },
     )
     response.ready = True
     response.binding_token = canonical_digest(value)
@@ -137,9 +165,12 @@ def prepare_task(
             )
         previous = spec_bindings(original.spec)
         response.previous_bindings = {
-            key: previous[key] for key in ("models", "resources", "plugins")
+            key: previous[key]
+            for key in ("models", "resources", "plugins", "effectiveAgentBudgets")
         }
         response.changed_bindings = [
-            key for key in ("models", "resources", "plugins") if previous[key] != value[key]
+            key
+            for key in ("models", "resources", "plugins", "effectiveAgentBudgets")
+            if previous[key] != value[key]
         ]
     return response
