@@ -6,7 +6,7 @@ These packages use `signaldeck.workflowPackage/v2`. Import a YAML file through W
 | --- | --- | --- | --- |
 | [Market advisory research](tradingagents_advisory_research.yaml) | `research` | Shared quotes, history and news evidence, parallel opportunity/risk assessments, and a Finance report with reasons and counterevidence | Finance plugin; `finance-market-data`; `research-model` |
 | [Digital Oracle research](digital_oracle_researcher.yaml) | `research` | Parallel specialist research, cross-source checks and a Finance report identifying conclusions, counterevidence and unresolved gaps | Digital Oracle and Finance plugins; `research-model` |
-| [US equity research](us_equity_research.yaml) | `research` | Four analyst reports, a bounded bull/bear debate, independent risk review, a directional assessment and optional comparison with a supplied prior report | Digital Oracle and Finance plugins; `finance-market-data`; `research-model` |
+| [US equity research](us_equity_research.yaml) | `research` | Four analyst reports, a bounded bull/bear debate, independent risk review, a directional assessment and optional comparison with a supplied prior report | Digital Oracle and Finance plugins; `finance-market-data`; `equity-research-model` |
 | [Research notes](research_notes.yaml) | `research` | Collection search, optional editing of conclusions and evidence-backed revisions, and an immutable note with source links | Notes plugin; `notes-workspace`; `research-model` |
 | [Research notes](research_notes.yaml) | `capture` | Original text saved as an immutable note | Notes plugin; `notes-workspace` |
 
@@ -24,9 +24,11 @@ The three Finance-report workflows accept an optional `previousReport`. Paste th
 
 This independent use case borrows the analyst, bull/bear discussion and final judgment structure from [TradingAgents](https://github.com/TauricResearch/TradingAgents). Its finite DAG runs four independent analysts (market, company, macro and news/policy), with at most two nodes executing concurrently, builds both cases, lets each side respond once, performs an independent risk review, then records the final assessment in Finance. All business prompts, topology, input fields and result presentation belong to this package; it adds no Core or frontend business logic.
 
-Choose **美股多空研究** in the task catalog. Configure the model resource and include the chosen ticker in `finance-market-data.config.scope.allowedSymbols`. Oracle reads `FRED_API_KEY` and `EDGAR_CONTACT_EMAIL` from its own deployment environment; the latter is the operator's contact email used in SEC request identification. Neither belongs in workflow input or YAML.
+Choose **美股多空研究** in the task catalog. Configure `equity-research-model` as a model resource and include the chosen ticker in `finance-market-data.config.scope.allowedSymbols`. This separate connection can use provider-native JSON output and its own reasoning settings without changing other workflows. Provider settings belong to the model service connection; the package contains no vendor-specific request options. Oracle reads `FRED_API_KEY` and `EDGAR_CONTACT_EMAIL` from its own deployment environment; the latter is the operator's contact email used in SEC request identification. Neither belongs in workflow input or YAML.
 
 The report includes the analysis date and horizon, bullish/bearish/neutral/insufficient-evidence stance, reasons, counterevidence, invalidation conditions, data gaps, evidence confidence and `changes` relative to a supplied prior report. The comparison is also included in the saved report body. Evidence confidence is not a calibrated probability of profit. The workflow preserves source warnings and partial findings when an analyst cannot complete; missing critical evidence can prevent a directional conclusion.
+
+Risk review and the final decision also receive the original supplemental materials, retaining source order for unit and citation checks. A previous report only enters the final comparison. Read-only model nodes allow at most two attempts within their existing deadline; the report writer does not restart a new write attempt this way. Output must still pass the platform's unchanged JSON and schema validation.
 
 Current sources have different coverage: Finance provides price/history/indicators and news metadata or summaries; Oracle provides FRED observations and SEC filing discovery. Filing links are not a substitute for reading a financial statement, and news summaries do not establish the full text or legal effect of a policy. Optional `supportingMaterials` accepts explicitly attributed financial excerpts, macro releases and policy materials; these remain supplied evidence unless independently checked. Model knowledge must not fill missing current facts.
 
@@ -36,7 +38,7 @@ This package does not execute trades, adjust holdings, backtest, add implicit me
 
 Install the relevant release descriptors from each plugin's `/release` endpoint. Plugin deployment and resource scopes are described in [the plugin guide](../plugins/README.md).
 
-Create `research-model` as a model resource with the provider's base URL and model ID. Enter its credential in the separate credential field; do not put credentials in a package, prompt or resource scope. The `capture` workflow does not use a model resource.
+Create `research-model` for the original research packages, or `equity-research-model` for US equity research, with the provider's base URL and model ID. Enter its credential in the separate credential field; do not put credentials in a package, prompt or resource scope. The `capture` workflow does not use a model resource.
 
 Create these tool resources when using the corresponding package:
 

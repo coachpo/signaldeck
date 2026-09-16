@@ -36,7 +36,8 @@ schema/1 仍拒绝 default/examples。需要注解时，在对应 schema 节点�
 发布描述 `PluginRelease` 包含：
 
 - `pluginId`、`releaseId`、`artifactDigest`：插件及不可变制品身份；
-- `endpoint`、可选 `pageUrl`：MCP 和独立业务页面地址，不允许 URL 凭据、query 或 fragment；
+- `endpoint`、可选 `pageUrl`：MCP 和业务页面地址，不允许 URL 凭据、query 或 fragment；页面也可使用下述受限 `/apps/<mountKey>/` 相对基址；
+- 可选 `ui`：闭合 `signaldeck.pluginUi/1` 展示声明；缺省不进入旧发布序列化，显式 null 拒绝；
 - `protocolVersion`、`tools`、`contractDigest`：固定协议和完整工具定义；contract digest 对排序后的工具声明规范化散列；
 - `configSchema`：非敏感资源 scope 的固定合同；
 - `supportsOperationQuery`、`supportsOperationDeduplication`：写恢复能力声明。
@@ -65,11 +66,67 @@ Workflow 的 presentation/1 `link` 分节明确提供节点输出 ref、toolId �
 
 resultLinks 参与工具 contract digest；旧工具缺省该字段时不自动序列化，原 digest 可验证。显式 null 拒绝。新增链接须发布新制品/描述，不修改已经冻结的发布。Finance 的报告路径及 query 参数由其自身发布提供，不能在 Core 添加业务路由推断。
 
+## 统一插件页面
+
+插件保持独立进程、业务 API、数据库和页面所有权。主站只提供常驻布局和通用页面宿主，Nginx 负责固定上游转发；Core 不代理业务数据，也不从插件 ID 推导上游。
+
+发布可以声明一个入口：
+
+```json
+{"ui": {"version": "signaldeck.pluginUi/1", "title": "资料"}}
+```
+
+`title` 为非空业务名称，最长 120 字符；未知字段、版本和显式 null 均拒绝。发布 `pageUrl` 的路径须精确为 `/apps/<mountKey>/`，可以是 HTTP(S) 绝对 URL 或该相对基址。没有 `ui` 的历史发布保持既有序列化和摘要，旧式页面继续按外链访问。工具 contractDigest 仍只绑定工具声明；页面合同随完整不可变发布保存、冻结，修改它必须发布新制品。
+
+部署文件由 `SIGNALDECK_PLUGIN_MOUNTS_FILE` 指定，Core 与网关读取同一份内容：
+
+```json
+{
+  "version": "signaldeck.pluginMounts/1",
+  "mounts": [{
+    "mountKey": "archive-release-1",
+    "pluginId": "example/archive",
+    "artifactDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "upstream": "http://archive-release-1:8000"
+  }]
+}
+```
+
+根对象与每个挂载均闭合。挂载键仅允许 1–64 个小写字母、数字、下划线或连字符，首字符为字母或数字；同一文件不允许重复键或重复插件制品绑定。上游只允许 HTTP(S) origin，不允许凭据、路径、query、fragment 或 Nginx 指令。只有部署方登记的可信插件可获得同源挂载能力，安装任意插件描述不会自动创建代理。挂载键终身绑定同一插件制品，不能在升级时改指向另一个版本。
+
+`GET /api/plugin-pages` 仅联结已保存发布、当前启用状态和部署文件，返回 `{mountKey, pluginId, artifactDigest, title, pageUrl, enabled}` 数组，不访问插件。`pageUrl` 返回相对主站入口；`enabled` 只标记当前启用发布，决定是否进入菜单。已经登记的历史发布和已停用发布仍可通过深链接读取；没有保存描述、页面路径不匹配或没有 ui 的挂载不进入目录。未配置文件时目录为空；文件不可读或非法时页面目录返回受控错误，不阻止 Core 启动和历史读取。
+
+| 路径 | 所有者与行为 |
+| --- | --- |
+| `/apps/<mountKey>/…` | 主站浏览器路由，承载插件内容及返回来源入口 |
+| `/_plugins/<mountKey>/…` | 网关运输路径，转发插件页面、静态资源及业务 API |
+| `/api/…` | Core HTTP API，保留原有身份与错误合同 |
+
+插件静态资源、请求和下载以自己的传输基址寻址，不能使用指向 Core 的根 `/api`。网关的业务 API 通过 `/api/plugin-auth` 复用现有 bearer-token 门禁，验证后剥离凭据再转发；下载使用带认证的请求。MCP、发布描述及内部接口不经公开插件路径开放。上游按请求解析，未启用或离线插件不能导致整个 Nginx 无法启动。同源插件共享浏览器信任，iframe 不是不可信代码沙箱。
+
+已访问插件实例留在本标签页内，切换路由只隐藏内容；打开另一业务详情由插件解释路径，不通过重设 iframe src 销毁页面。停用或更新目录不能销毁旧实例，新菜单指向新发布。页面刷新重新装载深链接，未保存输入不承诺刷新恢复。Run 结果始终使用冻结的 pageUrl/resultLinks，不追随当前目录改写；旧服务下线时保留明确不可用状态和 Core 已确认结果，不把旧地址重定向到新版本。
+
+嵌入桥接消息的根为 `{protocol: "signaldeck.pluginUi/1", type, ...}`，每类消息只接受列出的字段。双方必须同时校验同源 origin、指定父/子窗口 source 和消息结构，发送时指定精确 origin。
+
+| 方向 | type 与字段 | 用途 |
+| --- | --- | --- |
+| 插件 → 主站 | `ready` | 内容入口已装载，主站随后同步当前位置及偏好 |
+| 插件 → 主站 | `state`：`dirty`, `busy` 布尔值 | 刷新/关闭提醒及禁止破坏性重载 |
+| 插件 → 主站 | `navigate`：`path`，可选 `replace`，可选 `target: "platform"` | 请求宿主变更历史；平台目标仅用于返回来源 |
+| 主站 → 插件 | `preferences`：`theme`, `expertMode`，可选 `returnTo` | 同步 light/dark/system、专家展示及返回上下文 |
+| 主站 → 插件 | `location`：`path` | 按插件自有语义恢复路径、query 和 fragment |
+
+iframe 从传输根入口启动，以 `embedded=1` 明确启用嵌入模式；主站在 ready 后发送业务位置。嵌入子页面使用 replaceState，用户可见历史由主站写入；独立模式继续使用自身导航。路径不得跳出当前挂载。消息不携带业务正文、草稿内容或访问口令，插件自行保存编辑内存和处理忙碌时的业务导航。
+
+网关采用现有 Nginx 的变量上游及请求时解析方式，页面桥接采用浏览器 postMessage；选择这些现有机制避免增加 Core 业务代理或远程组件装载。配置语义参考 [Nginx proxy_pass](https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_pass)，消息边界参考 [MDN postMessage](https://developer.mozilla.org/en-US/docs/Web/API/Window/postMessage)。
+
 ## 资源、凭据与业务数据
 
 Agent 的 resources 是显式授权集合；工具 resourceRequirements 必须是其子集。工具资源配置固定所属 pluginId、scope、maxConcurrentCalls 和 requestsPerSecond。launch 验证 owner 和 configSchema；插件在自身业务查询中继续执行 scope 约束。Notes 按 collection 保存/检索，Finance 按 allowedSymbols 限制市场查询。
 
 MCP `_meta["signaldeck/context"]` 携带 Run/node/invocation/operation 身份、deadline、grant 及必要的非敏感 resourceBindings。凭据单独加密保存在资源中，仅最终 I/O adapter 解析固定 revision；不得放入工具参数、模型消息、描述、scope、快照、证据、日志或错误。插件自己拥有的 provider 凭据可以在插件部署 I/O 边界读取，例如 Oracle 的 FRED_API_KEY 和 EDGAR_CONTACT_EMAIL；不得返回这些值。
+
+Oracle 的 FRED 适配器按请求日期窗口倒序读取观测值，多个序列均分本次总条数上限；`asOfDate` 同时约束观测结束日期和当时可知的数据修订。标题与单位来自 FRED 序列元数据，不把所有序列标成百分比或美元。返回的 `date` 是统计观察期，不代表发布日期；调用方仍须保留指标频率、季调和年化口径的区别。当前接口不会返回独立的发布时间字段。插件的 `DIGITAL_ORACLE_PROVIDER_TIMEOUT` 控制单次上游请求等待时间，默认 5 秒；本地 Compose 可通过同名环境变量配置，工作流与模型输入不携带该部署设置。
 
 Core 的 MCP HTTP 请求可携带 W3C `traceparent`，将 client span 关联到发起调用的 Temporal activity；不发送 baggage 或 tracestate。资源凭据不得占用这些追踪 headers 或 `MCP-*` headers。插件如接入自己的追踪系统，应只传递安全身份，不能将工具参数、scope、凭据、输出或异常文本作为未经保护的 span 属性。Core 的持久调用证据独立于外部追踪服务。
 

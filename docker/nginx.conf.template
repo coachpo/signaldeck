@@ -51,6 +51,8 @@ server {
         proxy_redirect off;
     }
 
+    include /etc/nginx/plugin-locations.conf;
+
     location / {
         try_files $uri $uri/ /index.html;
     }

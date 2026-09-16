@@ -45,8 +45,9 @@ COPY demo/*.yaml /opt/signaldeck/workflows/
 COPY --from=frontend-builder /app/dist /usr/share/nginx/html
 COPY docker/nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY docker/entrypoint.sh /entrypoint.sh
+COPY frontend/gateway /opt/signaldeck/gateway
 COPY docker/supervisord.conf /etc/supervisor/supervisord.conf
-COPY docker/bootstrap_plugins.py docker/plugin-defaults.json /opt/signaldeck/
+COPY docker/bootstrap_plugins.py docker/prepare_plugin_mounts.py docker/plugin-defaults.json /opt/signaldeck/
 
 RUN chmod +x /entrypoint.sh \
     && mkdir -p /etc/supervisor/conf.d /var/log/supervisor /run/nginx \

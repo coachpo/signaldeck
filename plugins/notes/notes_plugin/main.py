@@ -207,6 +207,7 @@ def create_app(database_url=None):
         os.environ.get("PLUGIN_ENDPOINT", "http://notes:8000/mcp/"),
         definitions,
         [root, root.parent / "runtime"],
+        ui={"version": "signaldeck.pluginUi/1", "title": "资料"},
         page_url=os.environ.get("PLUGIN_PAGE_URL", "http://localhost:8093/"),
         config_schema={
             "title": "笔记服务",

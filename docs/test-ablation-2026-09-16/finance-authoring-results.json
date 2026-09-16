@@ -1,0 +1,118 @@
+{
+  "repeats": 3,
+  "command": "node tests/authoring.mjs",
+  "source": "plugins/finance/web/authoring.js",
+  "workspace": "temporary isolated copy; removed after experiment",
+  "results": [
+    {
+      "fault": "none",
+      "variant": "full",
+      "exit_code": 0,
+      "durations": [
+        0.22601116699999999,
+        0.186134334,
+        0.193357667
+      ],
+      "median": 0.193357667
+    },
+    {
+      "fault": "none",
+      "variant": "candidate",
+      "exit_code": 0,
+      "durations": [
+        0.23670595799999994,
+        0.2798110830000001,
+        0.23818829200000002
+      ],
+      "median": 0.23818829200000002
+    },
+    {
+      "fault": "inline_code_rewritten_in_editor",
+      "variant": "full",
+      "exit_code": 1,
+      "durations": [
+        0.28974437499999994,
+        0.1764928750000001,
+        0.22103800000000007
+      ],
+      "median": 0.22103800000000007
+    },
+    {
+      "fault": "inline_code_rewritten_in_editor",
+      "variant": "candidate",
+      "exit_code": 0,
+      "durations": [
+        0.29750804200000003,
+        0.3001168339999998,
+        0.363174833
+      ],
+      "median": 0.3001168339999998
+    },
+    {
+      "fault": "unchanged_draft_loses_exact_bytes",
+      "variant": "full",
+      "exit_code": 1,
+      "durations": [
+        0.35124395799999997,
+        0.2072402499999999,
+        0.5931954579999994
+      ],
+      "median": 0.35124395799999997
+    },
+    {
+      "fault": "unchanged_draft_loses_exact_bytes",
+      "variant": "candidate",
+      "exit_code": 0,
+      "durations": [
+        0.6006910000000003,
+        0.40923258299999965,
+        0.38470850000000034
+      ],
+      "median": 0.40923258299999965
+    },
+    {
+      "fault": "required_field_saved_optional",
+      "variant": "full",
+      "exit_code": 1,
+      "durations": [
+        0.23932041699999917,
+        0.26635883400000004,
+        0.326044209
+      ],
+      "median": 0.26635883400000004
+    },
+    {
+      "fault": "required_field_saved_optional",
+      "variant": "candidate",
+      "exit_code": 1,
+      "durations": [
+        0.22547408299999994,
+        0.24186408300000029,
+        0.5686559170000001
+      ],
+      "median": 0.24186408300000029
+    },
+    {
+      "fault": "unsafe_error_exposed",
+      "variant": "full",
+      "exit_code": 1,
+      "durations": [
+        0.30026216699999964,
+        0.3329564999999999,
+        0.908918667
+      ],
+      "median": 0.3329564999999999
+    },
+    {
+      "fault": "unsafe_error_exposed",
+      "variant": "candidate",
+      "exit_code": 1,
+      "durations": [
+        0.2602701249999999,
+        0.46604508299999914,
+        0.589370958
+      ],
+      "median": 0.46604508299999914
+    }
+  ]
+}

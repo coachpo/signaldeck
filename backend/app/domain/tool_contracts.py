@@ -5,6 +5,7 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import re
 from datetime import datetime
 from typing import Any, Literal, Self
 from urllib.parse import unquote, urlsplit
@@ -126,18 +127,45 @@ class ToolDefinition(ToolContractModel):
         return self
 
 
+class PluginUi(ToolContractModel):
+    version: Literal["signaldeck.pluginUi/1"]
+    title: str = Field(min_length=1, max_length=120)
+
+    @field_validator("title")
+    @classmethod
+    def nonblank_title(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("Plugin UI title must not be blank")
+        return value
+
+
 class PluginRelease(ToolContractModel):
     plugin_id: str = Field(pattern=PLUGIN_ID)
     release_id: str = Field(min_length=1)
     artifact_digest: str = Field(pattern=DIGEST)
     endpoint: str
     page_url: str | None = None
+    ui: PluginUi | None = None
     protocol_version: Literal["2025-11-25"] = MCP_PROTOCOL_VERSION
     config_schema: dict[str, Any] = Field(default_factory=lambda: {"type": "object"})
     tools: tuple[ToolDefinition, ...]
     contract_digest: str = Field(pattern=DIGEST)
     supports_operation_query: bool = False
     supports_operation_deduplication: bool = False
+
+    @model_validator(mode="before")
+    @classmethod
+    def reject_null_ui(cls, value: Any) -> Any:
+        if isinstance(value, dict) and "ui" in value and value["ui"] is None:
+            raise ValueError("ui must be omitted or an object, not null")
+        return value
+
+    @model_serializer(mode="wrap")
+    def omit_absent_ui(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:
+        value: dict[str, Any] = handler(self)
+        if self.ui is None:
+            value.pop("ui", None)
+        return value
 
     @field_validator("endpoint")
     @classmethod
@@ -157,11 +185,15 @@ class PluginRelease(ToolContractModel):
     @field_validator("page_url")
     @classmethod
     def safe_page_url(cls, value: str | None) -> str | None:
+        if value is not None and re.fullmatch(r"/apps/[a-z0-9][a-z0-9_-]{0,63}/", value):
+            return value
         return cls.safe_endpoint(value) if value is not None else None
 
     @model_validator(mode="after")
     def verified_contract(self) -> Self:
         validate_schema(self.config_schema)
+        if self.ui is not None and self.page_url is None:
+            raise ValueError("Plugin UI requires a page URL")
         if any(tool.owner_plugin_id != self.plugin_id for tool in self.tools):
             raise ValueError("Release tools must belong to its plugin")
         if len({tool.tool_id for tool in self.tools}) != len(self.tools):

@@ -1,0 +1,119 @@
+{
+  "revision": "7c4bcbcf87adce626fcf6fe7dc1ef23e98538a02",
+  "uiGroup": [
+    "src/components/shared/resource-selection-checkbox.test.tsx",
+    "src/components/shared/workspace-page-shell.test.tsx",
+    "src/components/shared/inventory-page-shell.test.tsx"
+  ],
+  "apiGroup": [
+    "src/lib/api/workflow-platform.test.ts",
+    "src/lib/api/task-experience.test.ts"
+  ],
+  "command": [
+    "node",
+    "<installed vitest>/vitest.mjs",
+    "run",
+    "<group paths>",
+    "--maxWorkers=2",
+    "--reporter=json",
+    "--outputFile=<json>"
+  ],
+  "samples": [
+    {
+      "id": "checkbox-label",
+      "source": "src/components/shared/resource-selection-checkbox.tsx",
+      "original": "aria-label={ariaLabel}",
+      "mutated": "aria-label={undefined}"
+    },
+    {
+      "id": "checkbox-mixed",
+      "source": "src/components/shared/resource-selection-checkbox.tsx",
+      "original": "indeterminate ? \"indeterminate\" : false",
+      "mutated": "indeterminate ? false : false"
+    },
+    {
+      "id": "checkbox-callback",
+      "source": "src/components/shared/resource-selection-checkbox.tsx",
+      "original": "onSelectedChange(checked === true)",
+      "mutated": "onSelectedChange(checked !== true)"
+    },
+    {
+      "id": "workspace-drop-content",
+      "source": "src/components/shared/workspace-page-shell.tsx",
+      "original": "{children}",
+      "mutated": "{null}"
+    },
+    {
+      "id": "workspace-wrong-container",
+      "source": "src/components/shared/workspace-page-shell.tsx",
+      "original": "{leftRail}\n",
+      "mutated": "{leftRail}{children}\n"
+    },
+    {
+      "id": "workspace-scroll",
+      "source": "src/components/shared/workspace-page-shell.tsx",
+      "original": "flex-1 flex-col overflow-auto",
+      "mutated": "flex-1 flex-col overflow-hidden"
+    },
+    {
+      "id": "inventory-drop-content",
+      "source": "src/components/shared/inventory-page-shell.tsx",
+      "original": "{children}",
+      "mutated": "{null}"
+    },
+    {
+      "id": "inventory-content-in-toolbar",
+      "source": "src/components/shared/inventory-page-shell.tsx",
+      "original": "<ResourceToolbar {...toolbar} />",
+      "mutated": "<ResourceToolbar {...toolbar} />{children}"
+    },
+    {
+      "id": "inventory-no-filter-content",
+      "source": "src/components/shared/inventory-page-shell.tsx",
+      "original": "{children}",
+      "mutated": "{filterBar ? children : null}"
+    },
+    {
+      "id": "inventory-drop-toolbar",
+      "source": "src/components/shared/inventory-page-shell.tsx",
+      "original": "{toolbar ? (",
+      "mutated": "{false ? ("
+    },
+    {
+      "id": "inventory-drop-filters",
+      "source": "src/components/shared/inventory-page-shell.tsx",
+      "original": "{filterBar ? (",
+      "mutated": "{false ? ("
+    },
+    {
+      "id": "api-null-default",
+      "source": "src/lib/api/workflow-platform.ts",
+      "original": "body: { workflowKey, parameters, launchId, executionOptions }",
+      "mutated": "body: { workflowKey, parameters: parameters ?? {}, launchId, executionOptions }"
+    },
+    {
+      "id": "api-number-string",
+      "source": "src/lib/api/workflow-platform.ts",
+      "original": "body: { workflowKey, parameters, launchId, executionOptions }",
+      "mutated": "body: { workflowKey, parameters: typeof parameters === \"number\" ? String(parameters) : parameters, launchId, executionOptions }"
+    },
+    {
+      "id": "api-drop-array-items",
+      "source": "src/lib/api/workflow-platform.ts",
+      "original": "parameters: body.parameters,",
+      "mutated": "parameters: Array.isArray(body.parameters) ? [] : body.parameters,"
+    },
+    {
+      "id": "api-schedule-projection",
+      "source": "src/lib/api/workflow-platform.ts",
+      "original": "name: body.name,",
+      "mutated": "...body,\n          name: body.name,"
+    },
+    {
+      "id": "api-trim-string-gap",
+      "source": "src/lib/api/workflow-platform.ts",
+      "original": "body: { workflowKey, parameters, launchId, executionOptions }",
+      "mutated": "body: { workflowKey, parameters: typeof parameters === \"string\" ? parameters.trim() : parameters, launchId, executionOptions }"
+    }
+  ]
+}

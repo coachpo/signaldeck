@@ -59,6 +59,7 @@ const scheduleParent = {
   title: "自动执行",
 } as const;
 const children: Definition[] = [
+  route("apps/:mountKey/*", "应用", "Puzzle", async () => ({ Component: (await import("./features/plugin-host/plugin-host")).PluginRoute }), { sidebar: false, fullHeight: true, testId: "plugin" }),
   route(
     "tasks",
     "任务",

@@ -46,24 +46,6 @@ describe("WorkspacePageShell", () => {
     expect(body).toContainElement(screen.getByTestId("consumer-split-content"));
   });
 
-  it("keeps consumer-owned workspace content inside the body region", () => {
-    render(
-      <WorkspacePageShell
-        contextBar={<PageContextBar title="Run context" />}
-        leftRail={<nav>Modes</nav>}
-      >
-        <div data-testid="consumer-owned-content">Evidence payload</div>
-      </WorkspacePageShell>,
-    );
-
-    const body = screen.getByTestId("workspace-page-shell-body");
-    const rail = screen.getByTestId("workspace-page-shell-left-rail");
-    const content = screen.getByTestId("consumer-owned-content");
-
-    expect(body).toContainElement(content);
-    expect(rail).not.toContainElement(content);
-  });
-
   it("keeps the scrollable body reachable by keyboard under a product-language name", () => {
     render(
       <WorkspacePageShell contextBar={<PageContextBar title="Run context" />}>

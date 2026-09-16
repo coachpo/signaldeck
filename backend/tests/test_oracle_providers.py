@@ -4465,6 +4465,15 @@ def test_macro_rates_parser_normalizes_sources_families_dates_and_filters() -> N
 def test_macro_rates_providers_map_public_payloads_to_normalized_series() -> None:
     client = FakeJsonClient(
         {
+            "fred/series": {
+                "seriess": [
+                    {
+                        "id": "FEDFUNDS",
+                        "title": "Federal Funds Effective Rate",
+                        "units": "Percent",
+                    }
+                ]
+            },
             "fred/series/observations": {
                 "observations": [
                     {"date": "2026-01-02", "value": "4.33"},

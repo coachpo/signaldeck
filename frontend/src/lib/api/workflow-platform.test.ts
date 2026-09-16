@@ -29,7 +29,15 @@ describe("workflow platform transport", () => {
       launchId: "stable-launch",
     });
   });
-  it.each([0, false, null, [], "", ["first", "second"]] as Json[])(
+  it.each([
+    0,
+    false,
+    null,
+    [],
+    "",
+    ["first", "second"],
+    "  source text\n",
+  ] as Json[])(
     "preserves a non-object parameter value in manual and scheduled writes: %j",
     async (parameters) => {
       const fetcher = mock();

@@ -9,6 +9,7 @@ from app.api.platform_packages import router as workflow_packages_router
 from app.api.platform_resources import router as resources_router
 from app.api.platform_runs import router as runs_router
 from app.api.platform_schedules import router as schedules_router
+from app.api.plugin_pages import router as plugin_pages_router
 from app.api.result_metadata import router as result_metadata_router
 from app.api.task_drafts import router as task_drafts_router
 from app.api.task_presets import router as task_presets_router
@@ -29,3 +30,5 @@ platform_router.include_router(attention_router)
 platform_router.include_router(task_drafts_router)
 
 platform_router.include_router(model_usage_router)
+
+platform_router.include_router(plugin_pages_router)

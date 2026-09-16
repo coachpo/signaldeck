@@ -10,12 +10,19 @@
         "config": {
           "name": "Finance market data",
           "pluginId": "signaldeck/finance",
-          "scope": {"allowedSymbols": ["MSFT", "AAPL"]},
+          "scope": {
+            "allowedSymbols": [
+              "MSFT",
+              "AAPL"
+            ]
+          },
           "maxConcurrentCalls": 4,
           "requestsPerSecond": 4.0
         }
       }
-    ]
+    ],
+    "uiUpstream": "http://finance:8000",
+    "descriptorFactory": "finance_plugin.main:create_app"
   },
   {
     "profile": "digital-oracle",
@@ -34,11 +41,15 @@
         "config": {
           "name": "Research notes",
           "pluginId": "example/notes",
-          "scope": {"collection": "research"},
+          "scope": {
+            "collection": "research"
+          },
           "maxConcurrentCalls": 4,
           "requestsPerSecond": 10.0
         }
       }
-    ]
+    ],
+    "uiUpstream": "http://notes:8000",
+    "descriptorFactory": "notes_plugin.main:create_app"
   }
 ]

@@ -91,6 +91,17 @@ Frontend：
 (cd frontend && pnpm test:e2e)
 ```
 
+统一插件页面的浏览器回归使用独立配置，启动真实 Finance、Notes 和第三个测试插件，覆盖草稿、冻结结果链接、路径式深链接、停用入口及四档屏幕宽度：
+
+```bash
+(cd frontend && pnpm exec playwright test --config playwright.integrated.config.ts)
+python3 -m unittest discover -s frontend/gateway -p 'test_*.py'
+python3 -m unittest discover -s docker -p 'test_*.py'
+python3 docker/test_plugin_gateway.py
+```
+
+该配置沿用上面的隔离数据库与端口约定，可用 `SIGNALDECK_E2E_BUILD_DIR` 选择独立构建目录。其 Vite 代理验证页面流程；`docker/test_plugin_gateway.py` 用自己的临时 Docker 容器和网络验证实际 Nginx 的口令、凭据剥离、编码路径、内部接口隔离与离线上游。修改组合或拆分镜像时，仍执行相应真实镜像构建和隔离 Compose 验证。
+
 涉及取消后的未知写效果、插件离线或执行服务停止后的历史读取时，补充独立故障配置：
 
 ```bash

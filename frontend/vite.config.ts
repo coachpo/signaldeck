@@ -1,5 +1,6 @@
 /// <reference types="vitest" />
 
+import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
@@ -15,7 +16,22 @@ const uiChunkPattern =
 const formsChunkPattern = /[/\\]node_modules[/\\](react-hook-form|zod)[/\\]|[/\\]node_modules[/\\]@hookform[/\\]resolvers[/\\]/;
 const vendorChunkPattern = /[/\\]node_modules[/\\]/;
 
+// The integrated browser suite uses real owned plugin servers behind one origin.
+// Production transport and authorization are verified against Nginx separately.
+const integratedProxy = process.env.SIGNALDECK_E2E_INTEGRATED === "1"
+  ? Object.fromEntries([
+      ["/api", { target: `http://127.0.0.1:${process.env.SIGNALDECK_E2E_BACKEND_PORT ?? "8001"}` }],
+      ...JSON.parse(readFileSync(process.env.SIGNALDECK_PLUGIN_MOUNTS_FILE!, "utf8")).mounts.map(
+        (mount: { mountKey: string; upstream: string }) => [
+          `/_plugins/${mount.mountKey}/`,
+          { target: mount.upstream, rewrite: (path: string) => path.slice(`/_plugins/${mount.mountKey}`.length) },
+        ],
+      ),
+    ])
+  : undefined;
+
 export default defineConfig({
+  preview: { proxy: integratedProxy },
   plugins: [react()],
   resolve: {
     alias: {

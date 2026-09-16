@@ -1,5 +1,6 @@
 """Exercise the preset data paths without substituting model quality for validation."""
 
+from copy import deepcopy
 from pathlib import Path
 
 import pytest
@@ -96,12 +97,72 @@ def test_equity_research_keeps_prior_judgment_out_of_new_evidence(previous, unav
         validate_value(definition.agents[node.uses].input_schema, agent_input)
         for missing in unavailable:
             assert "未取得确认结果" in agent_input[missing]
+        if node_id in ("risk", "decision"):
+            assert agent_input["supportingMaterials"] == []
         if node_id == "decision":
             assert agent_input["previousReport"] == (previous or "")
         else:
             assert "previousReport" not in agent_input
             namespace["nodes"][node_id] = {"output": {"content": "依据有限，保留数据缺口。"}}
     assert set(namespace["nodes"]).isdisjoint(unavailable)
+
+
+def test_equity_review_preserves_original_materials_beside_incorrect_analysis():
+    definition = package("us_equity_research")
+    workflow = definition.workflows["research"]
+    materials = [
+        {
+            "category": "公司财报",
+            "title": "季度财报摘录",
+            "publishedDate": "2026-08-26",
+            "source": "公司季度财报，第12页",
+            "content": "  费用为USD2.7十亿。\n本季毛利率62%，下季指引60%。\n",
+        },
+        {
+            "category": "美国政策",
+            "title": "出口规定摘录",
+            "publishedDate": "2026-07-01",
+            "source": "主管部门公告，第三段",
+            "content": "许可逐案审查；不等于已实现销售。\n本期收入指引未计入相关市场。",
+        },
+    ]
+    previous = "上一次报告：证据不完整，等待公司披露。"
+    parameters = {
+        "symbol": "ACME",
+        "asOfDate": "2026-09-15",
+        "horizonMonths": 3,
+        "question": "核对原始资料与各阶段分析。",
+        "supportingMaterials": deepcopy(materials),
+        "previousReport": previous,
+    }
+    unchanged = deepcopy(parameters)
+    incorrect_company = "U1显示费用2.7亿美元，毛利率指引由62%上升至60%。"
+    incorrect_news = "U1为出口公告；许可收紧必然减少已经计入指引的收入。"
+    namespace = {
+        "workflow": {"input": parameters},
+        "nodes": {
+            node_id: {"output": {"content": "沿用分析稿中的数字与编号。"}}
+            for node_id in ("market", "macro", "bull", "bear", "bull_reply", "bear_reply")
+        },
+    }
+    namespace["nodes"]["company"] = {"output": {"content": incorrect_company}}
+    namespace["nodes"]["news"] = {"output": {"content": incorrect_news}}
+    validate_value(workflow.input_schema, parameters)
+
+    for node_id in ("risk", "decision"):
+        node = workflow.nodes[node_id]
+        agent_input = resolve_mapping(node.input_mapping, namespace)
+        validate_value(definition.agents[node.uses].input_schema, agent_input)
+        assert agent_input["supportingMaterials"] == materials
+        assert agent_input["company"] == incorrect_company
+        assert agent_input["news"] == incorrect_news
+        if node_id == "risk":
+            assert "previousReport" not in agent_input
+            namespace["nodes"]["risk"] = {"output": {"content": "分析稿一致，无须更正。"}}
+        else:
+            assert agent_input["previousReport"] == previous
+            assert agent_input["riskReview"] == "分析稿一致，无须更正。"
+    assert parameters == unchanged
 
 
 def test_equity_report_keeps_comparison_in_saved_content_and_public_output():

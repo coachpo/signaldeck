@@ -111,6 +111,7 @@ def test_notes_link_is_frozen_and_old_release_has_no_implicit_link(database_url)
         update={
             "tools": legacy_tools,
             "page_url": None,
+            "ui": None,
             "contract_digest": tool_contract_digest(legacy_tools),
         }
     )

@@ -40,16 +40,14 @@ def test_default_client_ignores_ambient_bearer_token(client: TestClient) -> None
     assert response.status_code == 200
 
 
-def test_api_runs_rejects_missing_bearer_token(token_client: TestClient) -> None:
+def test_api_runs_rejects_missing_bearer_token_with_and_without_origin(
+    token_client: TestClient,
+) -> None:
     response = token_client.get("/api/runs")
 
     assert response.status_code == 401
     assert response.json() == {"detail": "Unauthorized"}
 
-
-def test_api_runs_missing_bearer_token_includes_cors_header(
-    token_client: TestClient,
-) -> None:
     response = token_client.get("/api/runs", headers={"Origin": ALLOWED_ORIGIN})
 
     assert response.status_code == 401

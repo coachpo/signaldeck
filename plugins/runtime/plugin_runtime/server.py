@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import re
 from collections.abc import Callable
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
@@ -36,9 +37,7 @@ def digest(value):
     return (
         "sha256:"
         + hashlib.sha256(
-            json.dumps(
-                value, sort_keys=True, separators=(",", ":"), allow_nan=False
-            ).encode()
+            json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
         ).hexdigest()
     )
 
@@ -100,9 +99,21 @@ def release(
     page_url=None,
     configuration=None,
     config_schema=None,
+    ui=None,
 ):
     for url in (endpoint, page_url):
         if url is None:
+            continue
+        if (
+            url == page_url
+            and url.startswith("/apps/")
+            and url.endswith("/")
+            and len(url.split("/")) == 4
+            and (
+                url.split("/")[2] == "{artifactDigest}"
+                or re.fullmatch(r"[a-z0-9][a-z0-9_-]{0,63}", url.split("/")[2])
+            )
+        ):
             continue
         parsed = urlsplit(url)
         if (
@@ -113,9 +124,7 @@ def release(
             or parsed.query
             or parsed.fragment
         ):
-            raise ValueError(
-                "Plugin URLs must not contain credentials, queries or fragments"
-            )
+            raise ValueError("Plugin URLs must not contain credentials, queries or fragments")
     result = {
         "pluginId": plugin_id,
         "releaseId": version,
@@ -133,7 +142,19 @@ def release(
         "supportsOperationDeduplication": True,
     }
     if page_url:
-        result["pageUrl"] = page_url
+        result["pageUrl"] = page_url.replace(
+            "{artifactDigest}", result["artifactDigest"].removeprefix("sha256:")
+        )
+    if ui is not None:
+        if (
+            set(ui) != {"version", "title"}
+            or ui["version"] != "signaldeck.pluginUi/1"
+            or not isinstance(ui["title"], str)
+            or not ui["title"].strip()
+            or len(ui["title"]) > 120
+        ):
+            raise ValueError("Invalid plugin UI declaration")
+        result["ui"] = ui
     return result
 
 
@@ -147,8 +168,7 @@ def application(
     logging.getLogger("httpx").setLevel(logging.WARNING)
     logging.getLogger("httpcore").setLevel(logging.WARNING)
     identity = {
-        key: binding[key]
-        for key in ("pluginId", "releaseId", "artifactDigest", "contractDigest")
+        key: binding[key] for key in ("pluginId", "releaseId", "artifactDigest", "contractDigest")
     }
     server = Server(binding["pluginId"], version=binding["releaseId"])
     definitions = {item["toolId"]: item for item in binding["tools"]}
@@ -195,9 +215,9 @@ def application(
             context = metadata.get("signaldeck/context")
             if not isinstance(context, dict) or set(context) != CONTEXT_FIELDS:
                 raise ValueError("invalid_invocation_context")
-            if datetime.fromisoformat(
-                context["deadline"].replace("Z", "+00:00")
-            ) <= datetime.now(UTC):
+            if datetime.fromisoformat(context["deadline"].replace("Z", "+00:00")) <= datetime.now(
+                UTC
+            ):
                 raise ValueError("deadline_exceeded")
             if name == "signaldeck/operations/query":
                 if (
@@ -221,28 +241,16 @@ def application(
                         resource, dict
                     ):
                         raise ValueError("resource_not_granted")
-                if list(
-                    Draft202012Validator(definition["inputSchema"]).iter_errors(
-                        arguments
-                    )
-                ):
+                if list(Draft202012Validator(definition["inputSchema"]).iter_errors(arguments)):
                     raise ValueError("invalid_tool_input")
-                result = await anyio.to_thread.run_sync(
-                    execute, name, arguments, context
-                )
-                if list(
-                    Draft202012Validator(definition["outputSchema"]).iter_errors(result)
-                ):
+                result = await anyio.to_thread.run_sync(execute, name, arguments, context)
+                if list(Draft202012Validator(definition["outputSchema"]).iter_errors(result)):
                     raise ValueError("invalid_tool_output")
             return types.CallToolResult(content=[], structuredContent=result)
         except Exception:
             # Exception messages may contain upstream headers, credentials, or supplied arguments.
             return types.CallToolResult(
-                content=[
-                    types.TextContent(
-                        type="text", text="Plugin call rejected or failed"
-                    )
-                ],
+                content=[types.TextContent(type="text", text="Plugin call rejected or failed")],
                 isError=True,
             )
 

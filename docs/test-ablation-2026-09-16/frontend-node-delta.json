@@ -1,0 +1,22 @@
+{
+  "removed": [
+    {
+      "file": "frontend/src/components/shared/inventory-page-shell.test.tsx",
+      "node": "InventoryPageShell keeps route-owned content after shared controls instead of nesting controls in results"
+    },
+    {
+      "file": "frontend/src/components/shared/resource-selection-checkbox.test.tsx",
+      "node": "ResourceSelectionCheckbox renders an accessible checkbox label"
+    },
+    {
+      "file": "frontend/src/components/shared/workspace-page-shell.test.tsx",
+      "node": "WorkspacePageShell keeps consumer-owned workspace content inside the body region"
+    }
+  ],
+  "added": [
+    {
+      "file": "frontend/src/lib/api/workflow-platform.test.ts",
+      "node": "workflow platform transport preserves a non-object parameter value in manual and scheduled writes: \"  source text\\n\""
+    }
+  ]
+}

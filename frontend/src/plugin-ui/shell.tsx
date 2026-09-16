@@ -8,6 +8,8 @@ import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/s
 import { PluginNavigation } from "./navigation";
 import { getStoredExpert, readDisplayHandoff, storeExpert } from "@/lib/display-preferences";
 
+import { embedded, mountBridge, send } from "./bridge";
+
 type ShellOptions = {
   title: string;
   onExpertChange?: (expert: boolean) => void;
@@ -15,6 +17,14 @@ type ShellOptions = {
 };
 
 export function mountPluginShell(options: ShellOptions) {
+  if (embedded) {
+    let expert = getStoredExpert();
+    const setExpert = (next: boolean) => { if (next !== expert && !options.expertDisabled?.()) { expert = next; options.onExpertChange?.(next); } };
+    document.querySelector('header')?.remove();
+    document.querySelector('main')?.classList.add('plugin-content');
+    mountBridge(setExpert, options.expertDisabled);
+    return { get expert() { return expert; }, setExpert, setState: (dirty: boolean, busy: boolean) => send('state', {dirty, busy}) };
+  }
   const platformOrigin = readDisplayHandoff();
   let expert = getStoredExpert();
   const content = document.querySelector("main");
@@ -63,5 +73,5 @@ export function mountPluginShell(options: ShellOptions) {
     </SidebarProvider></ThemeProvider>;
   }
   flushSync(() => root.render(<Shell />));
-  return { get expert() { return expert; }, setExpert };
+  return { get expert() { return expert; }, setExpert, setState: (dirty: boolean, busy: boolean) => send("state", {dirty, busy}) };
 }
