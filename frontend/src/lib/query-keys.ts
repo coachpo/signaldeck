@@ -45,7 +45,7 @@ export const queryKeys = {
       connectionPresets: () =>
         [...root, "resources", "connectionPresets"] as const,
     },
-    plugins: resourceKeys("plugins"),
+    plugins: { ...resourceKeys("plugins"), pages: () => [...root, "plugins", "pages"] as const },
     artifacts: resourceKeys("artifacts"),
   },
 };

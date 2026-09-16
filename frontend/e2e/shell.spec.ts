@@ -1,9 +1,8 @@
 import { expect, test, type Page } from "@playwright/test";
-import { apiBase } from "./platform-fixtures";
 import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 async function openSavedTaskCatalog(page: Page) {
-  const loading = page.waitForResponse((response) => response.url() === `${apiBase}/workflow-packages` && response.request().method() === "GET");
+  const loading = page.waitForResponse((response) => new URL(response.url()).pathname === "/api/workflow-packages" && response.request().method() === "GET");
   await page.goto("/");
   const response = await loading;
   expect(response.ok(), await response.text()).toBe(true);
@@ -27,7 +26,7 @@ const routes = [
   { path: "/runs", label: "结果", nav: "runs" },
   { path: "/attention", label: "执行更新", nav: "attention" },
 ];
-test("generic navigation owns one route shell without embedded finance pages", async ({
+test("generic navigation owns one route shell without statically compiled business pages", async ({
   page,
 }) => {
   const taskHrefs = await openSavedTaskCatalog(page);

@@ -1,6 +1,7 @@
 # Local/demo SD-TARGET-001 stack. Dedicated host data never reuses legacy volumes.
 x-core-environment: &core-environment
   SIGNALDECK_RUNTIME_MODE: local
+  SIGNALDECK_PLUGIN_MOUNTS_FILE: /etc/signaldeck/plugin-mounts.json
   SIGNALDECK_CONNECTION_PRESETS_FILE: /etc/signaldeck/connection-presets.json
   DATABASE_URL: postgresql+psycopg://signaldeck_core:${CORE_DB_PASSWORD:-core-local-password}@db:5432/signaldeck_core
   AGENT_PLATFORM_ENCRYPTION_KEY: ${AGENT_PLATFORM_ENCRYPTION_KEY:-signaldeck-agent-platform-dev-key}
@@ -13,6 +14,12 @@ x-core-environment: &core-environment
   UV_CACHE_DIR: /data/uv-cache
 
 x-core-volumes: &core-volumes
+  - type: bind
+    source: ${SIGNALDECK_PLUGIN_MOUNTS_FILE:-./docker/plugin-mounts.empty.json}
+    target: /etc/signaldeck/plugin-mounts.json
+    read_only: true
+    bind:
+      create_host_path: false
   - type: bind
     source: ${SIGNALDECK_WORKFLOW_DATA_SOURCE:-./demo}
     target: /opt/signaldeck/workflows
@@ -84,6 +91,7 @@ services:
     environment:
       <<: *core-environment
       SIGNALDECK_ROOT_IMAGE_SCOPE: local-demo-only
+      SIGNALDECK_PLUGIN_MOUNTS_REVISION: ${SIGNALDECK_PLUGIN_MOUNTS_REVISION:-}
       SIGNALDECK_WORKFLOW_DATA_DIR: ${SIGNALDECK_WORKFLOW_DATA_DIR-/opt/signaldeck/workflows}
       PUBLIC_BASE_URL: http://localhost:${APP_PORT:-8080}
       CORS_ALLOWED_ORIGINS: http://localhost:${APP_PORT:-8080},http://127.0.0.1:${APP_PORT:-8080}
@@ -136,9 +144,7 @@ services:
     environment:
       PLUGIN_DATABASE_URL: postgresql+psycopg://signaldeck_finance:${FINANCE_DB_PASSWORD:-finance-local-password}@db:5432/signaldeck_finance
       PLUGIN_ENDPOINT: http://finance:8000/mcp/
-      PLUGIN_PAGE_URL: http://localhost:${FINANCE_PORT:-8091}/
-    ports:
-      - "127.0.0.1:${FINANCE_PORT:-8091}:8000"
+      PLUGIN_PAGE_URL: /apps/{artifactDigest}/
 
   digital-oracle:
     restart: unless-stopped
@@ -166,9 +172,7 @@ services:
     environment:
       PLUGIN_DATABASE_URL: postgresql+psycopg://signaldeck_notes:${NOTES_DB_PASSWORD:-notes-local-password}@db:5432/signaldeck_notes
       PLUGIN_ENDPOINT: http://notes:8000/mcp/
-      PLUGIN_PAGE_URL: http://localhost:${NOTES_PORT:-8093}/
-    ports:
-      - "127.0.0.1:${NOTES_PORT:-8093}:8000"
+      PLUGIN_PAGE_URL: /apps/{artifactDigest}/
 
   bootstrap:
     image: ${SIGNALDECK_LOCAL_IMAGE_PREFIX:-signaldeck-target}-app:local

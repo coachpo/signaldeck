@@ -21,6 +21,10 @@ RUN pnpm run build
 
 FROM nginx:alpine@sha256:72ba65eb42c10344912a84ff42408db7d34f2feb642204570ab8fc5ffd29f1d3 AS runner
 
+RUN apk add --no-cache python3
+COPY gateway /opt/signaldeck/gateway
+COPY gateway/15-plugin-mounts.sh /docker-entrypoint.d/15-plugin-mounts.sh
+
 ENV PORT=3000
 ENV BACKEND_UPSTREAM=127.0.0.1:8000
 

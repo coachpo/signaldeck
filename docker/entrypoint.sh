@@ -12,6 +12,8 @@ case "$SIGNALDECK_RUNTIME_MODE" in
 esac
 
 mkdir -p /run/nginx
+export BACKEND_UPSTREAM="127.0.0.1:${BACKEND_PORT}"
+python /opt/signaldeck/gateway/generate.py
 # This image contains the API and web surface. Durable workers and command
 # delivery run as separate Compose services from the same Core source closure.
 envsubst '${PORT} ${BACKEND_PORT}' \

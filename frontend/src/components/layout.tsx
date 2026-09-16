@@ -9,6 +9,9 @@ import {
   Puzzle,
   Workflow,
 } from "lucide-react";
+import { usePluginPages } from "@/hooks/use-plugin-pages";
+import { PluginHost } from "@/features/plugin-host/plugin-host";
+import { pluginRoute } from "@/features/plugin-host/navigation";
 import type { LucideIcon } from "lucide-react";
 import { Link, NavLink, Outlet, useLocation, useMatches } from "react-router";
 
@@ -211,6 +214,7 @@ function AppSidebar() {
   const location = useLocation();
   const matches = useMatches();
   const { expert } = useDisplayMode();
+  const { data: pluginPages = [] } = usePluginPages();
   const navGroups = assembleNavGroups(
     rootRouteHandle(matches).sidebarGroups,
   ).map((group) => ({
@@ -288,6 +292,16 @@ function AppSidebar() {
             </SidebarGroupContent>
           </SidebarGroup>
         ))}
+        {pluginPages.some((page) => page.enabled) ? <SidebarGroup>
+          {showExpandedContent ? <SidebarGroupLabel>应用</SidebarGroupLabel> : null}
+          <SidebarGroupContent><SidebarMenu>
+            {pluginPages.filter((page) => page.enabled).map((page) => <SidebarMenuItem key={page.mountKey}>
+              <SidebarMenuButton asChild isActive={location.pathname.startsWith(`/apps/${page.mountKey}/`) || location.pathname === `/apps/${page.mountKey}`} tooltip={!showExpandedContent ? page.title : undefined}>
+                <NavLink to={`/apps/${page.mountKey}/`} data-plugin-resume="true" data-testid={`nav-plugin-${page.mountKey}`} onClick={() => setOpenMobile(false)}><Puzzle className="size-4 shrink-0" /><span className={!showExpandedContent ? "sr-only" : undefined}>{page.title}</span></NavLink>
+              </SidebarMenuButton>
+            </SidebarMenuItem>)}
+          </SidebarMenu></SidebarGroupContent>
+        </SidebarGroup> : null}
       </SidebarContent>
       <SidebarFooter>
         <SidebarMenu>
@@ -327,7 +341,11 @@ function routeWidthWrapperClassName(widthMode: RouteWidthMode) {
 export function Layout() {
   const matches = useMatches();
   const routeMetadata = activeRouteHandle(matches);
-  const breadcrumbMetadata = routeMetadata.breadcrumb;
+  const location = useLocation();
+  const plugin = pluginRoute(location.pathname);
+  const { data: pluginPages = [] } = usePluginPages();
+  const pluginTitle = pluginPages.find((page) => page.mountKey === plugin?.mountKey)?.title;
+  const breadcrumbMetadata = pluginTitle ? { title: pluginTitle } : routeMetadata.breadcrumb;
   const { expert, setExpert } = useDisplayMode();
   const usesFullHeightShell = routeMetadata.shellMode === "fullHeight";
 
@@ -390,6 +408,8 @@ export function Layout() {
           }
           data-testid={routeMetadata.testId}
         >
+          <PluginHost />
+          <div hidden={Boolean(plugin)} className="h-full min-h-0">
           {usesFullHeightShell ? (
             <div className="h-full [&>*]:h-full [&>*]:w-full">
               <Outlet />
@@ -406,6 +426,7 @@ export function Layout() {
               </div>
             </div>
           )}
+          </div>
         </main>
       </SidebarInset>
     </SidebarProvider>

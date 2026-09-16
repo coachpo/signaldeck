@@ -1,5 +1,5 @@
 'use strict';
-window.SignalDeckUI.mountShell({title: '资料'});
+const shell=window.SignalDeckUI.mountShell({title: '资料'});
 class NotesReadError extends Error {}
 const $ = id => document.getElementById(id);
 const sourceLabel = kind => ({original: '原始资料', derived: '整理结果', unclassified: '来源未分类'})[kind] || '来源未分类';
@@ -7,9 +7,9 @@ let generation = 0;
 let currentNote = null;
 let nextCursor = null;
 function url(params) { const value = params.toString(); return location.pathname + (value ? '?' + value : ''); }
-function navigate(params) { history.pushState(null, '', url(params)); render(); }
+function navigate(params) { window.SignalDeckUI.navigate('/?'+params); }
 async function read(path, params) {
-  const response = await fetch(path + (params ? '?' + params : ''), {headers: {'Accept': 'application/json'}});
+  const response = await window.SignalDeckUI.pluginFetch(path + (params ? '?' + params : ''), {headers: {'Accept': 'application/json'}});
   if (!response.ok) throw new NotesReadError(response.status === 404 ? '找不到这条笔记。请返回列表查找其他内容。' : '笔记暂时无法读取，请稍后重试。');
   return response.json();
 }
@@ -31,7 +31,7 @@ async function showSources(note, params, revision) {
   }));
 }
 async function render() {
-  const revision = ++generation;
+  const revision = ++generation; shell.setState(false,true);
   const params = new URLSearchParams(location.search);
   const noteId = params.get('noteId');
   $('browse').hidden = Boolean(noteId); $('detail').hidden = true;
@@ -63,7 +63,7 @@ async function render() {
     $('collection').value = collection; $('query').value = params.get('query') || '';
     $('notes').replaceChildren(); $('previous').disabled = true; $('next').disabled = true; $('page').textContent = '';
     if (!collection) { $('status').textContent = '还没有笔记。保存第一条笔记后，它会显示在这里。'; $('summary').textContent = ''; return; }
-    params.set('collection', collection); history.replaceState(null, '', url(params));
+    params.set('collection', collection); window.SignalDeckUI.navigate('/?'+params,true,false);
     const request = new URLSearchParams({collection, query: params.get('query') || '', limit: '20', includeDerived: $('includeDerived').value});
     const cursors = params.getAll('cursor');
     if (cursors.length) request.set('after', cursors[cursors.length - 1]);
@@ -89,6 +89,7 @@ async function render() {
     if (noteId) { params.delete('noteId'); const back = document.createElement('a'); back.href = url(params); back.textContent = ' 返回笔记'; $('status').append(back); }
   } finally {
     if (revision === generation) {
+      shell.setState(false,false);
       for (const control of $('search').elements) control.disabled = false;
       $('search').removeAttribute('aria-busy');
     }

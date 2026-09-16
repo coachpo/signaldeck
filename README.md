@@ -34,13 +34,17 @@ cd signaldeck
 
 示例 YAML 独立于 Core 可执行制品。Compose 默认只读挂载 `./demo`；可用 `SIGNALDECK_WORKFLOW_DATA_SOURCE=/absolute/path/workflows` 指定其他已有目录，或用 `SIGNALDECK_WORKFLOW_DATA_DIR='' ./start.sh --detach` 禁用示例导入。空平台仍可通过专家制作或通用 `POST /api/workflow-packages/import` 导入工作流；只改 YAML 不改变 Core digest，也无需重建前端。已有 key 的更新需要显式普通保存，重启不会自动升级。详见[独立数据导入](docs/工作流解耦方案.md#独立数据导入与分发)。
 
-默认启用 Finance、Digital Oracle 和 Notes 三个独立插件进程；Finance 的模板/报告页面位于 `http://localhost:8091`，Notes 的只读笔记页面位于 `http://localhost:8093`（可通过 `NOTES_PORT` 改写端口），也可从**设置 → 已连接服务**或专家插件管理的页面入口进入。可通过 `SIGNALDECK_PLUGINS` 指定逗号分隔的插件集合，例如：
+默认启用 Finance、Digital Oracle 和 Notes 三个独立插件进程。新实例在主站侧栏显示 Finance 的**报告**和 Notes 的**资料**入口，也可从设置、插件管理和结果进入；插件内容与主站共用 `APP_PORT`，不再默认发布 8091/8093。Temporal UI 保留 `http://localhost:8233` 运维入口，可用 `TEMPORAL_UI_PORT` 覆盖。可通过 `SIGNALDECK_PLUGINS` 指定逗号分隔的插件集合，例如：
 
 ```bash
 SIGNALDECK_PLUGINS=notes ./start.sh --detach
 ```
 
 空值只启动通用平台。启动时 bootstrap 注册缺失的本地插件描述与默认资源，保留已有配置；插件不可用时可在修复服务后运行 `./start.sh refresh-plugins` 刷新已选插件的 release。使用自定义环境变量时，后续状态、刷新和停止命令也应使用相同设置。插件使用说明见 [`plugins/README.md`](plugins/README.md)。
+
+启动脚本在镜像构建后读取制品描述，生成数据目录内的 `plugin-mounts.json`，将同一文件只读挂载给 Core 与 Nginx。登记内容变化会更新应用容器配置，使代理在重新创建时读取新映射。路径包含制品摘要，业务菜单使用插件声明的名称。自定义挂载可设置 `SIGNALDECK_PLUGIN_MOUNTS_FILE=/absolute/path/mounts.json`；文件格式、认证及独立部署方式见[统一插件页面](docs/writing-extensions.md#统一插件页面)。直接调用 `docker compose up` 时须自行提供登记文件，缺省空登记仍可运行通用平台。
+
+已有插件配置在普通启动时保持原发布，需明确执行 `refresh-plugins` 才切换当前发布。刷新前应为仍被历史链接或运行引用的旧发布保留独立服务和挂载；本地自动生成的文件只描述本次构建，不会自动维护旧服务。旧快照和地址不改写，旧挂载下线后显示不可用；不要把旧挂载键重新分配给新版本。
 
 普通连接选择由部署方提供。默认挂载 [`docker/connection-presets.local.json`](docker/connection-presets.local.json)，其中只有与本地 bootstrap 一致的 Notes 保存位置（`research`）及 Finance 查询范围（`MSFT`、`AAPL`）；它不配置模型，也不证明相关插件当前在线。研究任务使用的 `research-model` 需要部署方填入已验证的服务地址、模型及凭据字段说明，然后通过只读文件提供给 Core：
 

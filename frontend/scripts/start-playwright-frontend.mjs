@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const frontendDir = resolve(__dirname, "..");
-const apiBaseUrl = process.env.VITE_API_BASE_URL ?? `http://127.0.0.1:${process.env.SIGNALDECK_E2E_BACKEND_PORT ?? "8001"}/api`;
+const apiBaseUrl = process.env.SIGNALDECK_E2E_INTEGRATED === "1" ? "/api" : process.env.VITE_API_BASE_URL ?? `http://127.0.0.1:${process.env.SIGNALDECK_E2E_BACKEND_PORT ?? "8001"}/api`;
 const frontendPort = process.env.SIGNALDECK_E2E_FRONTEND_PORT ?? "4173";
 const buildDirectory = process.env.SIGNALDECK_E2E_BUILD_DIR ?? "dist";
 

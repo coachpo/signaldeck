@@ -54,6 +54,18 @@ git show afe9e1efebb992170cd52cb3341c0ad7b83f20ac:docs/迭代目标.md
 
 回归入口为 `backend/tests/test_execution_budgets.py`、`test_model_budget_failures.py`、`test_model_budget_contract.py`、`test_durable_runtime_budgets.py`、前端预算控件测试及 `frontend/e2e/model-usage.spec.ts`。测试使用隔离 PostgreSQL/Temporal、独立插件和受控模型；没有提交、部署、切换或处置现有实例。超过 300 行的受影响行为文件已按职责规则复核，无未通过项；新增预算输入、摘要及解析分别保留在所属模块。
 
+### 插件统一入口（2026-09-16）
+
+Finance 1.1.0、Notes 1.3.0 通过可选 `pluginUi/1` 声明接入主站常驻布局，业务页面、API 和数据仍由独立插件拥有。主站按只读发布目录生成导航，保留已打开页面、编辑内存及来源结果，支持深链接、前进后退与刷新；旧发布、旧快照和旧链接不改写。部署登记精确绑定制品，组合及拆分网关使用同一生成器，默认取消 Finance/Notes 宿主机端口。合同、模块归属及运行说明分别见[插件接入](docs/writing-extensions.md#统一插件页面)、[架构说明](docs/架构说明.md)和[快速开始](README.md#快速开始)。
+
+验证覆盖 A01、A02、A10、A14、A18 与 D06 的受影响路径。前端 `pnpm test:run --maxWorkers=2` 443 项通过，随后新增/调整的宿主 9 项和共享 UI 9 项专项通过，ESLint、TypeScript、build 通过；默认并发首轮出现 12 项等待/执行超时，降低测试进程并发后全部通过，没有放宽超时或断言。最终集成浏览器 7 项、壳层回归 5 项、Finance 专项 5 项及格式编辑保真检查通过；实际 Notes 确认结果的站内跳转、前进后退、刷新和来源返回均验证，第三个独立页面无需 Core 业务分支。375/768/1024/1440 四档截图保存在本机 `output/playwright/integrated-plugins/`，已检查布局和横向溢出。
+
+后端全量首轮 881 项通过、4 项失败：3 项为新发布后旧测试夹具的版本/UI 字段假设，同步夹具后 Notes 与独立发布相关 15 项通过；另一项为真实 Temporal 测试未在五秒内进入重试，构建负载降低后原测试单独通过（8.68 秒），未修改执行逻辑或测试时间阈值。Ruff、Black、isort、mypy 与 `git diff --check` 通过。页面目录/省略序列化回归在 `backend/tests/test_plugin_pages.py`，宿主、共享桥接、集成入口在 `frontend/src/features/plugin-host/`、`frontend/src/plugin-ui/` 和 `frontend/playwright.integrated.config.ts`；网关及启动脚本回归见 `frontend/gateway/test_generate.py`、`docker/test_plugin_gateway.py`、`docker/test_prepare_plugin_mounts.py` 和 `docker/test_start.py`。
+
+实际 Nginx 门禁、凭据剥离、编码路径、内部接口拒绝、离线上游隔离通过，6 项网关/注册表/启动器单元回归通过。最终组合镜像 `7558fda3c8cb` 与拆分前端镜像 `8e075f5eb24e` 构建通过，拆分入口 `nginx -t` 通过。独立 Compose 在 28188 端口验证真实 Core、Finance、Notes 页面及 API，空插件启动仍可读取主站；保持相同 app 镜像、仅变更注册表摘要也会重新创建 app 并载入新路由。该轻量 Compose 验证未启动 dispatcher、worker 或 Temporal，真实持久执行由上述隔离 E2E 的 Notes Run 覆盖。测试容器、网络、数据和临时配置已清理，未切换原有 8080 实例。
+
+超过 300 行的受影响行为文件已复核：`frontend/src/components/layout.tsx` 保持应用布局职责，插件状态和协议在独立 feature 内；E2E 启动脚本只编排隔离测试服务，`tool_contracts.py` 保持发布/工具合同归属，无未通过项。验证使用独立数据库、进程及 Compose 项目，没有提交、部署到现有实例或改写其数据；旧服务的持续保留须由部署方为原挂载配置独立上游，本地启动器不会自动迁移旧发布。
+
 ## 部署与使用
 
 当前部署边界是本地内网，使用对象是个人和单一操作者。项目优先保持本地启动、调试、观察和日常使用便利；这项偏好不取消现有的正确性、数据完整性、密钥保护和必要验证边界。

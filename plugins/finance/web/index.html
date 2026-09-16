@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>报告 · Finance · SignalDeck</title>
-<link rel="stylesheet" href="/ui/signaldeck-ui.css">
-<link rel="stylesheet" href="/assets/style.css"></head><body>
+<link rel="stylesheet" href="ui/signaldeck-ui.css">
+<link rel="stylesheet" href="assets/style.css"></head><body>
 <fieldset id="workspace">
 <header></header>
 <main><h1>报告</h1><p class="muted">阅读研究结果，或选择已有格式生成报告。</p><nav aria-label="报告工作区"><button data-tab="reports" aria-pressed="true">历史报告</button><button data-tab="templates" aria-pressed="false">使用已有格式</button><button id="new" hidden>新建格式</button><button id="upload" hidden>上传报告</button><input id="file" type="file" accept=".md,text/markdown" hidden></nav>
@@ -12,6 +12,6 @@
 <form id="author" hidden><h2 id="author-title">制作报告格式</h2><div class="author-layout"><div><label for="name">名称</label><input id="name" required maxlength="100"><label for="content">报告正文</label><p class="meta">直接填写正文，可用下方按钮加入需要每次填写的信息或已有报告。正文支持标题、列表和代码段。</p><textarea id="content" required spellcheck="false"></textarea><div class="actions"><button class="primary">保存</button><button type="button" id="author-preview">预览草稿</button><button type="button" id="delete">删除格式</button></div><p id="draft-note" class="meta"></p></div><aside><h3>需要填写的信息</h3><div id="field-list"></div><label for="field-label">新填写项的名称</label><input id="field-label" placeholder="例如：公司名称" maxlength="80"><label for="field-required"><input type="checkbox" id="field-required" checked> 每次都要填写</label><button type="button" id="insert-field">添加到正文</button><h3>引用已有内容</h3><label for="reference-kind">选择内容</label><select id="reference-kind"><option value="latest">最新报告</option><option value="ticker">某证券的最新报告</option><option value="tag">某标签的最新报告</option><option value="specific">指定报告</option><option value="position">按先后位置选择</option><option value="all">全部报告列表</option><option value="inputs">本次填写的信息</option></select><div id="reference-filter" hidden><label for="reference-value">筛选文字</label><input id="reference-value"><label for="reference-input">或使用本次填写的信息</label><select id="reference-input"><option value="">使用上方文字</option></select></div><div id="reference-report" hidden><label for="placeholder">选择报告</label><select id="placeholder"></select></div><div id="reference-position" hidden><label for="reference-number">第几份（最新优先）</label><input id="reference-number" type="number" min="1" value="1"></div><div id="reference-part"><label for="reference-field">引用部分</label><select id="reference-field"><option value="content">正文</option><option value="name">名称</option><option value="created_at">创建日期</option><option value="">摘要</option></select></div><button type="button" id="insert-reference">加入正文</button><p class="meta">引用内容改变后，需要重新预览并核对。</p></aside></div></form>
 <div id="using" hidden><h2 id="format-title"></h2><p class="muted">填写本次业务信息，预览后生成新的报告。刷新或关闭前，请先生成报告以保存本次内容。</p><form id="use-form"><div id="inputs"></div><div class="actions"><button class="primary">预览报告</button><button type="button" id="generate" disabled>生成报告</button></div></form><div id="diagnostics" role="status"></div><p id="generation-help" class="meta"></p><article id="preview" aria-label="报告预览" hidden></article></div>
 </section></div></main></fieldset>
-<script src="/ui/signaldeck-ui.js"></script>
-<script src="/assets/authoring.js"></script>
-<script src="/assets/app.js"></script></body></html>
+<script src="ui/signaldeck-ui.js"></script>
+<script src="assets/authoring.js"></script>
+<script src="assets/app.js"></script></body></html>

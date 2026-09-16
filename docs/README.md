@@ -29,7 +29,7 @@
 - [`planning/sprint-verification.md`](planning/sprint-verification.md)：简化操作的独立验收范围、修复、最终结果和复现入口；版本及后续状态以 `STATUS.md` 为准。
 - [`工作流解耦方案.md`](工作流解耦方案.md)：已实施的 Workflow 输入/展示及链接选择契约、独立数据导入、历史呈现影响、原验收与 main 集成证据；原则与模块边界分别以产品说明、架构说明为准。
 - [`data-model.md`](data-model.md)：Core/插件数据归属、PostgreSQL 表、不可变运行快照、凭据版本和内容寻址存储。
-- [`writing-extensions.md`](writing-extensions.md)：独立进程插件的发布、MCP/工具/schema、resultLinks 页面链接、资源/效果合同与升级方式；保留原文件路径。
+- [`writing-extensions.md`](writing-extensions.md)：独立进程插件的发布、MCP/工具/schema、resultLinks 页面链接、统一页面与部署挂载协议、资源/效果合同与升级方式；保留原文件路径。
 - [`执行引擎比较.md`](执行引擎比较.md)：Temporal、Prefect、Hatchet 的同场景比较、实际证据范围及选型结论；不替代平台整体验收。
 - [`../plugins/README.md`](../plugins/README.md)：Finance、Digital Oracle、Notes 独立制品的构建、部署配置和插件级验证。
 - [`handover-deps-follow-up.md`](handover-deps-follow-up.md)：依赖升级遗留问题的当前状态、解锁条件和验证命令。

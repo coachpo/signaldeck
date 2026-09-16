@@ -200,6 +200,7 @@ def create_app(database_url=None, quote_provider=None, *, settings: FinanceSetti
         definitions,
         [root, root.parent / "runtime"],
         os.environ.get("PLUGIN_PAGE_URL", "http://localhost:8091/"),
+        ui={"version": "signaldeck.pluginUi/1", "title": "报告"},
         configuration=configuration,
         config_schema={
             "title": "金融服务",

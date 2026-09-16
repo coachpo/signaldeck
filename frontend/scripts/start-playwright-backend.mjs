@@ -25,6 +25,7 @@ const children = new Set();
 const expectedExits = new Set();
 const controlFile = process.env.SIGNALDECK_E2E_CONTROL_FILE;
 let controlFileOwned = false;
+let mountsFileOwned = false;
 let controlTimer;
 let controlState;
 
@@ -170,6 +171,7 @@ async function stopAll(exitCode = 0) {
     rmSync(controlFile, { force: true });
     rmSync(`${controlFile}.request`, { force: true });
   }
+  if (mountsFileOwned) rmSync(process.env.SIGNALDECK_PLUGIN_MOUNTS_FILE, { force: true });
   dropE2eDatabase();
   unlockOwnedDirectories(runtimeDirectory);
   rmSync(runtimeDirectory, {
@@ -351,7 +353,8 @@ async function main() {
     fakeProviderPort,
   ]);
   await waitForPort(fakeProviderPort, provider);
-  for (const [kind, defaultPort] of [["notes", "18082"], ["finance", "18083"], ["oracle", "18084"]]) {
+  const mounts = [];
+  for (const [kind, defaultPort] of [["notes", "18082"], ["finance", "18083"], ["oracle", "18084"], ...(process.env.SIGNALDECK_E2E_INTEGRATED === "1" ? [["generic", "18085"]] : [])]) {
     const port = process.env[`SIGNALDECK_E2E_${kind.toUpperCase()}_PORT`] ?? defaultPort;
     const databaseName = `${e2eDatabaseName}_${kind}`;
     const databaseUrl = runDatabaseManager("create", databaseName);
@@ -362,10 +365,22 @@ async function main() {
       ...backendEnv,
       PLUGIN_DATABASE_URL: databaseUrl,
       PLUGIN_ENDPOINT: `http://127.0.0.1:${port}/mcp/`,
-      PLUGIN_PAGE_URL: `http://127.0.0.1:${port}/`,
+      PLUGIN_PAGE_URL: process.env.SIGNALDECK_E2E_INTEGRATED === "1"
+        ? `http://127.0.0.1:${process.env.SIGNALDECK_E2E_FRONTEND_PORT ?? "4173"}/apps/{artifactDigest}/`
+        : `http://127.0.0.1:${port}/`,
       PYTHONDONTWRITEBYTECODE: "1",
     });
     await waitForPort(port, child);
+    if (process.env.SIGNALDECK_E2E_INTEGRATED === "1") {
+      const response = await fetch(`http://127.0.0.1:${port}/release`);
+      if (!response.ok) throw new Error(`Cannot read ${kind} release`);
+      const release = await response.json();
+      mounts.push({ mountKey: release.artifactDigest.replace(/^sha256:/, ""), pluginId: release.pluginId, artifactDigest: release.artifactDigest, upstream: `http://127.0.0.1:${port}` });
+    }
+  }
+  if (process.env.SIGNALDECK_E2E_INTEGRATED === "1") {
+    writeFileSync(process.env.SIGNALDECK_PLUGIN_MOUNTS_FILE, JSON.stringify({ version: "signaldeck.pluginMounts/1", mounts }), { flag: "wx", mode: 0o600 });
+    mountsFileOwned = true;
   }
   spawnOwned("command dispatcher", [
     "run",
