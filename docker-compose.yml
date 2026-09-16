@@ -151,6 +151,7 @@ services:
       PLUGIN_ENDPOINT: http://digital-oracle:8000/mcp/
       FRED_API_KEY: ${FRED_API_KEY:-}
       EDGAR_CONTACT_EMAIL: ${EDGAR_CONTACT_EMAIL:-}
+      DIGITAL_ORACLE_PROVIDER_TIMEOUT: ${DIGITAL_ORACLE_PROVIDER_TIMEOUT:-5}
 
   notes:
     restart: unless-stopped

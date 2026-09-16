@@ -71,6 +71,8 @@ Agent 的 resources 是显式授权集合；工具 resourceRequirements 必须�
 
 MCP `_meta["signaldeck/context"]` 携带 Run/node/invocation/operation 身份、deadline、grant 及必要的非敏感 resourceBindings。凭据单独加密保存在资源中，仅最终 I/O adapter 解析固定 revision；不得放入工具参数、模型消息、描述、scope、快照、证据、日志或错误。插件自己拥有的 provider 凭据可以在插件部署 I/O 边界读取，例如 Oracle 的 FRED_API_KEY 和 EDGAR_CONTACT_EMAIL；不得返回这些值。
 
+Oracle 的 FRED 适配器按请求日期窗口倒序读取观测值，多个序列均分本次总条数上限；`asOfDate` 同时约束观测结束日期和当时可知的数据修订。标题与单位来自 FRED 序列元数据，不把所有序列标成百分比或美元。返回的 `date` 是统计观察期，不代表发布日期；调用方仍须保留指标频率、季调和年化口径的区别。当前接口不会返回独立的发布时间字段。插件的 `DIGITAL_ORACLE_PROVIDER_TIMEOUT` 控制单次上游请求等待时间，默认 5 秒；本地 Compose 可通过同名环境变量配置，工作流与模型输入不携带该部署设置。
+
 Core 的 MCP HTTP 请求可携带 W3C `traceparent`，将 client span 关联到发起调用的 Temporal activity；不发送 baggage 或 tracestate。资源凭据不得占用这些追踪 headers 或 `MCP-*` headers。插件如接入自己的追踪系统，应只传递安全身份，不能将工具参数、scope、凭据、输出或异常文本作为未经保护的 span 属性。Core 的持久调用证据独立于外部追踪服务。
 
 Core 与插件只交换值合同，不交换 ORM、Session 或万能 Context。Finance/Notes 的 `PLUGIN_DATABASE_URL` 必须使用插件自己拥有的数据库和角色，不回退到 Core `DATABASE_URL`。Core 不创建、读取或代理这些业务表。Finance Templates/Reports API 和业务页面始终属于 Finance；添加业务能力不要求在 Core 增加业务 router 或导航定义。

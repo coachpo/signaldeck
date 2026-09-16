@@ -298,7 +298,7 @@
     }
   },
   "us_equity_research": {
-    "contentHash": "39741ded50504b9587544536482998650c0c78227d7c2e7107b6ac3b2c8e4d65",
+    "contentHash": "42f072b8466b2c8920f13f58fb4bb40ad7b42bc997fda611b0c741cb6c341570",
     "tools": [
       "signaldeck/digital-oracle/macro_rates_lookup",
       "signaldeck/digital-oracle/sec_filings_lookup",
