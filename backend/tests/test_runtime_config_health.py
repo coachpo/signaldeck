@@ -43,18 +43,40 @@ def test_production_runtime_requires_explicit_database_url(monkeypatch: pytest.M
         _ = Settings()
 
 
-def test_production_runtime_rejects_placeholder_encryption_key(
+@pytest.mark.parametrize(
+    "encryption_key", [DEFAULT_AGENT_PLATFORM_ENCRYPTION_KEY, "change-me", "changeme", "", "   "]
+)
+def test_production_runtime_rejects_placeholder_or_empty_encryption_key(
     monkeypatch: pytest.MonkeyPatch,
+    encryption_key: str,
 ) -> None:
     clear_runtime_env(monkeypatch)
     monkeypatch.setenv("SIGNALDECK_RUNTIME_MODE", "production")
     monkeypatch.setenv("DATABASE_URL", PRODUCTION_DATABASE_URL)
-    monkeypatch.setenv("AGENT_PLATFORM_ENCRYPTION_KEY", DEFAULT_AGENT_PLATFORM_ENCRYPTION_KEY)
+    monkeypatch.setenv("AGENT_PLATFORM_ENCRYPTION_KEY", encryption_key)
     with pytest.raises(
         ValidationError,
         match="AGENT_PLATFORM_ENCRYPTION_KEY must be explicitly configured",
     ):
         _ = Settings()
+
+
+@pytest.mark.parametrize("field", ["database_url", "agent_platform_encryption_key", "api_token"])
+def test_runtime_validation_error_hides_sensitive_configuration(
+    monkeypatch: pytest.MonkeyPatch,
+    field: str,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    clear_runtime_env(monkeypatch)
+    sensitive_value = "TEST_SENTINEL"
+    with pytest.raises(ValidationError) as caught:
+        _ = Settings(**{field: sensitive_value, "runtime_mode": "production"})
+
+    with caplog.at_level(logging.ERROR):
+        logging.getLogger(__name__).error("Startup configuration failed: %s", caught.value)
+
+    assert sensitive_value not in str(caught.value)
+    assert sensitive_value not in caplog.text
 
 
 def test_production_runtime_accepts_explicit_non_placeholder_config(

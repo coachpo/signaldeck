@@ -1,0 +1,77 @@
+- generic [ref=f4e2]:
+  - generic [ref=f4e3]:
+    - link "Skip to main content" [ref=f4e4] [cursor=pointer]:
+      - /url: "#app-main"
+    - generic [ref=f4e7]:
+      - paragraph [ref=f4e13]: SignalDeck
+      - generic [ref=f4e15]:
+        - generic [ref=f4e16]: 日常操作
+        - list [ref=f4e18]:
+          - listitem [ref=f4e19]:
+            - link "任务" [ref=f4e20] [cursor=pointer]:
+              - /url: /
+          - listitem [ref=f4e27]:
+            - link "结果" [active] [ref=f4e28] [cursor=pointer]:
+              - /url: /runs
+          - listitem [ref=f4e33]:
+            - link "执行更新" [ref=f4e34] [cursor=pointer]:
+              - /url: /attention
+      - list [ref=f4e40]:
+        - listitem [ref=f4e41]:
+          - link "设置" [ref=f4e42] [cursor=pointer]:
+            - /url: /settings
+    - generic [ref=f4e48]:
+      - banner [ref=f4e49]:
+        - button "Open sidebar" [ref=f4e50] [cursor=pointer]
+        - navigation "breadcrumb" [ref=f4e53]:
+          - list [ref=f4e54]:
+            - listitem [ref=f4e55]:
+              - link "任务" [ref=f4e1771] [cursor=pointer]:
+                - /url: /
+            - listitem [aria-hidden] [ref=f4e1772]
+            - listitem [ref=f4e1775]:
+              - generic [ref=f4e1776]: 填写任务
+        - generic [ref=f4e57]:
+          - switch "专家模式" [ref=f4e58]
+          - text: 专家模式
+        - button "切换外观" [ref=f4e59] [cursor=pointer]
+      - main [ref=f4e61]:
+        - generic [ref=f4e1777]:
+          - heading "Save original text" [level=1] [ref=f4e1782]
+          - region "Workspace body" [ref=f4e1784]:
+            - generic [ref=f4e1785]:
+              - group [ref=f4e1786]:
+                - generic [ref=f4e1789]:
+                  - paragraph [ref=f4e1791]: 任务输入
+                  - generic [ref=f4e1792]:
+                    - generic [ref=f4e1794]:
+                      - generic [ref=f4e1795]:
+                        - paragraph [ref=f4e1796]: text
+                        - generic [ref=f4e1797]: 可留空
+                      - generic [ref=f4e1798]:
+                        - textbox "text" [ref=f4e1799]: 只验证导航返回后的内存保留。
+                        - button "text多行填写" [ref=f4e1800] [cursor=pointer]: 多行填写
+                    - generic [ref=f4e1802]:
+                      - generic [ref=f4e1803]:
+                        - paragraph [ref=f4e1804]: title
+                        - generic [ref=f4e1805]: 必填
+                      - generic [ref=f4e1806]:
+                        - textbox "title" [ref=f4e1807]: UI验收临时输入-不保存
+                        - button "title多行填写" [ref=f4e1808] [cursor=pointer]: 多行填写
+              - group [ref=f4e1809]:
+                - generic "用量与时间限制 · 使用工作流默认设置" [ref=f4e1810] [cursor=pointer]
+              - status [ref=f4e1811]: 正在自动核对连接与本次设置…
+              - generic [ref=f4e1812]:
+                - button "正在核对…" [disabled]
+                - button "开始任务" [disabled]
+                - button "设置重复执行" [ref=f4e1813] [cursor=pointer]
+              - region "任务草稿" [ref=f4e1814]:
+                - generic [ref=f4e1815]:
+                  - generic [ref=f4e1816]: 草稿名称
+                  - textbox "草稿名称" [ref=f4e1817]
+                - button "保存草稿" [ref=f4e1819] [cursor=pointer]
+                - paragraph [ref=f4e1820]: 保存草稿后，可在任务首页继续填写。保存不会启动任务；服务密钥请填写在连接设置中。
+                - status [ref=f4e1821]: 有尚未保存的修改。刷新或关闭页面前，请先保存草稿。
+              - group [ref=f4e1822]:
+                - generic "保存常用输入或收藏任务（可选）" [ref=f4e1823] [cursor=pointer]
+  - region "Notifications alt+T"

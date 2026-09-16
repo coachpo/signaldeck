@@ -1,0 +1,132 @@
+- generic [ref=f3e2]:
+  - generic [ref=f3e3]:
+    - link "Skip to main content" [ref=f3e4] [cursor=pointer]:
+      - /url: "#app-main"
+    - generic [ref=f3e7]:
+      - paragraph [ref=f3e13]: SignalDeck
+      - generic [ref=f3e15]:
+        - generic [ref=f3e16]: 日常操作
+        - list [ref=f3e18]:
+          - listitem [ref=f3e19]:
+            - link "任务" [ref=f3e20] [cursor=pointer]:
+              - /url: /
+          - listitem [ref=f3e27]:
+            - link "结果" [ref=f3e28] [cursor=pointer]:
+              - /url: /runs
+          - listitem [ref=f3e33]:
+            - link "执行更新" [ref=f3e34] [cursor=pointer]:
+              - /url: /attention
+      - list [ref=f3e40]:
+        - listitem [ref=f3e41]:
+          - link "设置" [ref=f3e42] [cursor=pointer]:
+            - /url: /settings
+    - generic [ref=f3e48]:
+      - banner [ref=f3e49]:
+        - button "Open sidebar" [ref=f3e50] [cursor=pointer]
+        - navigation "breadcrumb" [ref=f3e53]:
+          - list [ref=f3e54]:
+            - listitem [ref=f3e55]:
+              - generic [ref=f3e2131]: 结果
+        - generic [ref=f3e62]:
+          - switch "专家模式" [ref=f3e63]
+          - text: 专家模式
+        - button "切换外观" [ref=f3e64] [cursor=pointer]
+      - main [ref=f3e66]:
+        - generic [ref=f3e2133]:
+          - generic [ref=f3e2135]:
+            - generic [ref=f3e2137]:
+              - heading "结果" [level=1] [ref=f3e2138]
+              - paragraph [ref=f3e2139]: 查找和阅读所有执行记录
+            - generic [ref=f3e2142]:
+              - link "执行更新" [ref=f3e2143] [cursor=pointer]:
+                - /url: /attention
+              - button "刷新" [ref=f3e2144] [cursor=pointer]
+          - generic [ref=f3e2145]:
+            - group "结果分组" [ref=f3e2146]:
+              - button "全部结果" [ref=f3e2147] [cursor=pointer]
+              - button "进行中" [ref=f3e2148] [cursor=pointer]
+              - button "需要处理" [ref=f3e2149] [cursor=pointer]
+            - generic [ref=f3e2150]:
+              - generic [ref=f3e2151]:
+                - search [ref=f3e2152]:
+                  - generic [ref=f3e2153]: 搜索全部历史
+                  - textbox "搜索全部历史" [ref=f3e2154]:
+                    - /placeholder: 搜索标题或任务
+                    - text: NVDA
+                - generic [ref=f3e2155]:
+                  - generic [ref=f3e2156]: 收藏筛选
+                  - combobox "收藏筛选" [ref=f3e2157] [cursor=pointer]:
+                    - generic: 全部收藏状态
+                - generic [ref=f3e2158]:
+                  - generic [ref=f3e2159]: 阅读筛选
+                  - combobox "阅读筛选" [ref=f3e2160] [cursor=pointer]:
+                    - generic: 全部阅读状态
+                - generic [ref=f3e2161]:
+                  - generic [ref=f3e2162]: 执行状态
+                  - combobox "执行状态" [ref=f3e2163] [cursor=pointer]:
+                    - generic: 已完成
+                - generic [ref=f3e2164]:
+                  - generic [ref=f3e2165]: 任务类型
+                  - combobox "任务类型" [ref=f3e2166] [cursor=pointer]:
+                    - generic: 所有任务
+                - generic [ref=f3e2167]:
+                  - generic [ref=f3e2168]: 执行来源
+                  - combobox "执行来源" [ref=f3e2169] [cursor=pointer]:
+                    - generic: 所有来源
+                - generic [ref=f3e2170]:
+                  - text: 起始日期
+                  - textbox "起始日期" [ref=f3e2171]
+                - generic [ref=f3e2172]:
+                  - text: 结束日期
+                  - textbox "结束日期" [ref=f3e2173]
+                - generic [ref=f3e2174]:
+                  - generic [ref=f3e2175]: 排序
+                  - combobox "排序" [ref=f3e2176] [cursor=pointer]:
+                    - generic: 最新在前
+                - button "清除筛选" [ref=f3e2178] [cursor=pointer]
+              - generic [ref=f3e2179]: 共 2 条记录
+            - table [ref=f3e2183]:
+              - rowgroup [ref=f3e2184]:
+                - row [ref=f3e2185]:
+                  - columnheader "标题" [ref=f3e2186]
+                  - columnheader "状态" [ref=f3e2187]
+                  - columnheader "任务" [ref=f3e2188]
+                  - columnheader "来源" [ref=f3e2189]
+                  - columnheader "时间" [ref=f3e2190]
+                  - columnheader "操作" [ref=f3e2191]
+              - rowgroup [ref=f3e2192]:
+                - row [ref=f3e2193]:
+                  - cell [ref=f3e2194]:
+                    - link "NVDA" [ref=f3e2195] [cursor=pointer]:
+                      - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?history=q%3DNVDA%26status%3Dsucceeded
+                    - paragraph [ref=f3e2196]: 未读
+                  - cell "已完成" [ref=f3e2197]
+                  - cell "美股多空研究" [ref=f3e2199]
+                  - cell "调整后开始" [ref=f3e2200]
+                  - cell "2026/9/16 03:53:32" [ref=f3e2201]
+                  - cell [ref=f3e2202]:
+                    - generic [ref=f3e2204]:
+                      - button "收藏 NVDA" [ref=f3e2205] [cursor=pointer]: 收藏
+                      - button "标为已读 NVDA" [ref=f3e2206] [cursor=pointer]: 标为已读
+                    - link "修改输入" [ref=f3e2207] [cursor=pointer]:
+                      - /url: /tasks/new?fromRun=406ddea2-b8a7-45ba-befb-7efc86534173
+                - row [ref=f3e2208]:
+                  - cell [ref=f3e2209]:
+                    - link "NVDA" [ref=f3e2210] [cursor=pointer]:
+                      - /url: /runs/c910f828-166b-451e-b398-ae9286c89e5c?history=q%3DNVDA%26status%3Dsucceeded
+                    - paragraph [ref=f3e2211]: 未读
+                  - cell "已完成" [ref=f3e2212]
+                  - cell "美股多空研究" [ref=f3e2214]
+                  - cell "手动开始" [ref=f3e2215]
+                  - cell "2026/9/16 02:41:59" [ref=f3e2216]
+                  - cell [ref=f3e2217]:
+                    - generic [ref=f3e2219]:
+                      - button "收藏 NVDA" [ref=f3e2220] [cursor=pointer]: 收藏
+                      - button "标为已读 NVDA" [ref=f3e2221] [cursor=pointer]: 标为已读
+                    - link "修改输入" [ref=f3e2222] [cursor=pointer]:
+                      - /url: /tasks/new?fromRun=c910f828-166b-451e-b398-ae9286c89e5c
+            - navigation "结果分页" [ref=f3e2223]:
+              - button "上一页" [disabled]
+              - generic [ref=f3e2224]: 第 1 页 · 共 1 页
+              - button "下一页" [disabled]
+  - region "Notifications alt+T"

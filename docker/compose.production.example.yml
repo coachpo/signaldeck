@@ -1,4 +1,4 @@
-# Split-image wiring. Supply existing PostgreSQL and Temporal infrastructure.
+# Split-image wiring. See deployment.md; supply PostgreSQL and Temporal infrastructure.
 # Temporal's start-dev SQLite mode is confined to the local/demo Compose file.
 x-core-environment: &core-environment
   SIGNALDECK_RUNTIME_MODE: production
@@ -14,7 +14,12 @@ x-core-environment: &core-environment
   UV_CACHE_DIR: /data/uv-cache
 
 x-core-volumes: &core-volumes
-  - ${SIGNALDECK_PLUGIN_MOUNTS_FILE:-./plugin-mounts.empty.json}:/etc/signaldeck/plugin-mounts.json:ro
+  - type: bind
+    source: ${SIGNALDECK_PLUGIN_MOUNTS_FILE:-./plugin-mounts.empty.json}
+    target: /etc/signaldeck/plugin-mounts.json
+    read_only: true
+    bind:
+      create_host_path: false
   - target-artifacts:/data/artifacts
   - target-core:/data/core
   - target-core-environments:/data/core-environments
@@ -22,7 +27,7 @@ x-core-volumes: &core-volumes
 
 services:
   backend:
-    image: ghcr.io/OWNER/signaldeck-backend:${SIGNALDECK_IMAGE_TAG:?required}
+    image: ${SIGNALDECK_BACKEND_IMAGE:?Backend image with tag or digest required}
     environment:
       <<: *core-environment
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-}
@@ -30,7 +35,7 @@ services:
     restart: unless-stopped
 
   dispatcher:
-    image: ghcr.io/OWNER/signaldeck-backend:${SIGNALDECK_IMAGE_TAG:?required}
+    image: ${SIGNALDECK_BACKEND_IMAGE:?Backend image with tag or digest required}
     command: ["python", "-m", "app.workers.command_dispatcher"]
     environment: *core-environment
     volumes: *core-volumes
@@ -39,7 +44,7 @@ services:
     restart: unless-stopped
 
   worker:
-    image: ghcr.io/OWNER/signaldeck-backend:${SIGNALDECK_IMAGE_TAG:?required}
+    image: ${SIGNALDECK_BACKEND_IMAGE:?Backend image with tag or digest required}
     command: ["python", "-m", "app.workers.artifact_worker", "--serve"]
     environment: *core-environment
     volumes: *core-volumes
@@ -49,17 +54,23 @@ services:
     restart: unless-stopped
 
   frontend:
-    image: ghcr.io/OWNER/signaldeck-frontend:${SIGNALDECK_IMAGE_TAG:?required}
+    image: ${SIGNALDECK_FRONTEND_IMAGE:?Frontend image with tag or digest required}
     environment:
       PORT: 8080
       BACKEND_UPSTREAM: backend:8000
       SIGNALDECK_PLUGIN_MOUNTS_FILE: /etc/signaldeck/plugin-mounts.json
     volumes:
-      - ${SIGNALDECK_PLUGIN_MOUNTS_FILE:-./plugin-mounts.empty.json}:/etc/signaldeck/plugin-mounts.json:ro
+      - type: bind
+        source: ${SIGNALDECK_PLUGIN_MOUNTS_FILE:-./plugin-mounts.empty.json}
+        target: /etc/signaldeck/plugin-mounts.json
+        read_only: true
+        bind:
+          create_host_path: false
     ports:
       - "127.0.0.1:${APP_PORT:-8080}:8080"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     restart: unless-stopped
 
   finance:

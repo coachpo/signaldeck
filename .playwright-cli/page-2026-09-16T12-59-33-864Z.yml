@@ -1,0 +1,309 @@
+- generic [ref=f6e2]:
+  - generic [ref=f6e3]:
+    - link "Skip to main content" [ref=f6e4] [cursor=pointer]:
+      - /url: "#app-main"
+    - generic [ref=f6e7]:
+      - paragraph [ref=f6e13]: SignalDeck
+      - generic [ref=f6e15]:
+        - generic [ref=f6e16]: 专家工作区
+        - list [ref=f6e18]:
+          - listitem [ref=f6e19]:
+            - link "任务" [ref=f6e20] [cursor=pointer]:
+              - /url: /
+          - listitem [ref=f6e166]:
+            - link "工作流制作" [ref=f6e167] [cursor=pointer]:
+              - /url: /workflow-packages
+          - listitem [ref=f6e173]:
+            - link "服务连接" [ref=f6e174] [cursor=pointer]:
+              - /url: /resources
+          - listitem [ref=f6e180]:
+            - link "扩展服务" [ref=f6e181] [cursor=pointer]:
+              - /url: /plugins
+          - listitem [ref=f6e27]:
+            - link "结果" [ref=f6e28] [cursor=pointer]:
+              - /url: /runs
+          - listitem [ref=f6e33]:
+            - link "执行更新" [ref=f6e34] [cursor=pointer]:
+              - /url: /attention
+      - list [ref=f6e40]:
+        - listitem [ref=f6e41]:
+          - link "设置" [ref=f6e42] [cursor=pointer]:
+            - /url: /settings
+    - generic [ref=f6e48]:
+      - banner [ref=f6e49]:
+        - button "Open sidebar" [ref=f6e50] [cursor=pointer]
+        - navigation "breadcrumb" [ref=f6e53]:
+          - list [ref=f6e54]:
+            - listitem [ref=f6e55]:
+              - link "工作流制作" [ref=f6e241] [cursor=pointer]:
+                - /url: /workflow-packages
+            - listitem [aria-hidden] [ref=f6e242]
+            - listitem [ref=f6e245]:
+              - generic [ref=f6e246]: 编辑工作流
+        - generic [ref=f6e57]:
+          - switch "专家模式" [checked] [ref=f6e58]
+          - text: 专家模式
+        - button "切换外观" [ref=f6e59] [cursor=pointer]
+      - main [ref=f6e61]:
+        - generic [ref=f6e247]:
+          - generic [ref=f6e249]:
+            - generic [ref=f6e251]:
+              - heading "美国个股多空研究" [level=1] [ref=f6e252]
+              - paragraph [ref=f6e253]: 工作流已保存
+            - generic [ref=f6e256]:
+              - button "选择导入文件" [ref=f6e257]
+              - button "导入工作流" [ref=f6e258] [cursor=pointer]
+              - button "导出工作流" [ref=f6e259] [cursor=pointer]
+              - button "检查工作流" [ref=f6e260] [cursor=pointer]
+              - button "保存工作流" [ref=f6e261] [cursor=pointer]
+              - link "开始任务" [ref=f6e262] [cursor=pointer]:
+                - /url: /workflow-packages/us_equity_research/run
+          - region "Workspace body" [ref=f6e264]:
+            - generic [ref=f6e266]:
+              - tablist [ref=f6e267]:
+                - tab "制作内容" [selected] [ref=f6e268]
+                - tab "步骤关系" [ref=f6e269]
+              - tabpanel "制作内容" [ref=f6e270]:
+                - group [ref=f6e271]:
+                  - generic [ref=f6e272]:
+                    - generic [ref=f6e273]:
+                      - generic [ref=f6e274]:
+                        - generic [ref=f6e275]: 工作流集名称
+                        - textbox "工作流集名称" [ref=f6e276]: 美国个股多空研究
+                      - generic [ref=f6e277]:
+                        - generic [ref=f6e278]: 用途说明
+                        - textbox "用途说明" [ref=f6e279]: 四路证据研究、有限一轮多空交锋、独立风险复核与方向裁决。仅提供研究与不可变报告留存，明确资料局限，不执行交易。
+                    - generic [ref=f6e280]:
+                      - navigation "制作内容" [ref=f6e281]:
+                        - generic [ref=f6e282]:
+                          - heading "任务流程" [level=2] [ref=f6e283]
+                          - generic [ref=f6e284]:
+                            - button "美股多空研究" [ref=f6e285] [cursor=pointer]
+                            - button "步骤 1 · 多空独立论证" [ref=f6e286] [cursor=pointer]
+                            - button "步骤 2 · 多空相互回应" [ref=f6e287] [cursor=pointer]
+                            - button "步骤 3 · 多空独立论证" [ref=f6e288] [cursor=pointer]
+                            - button "步骤 4 · 多空相互回应" [ref=f6e289] [cursor=pointer]
+                            - button "步骤 5 · 公司财务分析师" [ref=f6e290] [cursor=pointer]
+                            - button "步骤 6 · 美股方向裁决" [ref=f6e291] [cursor=pointer]
+                            - button "步骤 7 · 宏观环境分析师" [ref=f6e292] [cursor=pointer]
+                            - button "步骤 8 · 行情与技术分析师" [ref=f6e293] [cursor=pointer]
+                            - button "步骤 9 · 新闻与美国政策分析师" [ref=f6e294] [cursor=pointer]
+                            - button "步骤 10 · 证据与风险复核" [ref=f6e295] [cursor=pointer]
+                            - button "步骤 11 · 保存美股研究报告" [ref=f6e296] [cursor=pointer]
+                            - button "为美股多空研究添加步骤" [ref=f6e297] [cursor=pointer]: 添加步骤
+                          - button "添加任务流程" [ref=f6e298] [cursor=pointer]
+                        - generic [ref=f6e299]:
+                          - heading "可复用助手" [level=2] [ref=f6e300]
+                          - button "美股方向裁决" [ref=f6e301] [cursor=pointer]
+                          - button "多空独立论证" [ref=f6e302] [cursor=pointer]
+                          - button "公司财务分析师" [ref=f6e303] [cursor=pointer]
+                          - button "宏观环境分析师" [ref=f6e304] [cursor=pointer]
+                          - button "行情与技术分析师" [ref=f6e305] [cursor=pointer]
+                          - button "新闻与美国政策分析师" [ref=f6e306] [cursor=pointer]
+                          - button "多空相互回应" [ref=f6e307] [cursor=pointer]
+                          - button "证据与风险复核" [ref=f6e308] [cursor=pointer]
+                          - button "保存美股研究报告" [ref=f6e309] [cursor=pointer]
+                          - button "添加助手" [ref=f6e310] [cursor=pointer]
+                      - region "所选制作内容" [active] [ref=f6e311]:
+                        - generic [ref=f6e319]:
+                          - heading "步骤 5 · 公司财务分析师" [level=2] [ref=f6e320]
+                          - generic [ref=f6e321]:
+                            - generic [ref=f6e322]: 由谁完成
+                            - combobox "由谁完成" [ref=f6e323] [cursor=pointer]:
+                              - generic: 公司财务分析师
+                          - group "交给助手的信息" [ref=f6e324]:
+                            - generic [ref=f6e326]:
+                              - generic [ref=f6e327]: 交给助手的信息 · 提供方式
+                              - combobox "交给助手的信息 · 提供方式" [ref=f6e328] [cursor=pointer]:
+                                - generic: 分别填写各项信息
+                            - generic [ref=f6e329]:
+                              - generic [ref=f6e330]:
+                                - generic [ref=f6e331]: 交给助手的信息 · 信息 1
+                                - combobox "交给助手的信息 · 信息 1" [ref=f6e332] [cursor=pointer]:
+                                  - generic: 分析截止日期
+                              - group "分析截止日期" [ref=f6e333]:
+                                - generic [ref=f6e335]:
+                                  - generic [ref=f6e336]: 分析截止日期 · 提供方式
+                                  - combobox "分析截止日期 · 提供方式" [ref=f6e337] [cursor=pointer]:
+                                    - generic: 使用已有信息
+                                - generic [ref=f6e338]:
+                                  - generic [ref=f6e339]:
+                                    - generic [ref=f6e340]: 分析截止日期 · 来源
+                                    - combobox "分析截止日期 · 来源" [ref=f6e341] [cursor=pointer]:
+                                      - generic: 用户填写的信息
+                                  - generic [ref=f6e342]:
+                                    - generic [ref=f6e343]: 分析截止日期 · 内容 1
+                                    - combobox "分析截止日期 · 内容 1" [ref=f6e344] [cursor=pointer]:
+                                      - generic: 分析截止日期
+                                - generic [ref=f6e345]:
+                                  - checkbox "来源没有内容时使用备用内容" [ref=f6e346]
+                                  - text: 来源没有内容时使用备用内容
+                              - button "移除交给助手的信息的信息 1" [ref=f6e347] [cursor=pointer]: 移除这项信息
+                            - generic [ref=f6e348]:
+                              - generic [ref=f6e349]:
+                                - generic [ref=f6e350]: 交给助手的信息 · 信息 2
+                                - combobox "交给助手的信息 · 信息 2" [ref=f6e351] [cursor=pointer]:
+                                  - generic: 判断期限（月）
+                              - group "判断期限（月）" [ref=f6e352]:
+                                - generic [ref=f6e354]:
+                                  - generic [ref=f6e355]: 判断期限（月） · 提供方式
+                                  - combobox "判断期限（月） · 提供方式" [ref=f6e356] [cursor=pointer]:
+                                    - generic: 使用已有信息
+                                - generic [ref=f6e357]:
+                                  - generic [ref=f6e358]:
+                                    - generic [ref=f6e359]: 判断期限（月） · 来源
+                                    - combobox "判断期限（月） · 来源" [ref=f6e360] [cursor=pointer]:
+                                      - generic: 用户填写的信息
+                                  - generic [ref=f6e361]:
+                                    - generic [ref=f6e362]: 判断期限（月） · 内容 1
+                                    - combobox "判断期限（月） · 内容 1" [ref=f6e363] [cursor=pointer]:
+                                      - generic: 判断期限（月）
+                                - generic [ref=f6e364]:
+                                  - checkbox "来源没有内容时使用备用内容" [ref=f6e365]
+                                  - text: 来源没有内容时使用备用内容
+                              - button "移除交给助手的信息的信息 2" [ref=f6e366] [cursor=pointer]: 移除这项信息
+                            - generic [ref=f6e367]:
+                              - generic [ref=f6e368]:
+                                - generic [ref=f6e369]: 交给助手的信息 · 信息 3
+                                - combobox "交给助手的信息 · 信息 3" [ref=f6e370] [cursor=pointer]:
+                                  - generic: 研究问题
+                              - group "研究问题" [ref=f6e371]:
+                                - generic [ref=f6e373]:
+                                  - generic [ref=f6e374]: 研究问题 · 提供方式
+                                  - combobox "研究问题 · 提供方式" [ref=f6e375] [cursor=pointer]:
+                                    - generic: 使用已有信息
+                                - generic [ref=f6e376]:
+                                  - generic [ref=f6e377]:
+                                    - generic [ref=f6e378]: 研究问题 · 来源
+                                    - combobox "研究问题 · 来源" [ref=f6e379] [cursor=pointer]:
+                                      - generic: 用户填写的信息
+                                  - generic [ref=f6e380]:
+                                    - generic [ref=f6e381]: 研究问题 · 内容 1
+                                    - combobox "研究问题 · 内容 1" [ref=f6e382] [cursor=pointer]:
+                                      - generic: 研究问题
+                                - generic [ref=f6e383]:
+                                  - checkbox "来源没有内容时使用备用内容" [ref=f6e384]
+                                  - text: 来源没有内容时使用备用内容
+                              - button "移除交给助手的信息的信息 3" [ref=f6e385] [cursor=pointer]: 移除这项信息
+                            - generic [ref=f6e386]:
+                              - generic [ref=f6e387]:
+                                - generic [ref=f6e388]: 交给助手的信息 · 信息 4
+                                - combobox "交给助手的信息 · 信息 4" [ref=f6e389] [cursor=pointer]:
+                                  - generic: 补充资料
+                              - group "补充资料" [ref=f6e390]:
+                                - generic [ref=f6e392]:
+                                  - generic [ref=f6e393]: 补充资料 · 提供方式
+                                  - combobox "补充资料 · 提供方式" [ref=f6e394] [cursor=pointer]:
+                                    - generic: 使用已有信息
+                                - generic [ref=f6e395]:
+                                  - generic [ref=f6e396]:
+                                    - generic [ref=f6e397]: 补充资料 · 来源
+                                    - combobox "补充资料 · 来源" [ref=f6e398] [cursor=pointer]:
+                                      - generic: 用户填写的信息
+                                  - generic [ref=f6e399]:
+                                    - generic [ref=f6e400]: 补充资料 · 内容 1
+                                    - combobox "补充资料 · 内容 1" [ref=f6e401] [cursor=pointer]:
+                                      - generic: 补充资料
+                                  - generic [ref=f6e402]:
+                                    - generic [ref=f6e403]: 补充资料 · 列表内容 2
+                                    - combobox "补充资料 · 列表内容 2" [ref=f6e404] [cursor=pointer]:
+                                      - generic: 整个列表
+                                - generic [ref=f6e405]:
+                                  - checkbox "来源没有内容时使用备用内容" [checked] [ref=f6e406]
+                                  - text: 来源没有内容时使用备用内容
+                                - group "补充资料 · 备用内容" [ref=f6e407]:
+                                  - generic [ref=f6e409]:
+                                    - generic [ref=f6e410]: 补充资料 · 备用内容 · 提供方式
+                                    - combobox "补充资料 · 备用内容 · 提供方式" [ref=f6e411] [cursor=pointer]:
+                                      - generic: 填写固定内容
+                                  - generic [ref=f6e412]:
+                                    - paragraph [ref=f6e414]: 补充资料
+                                    - paragraph [ref=f6e415]: 可选。提供宏观数据、财报摘录或新闻政策原文，并填写来源和公开日期；未核实资料会明确标记。
+                                    - generic [ref=f6e416]:
+                                      - paragraph [ref=f6e417]: 暂无项目。可按需添加。
+                                      - button "添加项目" [ref=f6e418] [cursor=pointer]
+                              - button "移除交给助手的信息的信息 4" [ref=f6e419] [cursor=pointer]: 移除这项信息
+                            - generic [ref=f6e420]:
+                              - generic [ref=f6e421]:
+                                - generic [ref=f6e422]: 交给助手的信息 · 信息 5
+                                - combobox "交给助手的信息 · 信息 5" [ref=f6e423] [cursor=pointer]:
+                                  - generic: 股票代码
+                              - group "股票代码" [ref=f6e424]:
+                                - generic [ref=f6e426]:
+                                  - generic [ref=f6e427]: 股票代码 · 提供方式
+                                  - combobox "股票代码 · 提供方式" [ref=f6e428] [cursor=pointer]:
+                                    - generic: 使用已有信息
+                                - generic [ref=f6e429]:
+                                  - generic [ref=f6e430]:
+                                    - generic [ref=f6e431]: 股票代码 · 来源
+                                    - combobox "股票代码 · 来源" [ref=f6e432] [cursor=pointer]:
+                                      - generic: 用户填写的信息
+                                  - generic [ref=f6e433]:
+                                    - generic [ref=f6e434]: 股票代码 · 内容 1
+                                    - combobox "股票代码 · 内容 1" [ref=f6e435] [cursor=pointer]:
+                                      - generic: 股票代码
+                                - generic [ref=f6e436]:
+                                  - checkbox "来源没有内容时使用备用内容" [ref=f6e437]
+                                  - text: 来源没有内容时使用备用内容
+                              - button "移除交给助手的信息的信息 5" [ref=f6e438] [cursor=pointer]: 移除这项信息
+                            - button "添加信息" [disabled]
+                          - group "执行顺序" [ref=f6e439]:
+                            - group "还需要先完成" [ref=f6e441]:
+                              - generic [ref=f6e443]:
+                                - checkbox "步骤 1 · 多空独立论证" [ref=f6e444]
+                                - generic [ref=f6e445]: 步骤 1 · 多空独立论证
+                              - generic [ref=f6e446]:
+                                - checkbox "步骤 2 · 多空相互回应" [ref=f6e447]
+                                - generic [ref=f6e448]: 步骤 2 · 多空相互回应
+                              - generic [ref=f6e449]:
+                                - checkbox "步骤 3 · 多空独立论证" [ref=f6e450]
+                                - generic [ref=f6e451]: 步骤 3 · 多空独立论证
+                              - generic [ref=f6e452]:
+                                - checkbox "步骤 4 · 多空相互回应" [ref=f6e453]
+                                - generic [ref=f6e454]: 步骤 4 · 多空相互回应
+                              - generic [ref=f6e455]:
+                                - checkbox "步骤 6 · 美股方向裁决" [ref=f6e456]
+                                - generic [ref=f6e457]: 步骤 6 · 美股方向裁决
+                              - generic [ref=f6e458]:
+                                - checkbox "步骤 7 · 宏观环境分析师" [ref=f6e459]
+                                - generic [ref=f6e460]: 步骤 7 · 宏观环境分析师
+                              - generic [ref=f6e461]:
+                                - checkbox "步骤 8 · 行情与技术分析师" [ref=f6e462]
+                                - generic [ref=f6e463]: 步骤 8 · 行情与技术分析师
+                              - generic [ref=f6e464]:
+                                - checkbox "步骤 9 · 新闻与美国政策分析师" [ref=f6e465]
+                                - generic [ref=f6e466]: 步骤 9 · 新闻与美国政策分析师
+                              - generic [ref=f6e467]:
+                                - checkbox "步骤 10 · 证据与风险复核" [ref=f6e468]
+                                - generic [ref=f6e469]: 步骤 10 · 证据与风险复核
+                              - generic [ref=f6e470]:
+                                - checkbox "步骤 11 · 保存美股研究报告" [ref=f6e471]
+                                - generic [ref=f6e472]: 步骤 11 · 保存美股研究报告
+                            - paragraph [ref=f6e473]: 使用其他步骤的结果时，会自动等它完成。这里可以另外指定需要先完成的步骤。
+                          - button "设置执行条件" [ref=f6e474] [cursor=pointer]
+                          - group "遇到问题时" [ref=f6e475]:
+                            - group "前置步骤出现哪些情况时仍可继续" [ref=f6e477]:
+                              - generic [ref=f6e479]:
+                                - checkbox "已完成" [checked] [ref=f6e480]
+                                - generic [ref=f6e481]: 已完成
+                              - generic [ref=f6e482]:
+                                - checkbox "失败" [ref=f6e483]
+                                - generic [ref=f6e484]: 失败
+                              - generic [ref=f6e485]:
+                                - checkbox "因条件不满足而跳过" [ref=f6e486]
+                                - generic [ref=f6e487]: 因条件不满足而跳过
+                              - generic [ref=f6e488]:
+                                - checkbox "因前置步骤未完成而停止" [ref=f6e489]
+                                - generic [ref=f6e490]: 因前置步骤未完成而停止
+                              - generic [ref=f6e491]:
+                                - checkbox "已取消" [ref=f6e492]
+                                - generic [ref=f6e493]: 已取消
+                              - generic [ref=f6e494]:
+                                - checkbox "等待超时" [ref=f6e495]
+                                - generic [ref=f6e496]: 等待超时
+                            - generic [ref=f6e498]:
+                              - generic [ref=f6e499]: 最多尝试次数（含首次）
+                              - spinbutton "最多尝试次数（含首次）" [ref=f6e500]: "2"
+                            - paragraph [ref=f6e501]: 允许前置步骤失败后继续时，请为可能缺失的信息设置替代内容。
+                        - button "移除步骤" [ref=f6e502] [cursor=pointer]
+  - region "Notifications alt+T"

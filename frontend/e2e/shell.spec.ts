@@ -50,7 +50,7 @@ test("generic navigation owns one route shell without statically compiled busine
     await page.getByTestId(`nav-${route.nav}`).click();
     await expect(page).toHaveURL(route.path);
     await expect(
-      page.getByRole("heading", { name: route.label, exact: true }),
+      page.getByRole("heading", { name: route.label, level: 1, exact: true }),
     ).toBeVisible();
     await expect(page.getByRole("main")).toHaveCount(1);
   }

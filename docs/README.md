@@ -20,6 +20,7 @@
 
 ## 专项文档
 
+- [拆分镜像部署](../docker/deployment.md)：现有拆分 Compose 的构建、配置、启动、持久化与健康验证；部署边界仍以 `STATUS.md` 为准。
 - [自动化测试消融与精简实测](test-ablation-2026-09-16.md)：全测试入口盘点、同故障对照、保留与精简依据、耗时及未验证范围。
 - [三项实测优化交付与验证](planning/observed-gaps-verification.md)：输出上限、读写不确定性与Notes来源过滤的C1–C8映射、同版本真实流程和数据/部署边界。
 

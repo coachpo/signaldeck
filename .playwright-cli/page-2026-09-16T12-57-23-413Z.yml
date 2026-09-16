@@ -1,0 +1,253 @@
+- generic [ref=f4e2]:
+  - generic [ref=f4e3]:
+    - link "Skip to main content" [ref=f4e4] [cursor=pointer]:
+      - /url: "#app-main"
+    - generic [ref=f4e7]:
+      - paragraph [ref=f4e13]: SignalDeck
+      - generic [ref=f4e15]:
+        - generic [ref=f4e16]: 日常操作
+        - list [ref=f4e18]:
+          - listitem [ref=f4e19]:
+            - link "任务" [ref=f4e20] [cursor=pointer]:
+              - /url: /
+          - listitem [ref=f4e27]:
+            - link "结果" [active] [ref=f4e28] [cursor=pointer]:
+              - /url: /runs
+          - listitem [ref=f4e33]:
+            - link "执行更新" [ref=f4e34] [cursor=pointer]:
+              - /url: /attention
+      - list [ref=f4e40]:
+        - listitem [ref=f4e41]:
+          - link "设置" [ref=f4e42] [cursor=pointer]:
+            - /url: /settings
+    - generic [ref=f4e48]:
+      - banner [ref=f4e49]:
+        - button "Open sidebar" [ref=f4e50] [cursor=pointer]
+        - navigation "breadcrumb" [ref=f4e53]:
+          - list [ref=f4e54]:
+            - listitem [ref=f4e55]:
+              - generic [ref=f4e1557]: 结果
+        - generic [ref=f4e57]:
+          - switch "专家模式" [ref=f4e58]
+          - text: 专家模式
+        - button "切换外观" [ref=f4e59] [cursor=pointer]
+      - main [ref=f4e61]:
+        - generic [ref=f4e1558]:
+          - generic [ref=f4e1560]:
+            - generic [ref=f4e1562]:
+              - heading "结果" [level=1] [ref=f4e1563]
+              - paragraph [ref=f4e1564]: 查找和阅读所有执行记录
+            - generic [ref=f4e1567]:
+              - link "执行更新" [ref=f4e1568] [cursor=pointer]:
+                - /url: /attention
+              - button "刷新" [ref=f4e1569] [cursor=pointer]
+          - generic [ref=f4e1570]:
+            - group "结果分组" [ref=f4e1571]:
+              - button "全部结果" [ref=f4e1572] [cursor=pointer]
+              - button "进行中" [ref=f4e1573] [cursor=pointer]
+              - button "需要处理" [ref=f4e1574] [cursor=pointer]
+            - generic [ref=f4e1575]:
+              - generic [ref=f4e1576]:
+                - search [ref=f4e1577]:
+                  - generic [ref=f4e1578]: 搜索全部历史
+                  - textbox "搜索全部历史" [ref=f4e1579]:
+                    - /placeholder: 搜索标题或任务
+                - generic [ref=f4e1580]:
+                  - generic [ref=f4e1581]: 收藏筛选
+                  - combobox "收藏筛选" [ref=f4e1582] [cursor=pointer]:
+                    - generic: 全部收藏状态
+                - generic [ref=f4e1583]:
+                  - generic [ref=f4e1584]: 阅读筛选
+                  - combobox "阅读筛选" [ref=f4e1585] [cursor=pointer]:
+                    - generic: 全部阅读状态
+                - generic [ref=f4e1586]:
+                  - generic [ref=f4e1587]: 执行状态
+                  - combobox "执行状态" [ref=f4e1588] [cursor=pointer]:
+                    - generic: 所有状态
+                - generic [ref=f4e1589]:
+                  - generic [ref=f4e1590]: 任务类型
+                  - combobox "任务类型" [ref=f4e1591] [cursor=pointer]:
+                    - generic: 所有任务
+                - generic [ref=f4e1592]:
+                  - generic [ref=f4e1593]: 执行来源
+                  - combobox "执行来源" [ref=f4e1594] [cursor=pointer]:
+                    - generic: 所有来源
+                - generic [ref=f4e1595]:
+                  - text: 起始日期
+                  - textbox "起始日期" [ref=f4e1596]
+                - generic [ref=f4e1597]:
+                  - text: 结束日期
+                  - textbox "结束日期" [ref=f4e1598]
+                - generic [ref=f4e1599]:
+                  - generic [ref=f4e1600]: 排序
+                  - combobox "排序" [ref=f4e1601] [cursor=pointer]:
+                    - generic: 最新在前
+                - button "清除筛选" [ref=f4e1603] [cursor=pointer]
+              - generic [ref=f4e1604]: 共 10 条记录
+            - table [ref=f4e1608]:
+              - rowgroup [ref=f4e1609]:
+                - row [ref=f4e1610]:
+                  - columnheader "标题" [ref=f4e1611]
+                  - columnheader "状态" [ref=f4e1612]
+                  - columnheader "任务" [ref=f4e1613]
+                  - columnheader "来源" [ref=f4e1614]
+                  - columnheader "时间" [ref=f4e1615]
+                  - columnheader "操作" [ref=f4e1616]
+              - rowgroup [ref=f4e1617]:
+                - row [ref=f4e1618]:
+                  - cell [ref=f4e1619]:
+                    - link "NVDA" [ref=f4e1620] [cursor=pointer]:
+                      - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?history=
+                    - paragraph [ref=f4e1621]: 未读
+                  - cell "已完成" [ref=f4e1622]
+                  - cell "美股多空研究" [ref=f4e1624]
+                  - cell "调整后开始" [ref=f4e1625]
+                  - cell "2026/9/16 03:53:32" [ref=f4e1626]
+                  - cell [ref=f4e1627]:
+                    - generic [ref=f4e1629]:
+                      - button "收藏 NVDA" [ref=f4e1630] [cursor=pointer]: 收藏
+                      - button "标为已读 NVDA" [ref=f4e1631] [cursor=pointer]: 标为已读
+                    - link "修改输入" [ref=f4e1632] [cursor=pointer]:
+                      - /url: /tasks/new?fromRun=406ddea2-b8a7-45ba-befb-7efc86534173
+                - row [ref=f4e1633]:
+                  - cell [ref=f4e1634]:
+                    - link "NVDA" [ref=f4e1635] [cursor=pointer]:
+                      - /url: /runs/d1a3b46c-a5d7-4314-8729-5982313a20d2?history=
+                    - paragraph [ref=f4e1636]: 未读
+                  - cell "执行失败" [ref=f4e1637]
+                  - cell "美股多空研究" [ref=f4e1639]
+                  - cell "调整后开始" [ref=f4e1640]
+                  - cell "2026/9/16 03:50:20" [ref=f4e1641]
+                  - cell [ref=f4e1642]:
+                    - generic [ref=f4e1644]:
+                      - button "收藏 NVDA" [ref=f4e1645] [cursor=pointer]: 收藏
+                      - button "标为已读 NVDA" [ref=f4e1646] [cursor=pointer]: 标为已读
+                    - link "修改输入" [ref=f4e1647] [cursor=pointer]:
+                      - /url: /tasks/new?fromRun=d1a3b46c-a5d7-4314-8729-5982313a20d2
+                - row [ref=f4e1648]:
+                  - cell [ref=f4e1649]:
+                    - link "NVDA" [ref=f4e1650] [cursor=pointer]:
+                      - /url: /runs/c910f828-166b-451e-b398-ae9286c89e5c?history=
+                    - paragraph [ref=f4e1651]: 未读
+                  - cell "已完成" [ref=f4e1652]
+                  - cell "美股多空研究" [ref=f4e1654]
+                  - cell "手动开始" [ref=f4e1655]
+                  - cell "2026/9/16 02:41:59" [ref=f4e1656]
+                  - cell [ref=f4e1657]:
+                    - generic [ref=f4e1659]:
+                      - button "收藏 NVDA" [ref=f4e1660] [cursor=pointer]: 收藏
+                      - button "标为已读 NVDA" [ref=f4e1661] [cursor=pointer]: 标为已读
+                    - link "修改输入" [ref=f4e1662] [cursor=pointer]:
+                      - /url: /tasks/new?fromRun=c910f828-166b-451e-b398-ae9286c89e5c
+                - row [ref=f4e1663]:
+                  - cell [ref=f4e1664]:
+                    - link "NVDA" [ref=f4e1665] [cursor=pointer]:
+                      - /url: /runs/9080f2ea-f7f8-4bb6-9bf1-90fabb478ec3?history=
+                    - paragraph [ref=f4e1666]: 未读
+                  - cell "执行失败" [ref=f4e1667]
+                  - cell "美股多空研究" [ref=f4e1669]
+                  - cell "手动开始" [ref=f4e1670]
+                  - cell "2026/9/16 02:31:39" [ref=f4e1671]
+                  - cell [ref=f4e1672]:
+                    - generic [ref=f4e1674]:
+                      - button "收藏 NVDA" [ref=f4e1675] [cursor=pointer]: 收藏
+                      - button "标为已读 NVDA" [ref=f4e1676] [cursor=pointer]: 标为已读
+                    - link "修改输入" [ref=f4e1677] [cursor=pointer]:
+                      - /url: /tasks/new?fromRun=9080f2ea-f7f8-4bb6-9bf1-90fabb478ec3
+                - row [ref=f4e1678]:
+                  - cell [ref=f4e1679]:
+                    - link "NVDA" [ref=f4e1680] [cursor=pointer]:
+                      - /url: /runs/93718a9f-6d0f-47f0-92e1-bb14ed1f15b0?history=
+                    - paragraph [ref=f4e1681]: 未读
+                  - cell "执行失败" [ref=f4e1682]
+                  - cell "美股多空研究" [ref=f4e1684]
+                  - cell "手动开始" [ref=f4e1685]
+                  - cell "2026/9/16 02:15:24" [ref=f4e1686]
+                  - cell [ref=f4e1687]:
+                    - generic [ref=f4e1689]:
+                      - button "收藏 NVDA" [ref=f4e1690] [cursor=pointer]: 收藏
+                      - button "标为已读 NVDA" [ref=f4e1691] [cursor=pointer]: 标为已读
+                    - link "修改输入" [ref=f4e1692] [cursor=pointer]:
+                      - /url: /tasks/new?fromRun=93718a9f-6d0f-47f0-92e1-bb14ed1f15b0
+                - row [ref=f4e1693]:
+                  - cell [ref=f4e1694]:
+                    - link "NVDA" [ref=f4e1695] [cursor=pointer]:
+                      - /url: /runs/701b6a78-c6d6-4368-bd7d-dea89c93b913?history=
+                    - paragraph [ref=f4e1696]: 未读
+                  - cell "执行失败 读取结果未确认" [ref=f4e1697]:
+                    - generic [ref=f4e1698]: 执行失败
+                    - generic [ref=f4e1699]: 读取结果未确认
+                  - cell "美股多空研究" [ref=f4e1700]
+                  - cell "手动开始" [ref=f4e1701]
+                  - cell "2026/9/16 02:08:30" [ref=f4e1702]
+                  - cell [ref=f4e1703]:
+                    - generic [ref=f4e1705]:
+                      - button "收藏 NVDA" [ref=f4e1706] [cursor=pointer]: 收藏
+                      - button "标为已读 NVDA" [ref=f4e1707] [cursor=pointer]: 标为已读
+                    - link "修改输入" [ref=f4e1708] [cursor=pointer]:
+                      - /url: /tasks/new?fromRun=701b6a78-c6d6-4368-bd7d-dea89c93b913
+                - row [ref=f4e1709]:
+                  - cell [ref=f4e1710]:
+                    - link "NVDA" [ref=f4e1711] [cursor=pointer]:
+                      - /url: /runs/e7764ceb-69e6-4ba7-be1b-6e5f8ebde787?history=
+                    - paragraph [ref=f4e1712]: 未读
+                  - cell "执行失败" [ref=f4e1713]
+                  - cell "美股多空研究" [ref=f4e1715]
+                  - cell "手动开始" [ref=f4e1716]
+                  - cell "2026/9/16 02:02:22" [ref=f4e1717]
+                  - cell [ref=f4e1718]:
+                    - generic [ref=f4e1720]:
+                      - button "收藏 NVDA" [ref=f4e1721] [cursor=pointer]: 收藏
+                      - button "标为已读 NVDA" [ref=f4e1722] [cursor=pointer]: 标为已读
+                    - link "修改输入" [ref=f4e1723] [cursor=pointer]:
+                      - /url: /tasks/new?fromRun=e7764ceb-69e6-4ba7-be1b-6e5f8ebde787
+                - row [ref=f4e1724]:
+                  - cell [ref=f4e1725]:
+                    - link "NVDA" [ref=f4e1726] [cursor=pointer]:
+                      - /url: /runs/ed0c1b9e-01c4-4f38-b2fc-07343d660dbd?history=
+                    - paragraph [ref=f4e1727]: 未读
+                  - cell "执行失败" [ref=f4e1728]
+                  - cell "美股多空研究" [ref=f4e1730]
+                  - cell "手动开始" [ref=f4e1731]
+                  - cell "2026/9/16 01:44:49" [ref=f4e1732]
+                  - cell [ref=f4e1733]:
+                    - generic [ref=f4e1735]:
+                      - button "收藏 NVDA" [ref=f4e1736] [cursor=pointer]: 收藏
+                      - button "标为已读 NVDA" [ref=f4e1737] [cursor=pointer]: 标为已读
+                    - link "修改输入" [ref=f4e1738] [cursor=pointer]:
+                      - /url: /tasks/new?fromRun=ed0c1b9e-01c4-4f38-b2fc-07343d660dbd
+                - row [ref=f4e1739]:
+                  - cell [ref=f4e1740]:
+                    - link "NVDA" [ref=f4e1741] [cursor=pointer]:
+                      - /url: /runs/a896196e-6bd0-42f8-8724-2afdf3a81c3a?history=
+                    - paragraph [ref=f4e1742]: 未读
+                  - cell "执行失败" [ref=f4e1743]
+                  - cell "美股多空研究" [ref=f4e1745]
+                  - cell "手动开始" [ref=f4e1746]
+                  - cell "2026/9/16 01:35:47" [ref=f4e1747]
+                  - cell [ref=f4e1748]:
+                    - generic [ref=f4e1750]:
+                      - button "收藏 NVDA" [ref=f4e1751] [cursor=pointer]: 收藏
+                      - button "标为已读 NVDA" [ref=f4e1752] [cursor=pointer]: 标为已读
+                    - link "修改输入" [ref=f4e1753] [cursor=pointer]:
+                      - /url: /tasks/new?fromRun=a896196e-6bd0-42f8-8724-2afdf3a81c3a
+                - row [ref=f4e1754]:
+                  - cell [ref=f4e1755]:
+                    - link "NVDA" [ref=f4e1756] [cursor=pointer]:
+                      - /url: /runs/addfb607-a708-44a3-910c-5a1fd67e2cf7?history=
+                    - paragraph [ref=f4e1757]: 未读
+                  - cell "已取消" [ref=f4e1758]
+                  - cell "美股多空研究" [ref=f4e1760]
+                  - cell "手动开始" [ref=f4e1761]
+                  - cell "2026/9/16 01:31:08" [ref=f4e1762]
+                  - cell [ref=f4e1763]:
+                    - generic [ref=f4e1765]:
+                      - button "收藏 NVDA" [ref=f4e1766] [cursor=pointer]: 收藏
+                      - button "标为已读 NVDA" [ref=f4e1767] [cursor=pointer]: 标为已读
+                    - link "修改输入" [ref=f4e1768] [cursor=pointer]:
+                      - /url: /tasks/new?fromRun=addfb607-a708-44a3-910c-5a1fd67e2cf7
+            - navigation "结果分页" [ref=f4e1769]:
+              - button "上一页" [disabled]
+              - generic [ref=f4e1770]: 第 1 页 · 共 1 页
+              - button "下一页" [disabled]
+  - region "Notifications alt+T"

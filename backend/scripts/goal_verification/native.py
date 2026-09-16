@@ -209,7 +209,8 @@ def _commands(group: str, workspace: Path, output: Path, env: dict[str, str]) ->
                 "TEMPORAL_ADDRESS": "temporal:7233",
                 "AGENT_PLATFORM_ENCRYPTION_KEY": "acceptance-example-only",
                 "SIGNALDECK_API_TOKEN": "acceptance-example-only",
-                "SIGNALDECK_IMAGE_TAG": "acceptance-example-only",
+                "SIGNALDECK_BACKEND_IMAGE": "signaldeck-backend:acceptance-example-only",
+                "SIGNALDECK_FRONTEND_IMAGE": "signaldeck-frontend:acceptance-example-only",
             }
         )
         commands = [

@@ -3,6 +3,14 @@
 .codebase-memory
 .env
 .env.*
+**/.env
+**/.env.*
+**/*.pem
+**/*.key
+**/*.log
+**/*.db
+**/*.sqlite
+**/*.sqlite3
 **/__pycache__
 **/.mypy_cache
 **/.pytest_cache
@@ -18,5 +26,10 @@ backend/.data
 backend/.cache
 backend/experiments
 .signaldeck-target
+.signaldeck-dev
+.tmp
+tmp
+output
+.playwright-cli
 
 plugins/runtime/plugin_runtime/web/

@@ -1,0 +1,53 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - link "Skip to main content" [ref=e4] [cursor=pointer]:
+      - /url: "#app-main"
+    - generic [ref=e7]:
+      - paragraph [ref=e13]: SignalDeck
+      - generic [ref=e15]:
+        - generic [ref=e16]: 日常操作
+        - list [ref=e18]:
+          - listitem [ref=e19]:
+            - link "任务" [ref=e20] [cursor=pointer]:
+              - /url: /
+          - listitem [ref=e27]:
+            - link "结果" [ref=e28] [cursor=pointer]:
+              - /url: /runs
+          - listitem [ref=e33]:
+            - link "执行更新" [ref=e34] [cursor=pointer]:
+              - /url: /attention
+      - list [ref=e40]:
+        - listitem [ref=e41]:
+          - link "设置" [ref=e42] [cursor=pointer]:
+            - /url: /settings
+    - generic [ref=e48]:
+      - banner [ref=e49]:
+        - button "Open sidebar" [ref=e50] [cursor=pointer]
+        - navigation "breadcrumb" [ref=e53]:
+          - list [ref=e54]:
+            - listitem [ref=e55]:
+              - generic [ref=e56]: 任务
+        - generic [ref=e57]:
+          - switch "专家模式" [ref=e58]
+          - text: 专家模式
+        - button "切换外观" [ref=e59] [cursor=pointer]
+      - main [ref=e61]:
+        - generic [ref=e64]:
+          - generic [ref=e66]:
+            - generic [ref=e68]:
+              - heading "任务" [level=1] [ref=e69]
+              - paragraph [ref=e70]: 选择任务，填写业务信息，核对连接和保存位置后开始。
+            - link "自动执行" [ref=e73] [cursor=pointer]:
+              - /url: /scheduled-tasks
+          - region "Workspace body" [ref=e75]:
+            - generic [ref=e76]:
+              - region "已保存草稿" [ref=e77]:
+                - heading "已保存草稿" [level=2] [ref=e78]
+                - status [ref=e79]: 正在读取草稿…
+              - generic [ref=e80]:
+                - generic [ref=e81]: 搜索任务或常用配置
+                - textbox "搜索任务或常用配置" [ref=e82]
+              - alert [ref=e85]:
+                - generic [ref=e86]: 正在读取任务…
+              - heading "常用配置与收藏" [level=2] [ref=e88]
+  - region "Notifications alt+T"

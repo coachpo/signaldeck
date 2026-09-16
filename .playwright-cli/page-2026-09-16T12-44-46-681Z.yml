@@ -1,0 +1,586 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - link "Skip to main content" [ref=e4] [cursor=pointer]:
+      - /url: "#app-main"
+    - generic [ref=e7]:
+      - paragraph [ref=e13]: SignalDeck
+      - generic [ref=e15]:
+        - generic [ref=e16]: 日常操作
+        - list [ref=e18]:
+          - listitem [ref=e19]:
+            - link "任务" [ref=e20] [cursor=pointer]:
+              - /url: /
+          - listitem [ref=e27]:
+            - link "结果" [ref=e28] [cursor=pointer]:
+              - /url: /runs
+          - listitem [ref=e33]:
+            - link "执行更新" [ref=e34] [cursor=pointer]:
+              - /url: /attention
+      - list [ref=e40]:
+        - listitem [ref=e41]:
+          - link "设置" [ref=e42] [cursor=pointer]:
+            - /url: /settings
+    - generic [ref=e48]:
+      - banner [ref=e49]:
+        - button "Open sidebar" [ref=e50] [cursor=pointer]
+        - navigation "breadcrumb" [ref=e53]:
+          - list [ref=e54]:
+            - listitem [ref=e55]:
+              - link "结果" [ref=e391] [cursor=pointer]:
+                - /url: /runs
+            - listitem [aria-hidden] [ref=e392]
+            - listitem [ref=e395]:
+              - generic [ref=e396]: 结果详情
+        - generic [ref=e57]:
+          - switch "专家模式" [ref=e58]
+          - text: 专家模式
+        - button "切换外观" [ref=e59] [cursor=pointer]
+      - main [ref=e61]:
+        - generic [ref=e788]:
+          - generic [ref=e790]:
+            - generic [ref=e792]:
+              - heading "美股多空研究" [level=1] [ref=e793]
+              - paragraph [ref=e794]: 执行过程 · 2026/9/16 03:53:32
+            - generic [ref=e795]:
+              - generic [ref=e796]: 已完成
+              - link "返回结果" [ref=e800] [cursor=pointer]:
+                - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?history=q%3DNVDA%26status%3Dsucceeded
+          - region "Workspace body" [ref=e802]:
+            - generic [ref=e804]:
+              - tablist [ref=e805]:
+                - tab "步骤进度" [ref=e806]
+                - tab "执行过程" [selected] [ref=e807]
+                - tab "资料与附件" [ref=e808]
+                - tab "本次设置" [ref=e809]
+              - tabpanel "执行过程" [ref=e810]:
+                - generic [ref=e811]:
+                  - generic "步骤与服务操作" [ref=e812]:
+                    - list [ref=e813]:
+                      - listitem [ref=e814]:
+                        - generic [ref=e815]:
+                          - link "多空独立论证 · 第 1 次" [ref=e816] [cursor=pointer]:
+                            - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Anode%3Abear&history=q%3DNVDA%26status%3Dsucceeded
+                          - generic [ref=e817]: 已完成
+                        - list [ref=e819]:
+                          - listitem [ref=e820]:
+                            - generic [ref=e821]:
+                              - link "处理任务 · 第 1 次" [ref=e822] [cursor=pointer]:
+                                - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Abear%3Aagent%3A1&history=q%3DNVDA%26status%3Dsucceeded
+                              - generic [ref=e823]: 已完成
+                            - list [ref=e825]:
+                              - listitem [ref=e826]:
+                                - generic [ref=e827]:
+                                  - link "生成内容 · 第 1 次" [ref=e828] [cursor=pointer]:
+                                    - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Abear%3Aagent%3A1%3Amodel%3A1&history=q%3DNVDA%26status%3Dsucceeded
+                                  - generic [ref=e829]: 已完成
+                                - list [ref=e831]:
+                                  - listitem [ref=e832]:
+                                    - generic [ref=e833]:
+                                      - link "联系服务 · 第 1 次" [ref=e834] [cursor=pointer]:
+                                        - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Abear%3Aagent%3A1%3Amodel%3A1%3Aattempt%3A1&history=q%3DNVDA%26status%3Dsucceeded
+                                      - generic [ref=e835]: 已完成
+                      - listitem [ref=e836]:
+                        - generic [ref=e837]:
+                          - link "多空相互回应 · 第 1 次" [ref=e838] [cursor=pointer]:
+                            - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Anode%3Abear_reply&history=q%3DNVDA%26status%3Dsucceeded
+                          - generic [ref=e839]: 已完成
+                        - list [ref=e841]:
+                          - listitem [ref=e842]:
+                            - generic [ref=e843]:
+                              - link "处理任务 · 第 1 次" [ref=e844] [cursor=pointer]:
+                                - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Abear_reply%3Aagent%3A1&history=q%3DNVDA%26status%3Dsucceeded
+                              - generic [ref=e845]: 已完成
+                            - list [ref=e847]:
+                              - listitem [ref=e848]:
+                                - generic [ref=e849]:
+                                  - link "生成内容 · 第 1 次" [ref=e850] [cursor=pointer]:
+                                    - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Abear_reply%3Aagent%3A1%3Amodel%3A1&history=q%3DNVDA%26status%3Dsucceeded
+                                  - generic [ref=e851]: 已完成
+                                - list [ref=e853]:
+                                  - listitem [ref=e854]:
+                                    - generic [ref=e855]:
+                                      - link "联系服务 · 第 1 次" [ref=e856] [cursor=pointer]:
+                                        - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Abear_reply%3Aagent%3A1%3Amodel%3A1%3Aattempt%3A1&history=q%3DNVDA%26status%3Dsucceeded
+                                      - generic [ref=e857]: 已完成
+                      - listitem [ref=e858]:
+                        - generic [ref=e859]:
+                          - link "多空独立论证 · 第 1 次" [ref=e860] [cursor=pointer]:
+                            - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Anode%3Abull&history=q%3DNVDA%26status%3Dsucceeded
+                          - generic [ref=e861]: 已完成
+                        - list [ref=e863]:
+                          - listitem [ref=e864]:
+                            - generic [ref=e865]:
+                              - link "处理任务 · 第 1 次" [ref=e866] [cursor=pointer]:
+                                - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Abull%3Aagent%3A1&history=q%3DNVDA%26status%3Dsucceeded
+                              - generic [ref=e867]: 已完成
+                            - list [ref=e869]:
+                              - listitem [ref=e870]:
+                                - generic [ref=e871]:
+                                  - link "生成内容 · 第 1 次" [ref=e872] [cursor=pointer]:
+                                    - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Abull%3Aagent%3A1%3Amodel%3A1&history=q%3DNVDA%26status%3Dsucceeded
+                                  - generic [ref=e873]: 已完成
+                                - list [ref=e875]:
+                                  - listitem [ref=e876]:
+                                    - generic [ref=e877]:
+                                      - link "联系服务 · 第 1 次" [ref=e878] [cursor=pointer]:
+                                        - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Abull%3Aagent%3A1%3Amodel%3A1%3Aattempt%3A1&history=q%3DNVDA%26status%3Dsucceeded
+                                      - generic [ref=e879]: 已完成
+                      - listitem [ref=e880]:
+                        - generic [ref=e881]:
+                          - link "多空相互回应 · 第 1 次" [ref=e882] [cursor=pointer]:
+                            - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Anode%3Abull_reply&history=q%3DNVDA%26status%3Dsucceeded
+                          - generic [ref=e883]: 已完成
+                        - list [ref=e885]:
+                          - listitem [ref=e886]:
+                            - generic [ref=e887]:
+                              - link "处理任务 · 第 1 次" [ref=e888] [cursor=pointer]:
+                                - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Abull_reply%3Aagent%3A1&history=q%3DNVDA%26status%3Dsucceeded
+                              - generic [ref=e889]: 已完成
+                            - list [ref=e891]:
+                              - listitem [ref=e892]:
+                                - generic [ref=e893]:
+                                  - link "生成内容 · 第 1 次" [ref=e894] [cursor=pointer]:
+                                    - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Abull_reply%3Aagent%3A1%3Amodel%3A1&history=q%3DNVDA%26status%3Dsucceeded
+                                  - generic [ref=e895]: 已完成
+                                - list [ref=e897]:
+                                  - listitem [ref=e898]:
+                                    - generic [ref=e899]:
+                                      - link "联系服务 · 第 1 次" [ref=e900] [cursor=pointer]:
+                                        - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Abull_reply%3Aagent%3A1%3Amodel%3A1%3Aattempt%3A1&history=q%3DNVDA%26status%3Dsucceeded
+                                      - generic [ref=e901]: 已完成
+                      - listitem [ref=e902]:
+                        - generic [ref=e903]:
+                          - link "公司财务分析师 · 第 1 次" [ref=e904] [cursor=pointer]:
+                            - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Anode%3Acompany&history=q%3DNVDA%26status%3Dsucceeded
+                          - generic [ref=e905]: 已完成
+                        - list [ref=e907]:
+                          - listitem [ref=e908]:
+                            - generic [ref=e909]:
+                              - link "处理任务 · 第 1 次" [ref=e910] [cursor=pointer]:
+                                - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Acompany%3Aagent%3A1&history=q%3DNVDA%26status%3Dsucceeded
+                              - generic [ref=e911]: 执行失败
+                            - list [ref=e913]:
+                              - listitem [ref=e914]:
+                                - generic [ref=e915]:
+                                  - link "生成内容 · 第 1 次" [ref=e916] [cursor=pointer]:
+                                    - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Acompany%3Aagent%3A1%3Amodel%3A1&history=q%3DNVDA%26status%3Dsucceeded
+                                  - generic [ref=e917]: 已完成
+                                - list [ref=e919]:
+                                  - listitem [ref=e920]:
+                                    - generic [ref=e921]:
+                                      - link "联系服务 · 第 1 次" [ref=e922] [cursor=pointer]:
+                                        - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Acompany%3Aagent%3A1%3Amodel%3A1%3Aattempt%3A1&history=q%3DNVDA%26status%3Dsucceeded
+                                      - generic [ref=e923]: 已完成
+                          - listitem [ref=e924]:
+                            - generic [ref=e925]:
+                              - link "处理任务 · 第 2 次" [ref=e926] [cursor=pointer]:
+                                - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Acompany%3Aagent%3A2&history=q%3DNVDA%26status%3Dsucceeded
+                              - generic [ref=e927]: 已完成
+                            - list [ref=e929]:
+                              - listitem [ref=e930]:
+                                - generic [ref=e931]:
+                                  - link "生成内容 · 第 1 次" [ref=e932] [cursor=pointer]:
+                                    - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Acompany%3Aagent%3A2%3Amodel%3A1&history=q%3DNVDA%26status%3Dsucceeded
+                                  - generic [ref=e933]: 已完成
+                                - list [ref=e935]:
+                                  - listitem [ref=e936]:
+                                    - generic [ref=e937]:
+                                      - link "联系服务 · 第 1 次" [ref=e938] [cursor=pointer]:
+                                        - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Acompany%3Aagent%3A2%3Amodel%3A1%3Aattempt%3A1&history=q%3DNVDA%26status%3Dsucceeded
+                                      - generic [ref=e939]: 已完成
+                              - listitem [ref=e940]:
+                                - generic [ref=e941]:
+                                  - link "生成内容 · 第 1 次" [ref=e942] [cursor=pointer]:
+                                    - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Acompany%3Aagent%3A2%3Amodel%3A2&history=q%3DNVDA%26status%3Dsucceeded
+                                  - generic [ref=e943]: 已完成
+                                - list [ref=e945]:
+                                  - listitem [ref=e946]:
+                                    - generic [ref=e947]:
+                                      - link "联系服务 · 第 1 次" [ref=e948] [cursor=pointer]:
+                                        - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Acompany%3Aagent%3A2%3Amodel%3A2%3Aattempt%3A1&history=q%3DNVDA%26status%3Dsucceeded
+                                      - generic [ref=e949]: 已完成
+                              - listitem [ref=e950]:
+                                - generic [ref=e951]:
+                                  - link "生成内容 · 第 1 次" [ref=e952] [cursor=pointer]:
+                                    - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Acompany%3Aagent%3A2%3Amodel%3A3&history=q%3DNVDA%26status%3Dsucceeded
+                                  - generic [ref=e953]: 已完成
+                                - list [ref=e955]:
+                                  - listitem [ref=e956]:
+                                    - generic [ref=e957]:
+                                      - link "联系服务 · 第 1 次" [ref=e958] [cursor=pointer]:
+                                        - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Acompany%3Aagent%3A2%3Amodel%3A3%3Aattempt%3A1&history=q%3DNVDA%26status%3Dsucceeded
+                                      - generic [ref=e959]: 已完成
+                              - listitem [ref=e960]:
+                                - generic [ref=e961]:
+                                  - link "查找公司公告 · 第 1 次" [ref=e962] [cursor=pointer]:
+                                    - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Acompany%3Aagent%3A2%3Atool%3A1%3Acall_e4b92d1d65a44b2c9eb5ff1c&history=q%3DNVDA%26status%3Dsucceeded
+                                  - generic [ref=e963]: 已完成
+                                - list [ref=e965]:
+                                  - listitem [ref=e966]:
+                                    - generic [ref=e967]:
+                                      - link "联系服务 · 第 1 次" [ref=e968] [cursor=pointer]:
+                                        - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Acompany%3Aagent%3A2%3Atool%3A1%3Acall_e4b92d1d65a44b2c9eb5ff1c%3Aattempt%3A1&history=q%3DNVDA%26status%3Dsucceeded
+                                      - generic [ref=e969]: 已完成
+                              - listitem [ref=e970]:
+                                - generic [ref=e971]:
+                                  - link "查找公司公告 · 第 1 次" [ref=e972] [cursor=pointer]:
+                                    - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Acompany%3Aagent%3A2%3Atool%3A1%3Acall_fba731e6837d47edbc82b5c2&history=q%3DNVDA%26status%3Dsucceeded
+                                  - generic [ref=e973]: 已完成
+                                - list [ref=e975]:
+                                  - listitem [ref=e976]:
+                                    - generic [ref=e977]:
+                                      - link "联系服务 · 第 1 次" [ref=e978] [cursor=pointer]:
+                                        - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Acompany%3Aagent%3A2%3Atool%3A1%3Acall_fba731e6837d47edbc82b5c2%3Aattempt%3A1&history=q%3DNVDA%26status%3Dsucceeded
+                                      - generic [ref=e979]: 已完成
+                              - listitem [ref=e980]:
+                                - generic [ref=e981]:
+                                  - link "查找公司公告 · 第 1 次" [ref=e982] [cursor=pointer]:
+                                    - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Acompany%3Aagent%3A2%3Atool%3A2%3Acall_db95bbc577f14333abd005bf&history=q%3DNVDA%26status%3Dsucceeded
+                                  - generic [ref=e983]: 已完成
+                                - list [ref=e985]:
+                                  - listitem [ref=e986]:
+                                    - generic [ref=e987]:
+                                      - link "联系服务 · 第 1 次" [ref=e988] [cursor=pointer]:
+                                        - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Acompany%3Aagent%3A2%3Atool%3A2%3Acall_db95bbc577f14333abd005bf%3Aattempt%3A1&history=q%3DNVDA%26status%3Dsucceeded
+                                      - generic [ref=e989]: 已完成
+                      - listitem [ref=e990]:
+                        - generic [ref=e991]:
+                          - link "美股方向裁决 · 第 1 次" [ref=e992] [cursor=pointer]:
+                            - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Anode%3Adecision&history=q%3DNVDA%26status%3Dsucceeded
+                          - generic [ref=e993]: 已完成
+                        - list [ref=e995]:
+                          - listitem [ref=e996]:
+                            - generic [ref=e997]:
+                              - link "处理任务 · 第 1 次" [ref=e998] [cursor=pointer]:
+                                - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Adecision%3Aagent%3A1&history=q%3DNVDA%26status%3Dsucceeded
+                              - generic [ref=e999]: 已完成
+                            - list [ref=e1001]:
+                              - listitem [ref=e1002]:
+                                - generic [ref=e1003]:
+                                  - link "生成内容 · 第 1 次" [ref=e1004] [cursor=pointer]:
+                                    - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Adecision%3Aagent%3A1%3Amodel%3A1&history=q%3DNVDA%26status%3Dsucceeded
+                                  - generic [ref=e1005]: 已完成
+                                - list [ref=e1007]:
+                                  - listitem [ref=e1008]:
+                                    - generic [ref=e1009]:
+                                      - link "联系服务 · 第 1 次" [ref=e1010] [cursor=pointer]:
+                                        - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Adecision%3Aagent%3A1%3Amodel%3A1%3Aattempt%3A1&history=q%3DNVDA%26status%3Dsucceeded
+                                      - generic [ref=e1011]: 已完成
+                      - listitem [ref=e1012]:
+                        - generic [ref=e1013]:
+                          - link "宏观环境分析师 · 第 1 次" [ref=e1014] [cursor=pointer]:
+                            - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Anode%3Amacro&history=q%3DNVDA%26status%3Dsucceeded
+                          - generic [ref=e1015]: 已完成
+                        - list [ref=e1017]:
+                          - listitem [ref=e1018]:
+                            - generic [ref=e1019]:
+                              - link "处理任务 · 第 1 次" [ref=e1020] [cursor=pointer]:
+                                - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Amacro%3Aagent%3A1&history=q%3DNVDA%26status%3Dsucceeded
+                              - generic [ref=e1021]: 已完成
+                            - list [ref=e1023]:
+                              - listitem [ref=e1024]:
+                                - generic [ref=e1025]:
+                                  - link "生成内容 · 第 1 次" [ref=e1026] [cursor=pointer]:
+                                    - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Amacro%3Aagent%3A1%3Amodel%3A1&history=q%3DNVDA%26status%3Dsucceeded
+                                  - generic [ref=e1027]: 已完成
+                                - list [ref=e1029]:
+                                  - listitem [ref=e1030]:
+                                    - generic [ref=e1031]:
+                                      - link "联系服务 · 第 1 次" [ref=e1032] [cursor=pointer]:
+                                        - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Amacro%3Aagent%3A1%3Amodel%3A1%3Aattempt%3A1&history=q%3DNVDA%26status%3Dsucceeded
+                                      - generic [ref=e1033]: 已完成
+                              - listitem [ref=e1034]:
+                                - generic [ref=e1035]:
+                                  - link "生成内容 · 第 1 次" [ref=e1036] [cursor=pointer]:
+                                    - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Amacro%3Aagent%3A1%3Amodel%3A2&history=q%3DNVDA%26status%3Dsucceeded
+                                  - generic [ref=e1037]: 已完成
+                                - list [ref=e1039]:
+                                  - listitem [ref=e1040]:
+                                    - generic [ref=e1041]:
+                                      - link "联系服务 · 第 1 次" [ref=e1042] [cursor=pointer]:
+                                        - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Amacro%3Aagent%3A1%3Amodel%3A2%3Aattempt%3A1&history=q%3DNVDA%26status%3Dsucceeded
+                                      - generic [ref=e1043]: 已完成
+                              - listitem [ref=e1044]:
+                                - generic [ref=e1045]:
+                                  - link "查询宏观利率 · 第 1 次" [ref=e1046] [cursor=pointer]:
+                                    - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Amacro%3Aagent%3A1%3Atool%3A1%3Acall_c2592cd68f8c4cc0be8893b5&history=q%3DNVDA%26status%3Dsucceeded
+                                  - generic [ref=e1047]: 已完成
+                                - list [ref=e1049]:
+                                  - listitem [ref=e1050]:
+                                    - generic [ref=e1051]:
+                                      - link "联系服务 · 第 1 次" [ref=e1052] [cursor=pointer]:
+                                        - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Amacro%3Aagent%3A1%3Atool%3A1%3Acall_c2592cd68f8c4cc0be8893b5%3Aattempt%3A1&history=q%3DNVDA%26status%3Dsucceeded
+                                      - generic [ref=e1053]: 已完成
+                      - listitem [ref=e1054]:
+                        - generic [ref=e1055]:
+                          - link "行情与技术分析师 · 第 1 次" [ref=e1056] [cursor=pointer]:
+                            - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Anode%3Amarket&history=q%3DNVDA%26status%3Dsucceeded
+                          - generic [ref=e1057]: 已完成
+                        - list [ref=e1059]:
+                          - listitem [ref=e1060]:
+                            - generic [ref=e1061]:
+                              - link "处理任务 · 第 1 次" [ref=e1062] [cursor=pointer]:
+                                - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Amarket%3Aagent%3A1&history=q%3DNVDA%26status%3Dsucceeded
+                              - generic [ref=e1063]: 已完成
+                            - list [ref=e1065]:
+                              - listitem [ref=e1066]:
+                                - generic [ref=e1067]:
+                                  - link "生成内容 · 第 1 次" [ref=e1068] [cursor=pointer]:
+                                    - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Amarket%3Aagent%3A1%3Amodel%3A1&history=q%3DNVDA%26status%3Dsucceeded
+                                  - generic [ref=e1069]: 已完成
+                                - list [ref=e1071]:
+                                  - listitem [ref=e1072]:
+                                    - generic [ref=e1073]:
+                                      - link "联系服务 · 第 1 次" [ref=e1074] [cursor=pointer]:
+                                        - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Amarket%3Aagent%3A1%3Amodel%3A1%3Aattempt%3A1&history=q%3DNVDA%26status%3Dsucceeded
+                                      - generic [ref=e1075]: 已完成
+                              - listitem [ref=e1076]:
+                                - generic [ref=e1077]:
+                                  - link "生成内容 · 第 1 次" [ref=e1078] [cursor=pointer]:
+                                    - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Amarket%3Aagent%3A1%3Amodel%3A2&history=q%3DNVDA%26status%3Dsucceeded
+                                  - generic [ref=e1079]: 已完成
+                                - list [ref=e1081]:
+                                  - listitem [ref=e1082]:
+                                    - generic [ref=e1083]:
+                                      - link "联系服务 · 第 1 次" [ref=e1084] [cursor=pointer]:
+                                        - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Amarket%3Aagent%3A1%3Amodel%3A2%3Aattempt%3A1&history=q%3DNVDA%26status%3Dsucceeded
+                                      - generic [ref=e1085]: 已完成
+                              - listitem [ref=e1086]:
+                                - generic [ref=e1087]:
+                                  - link "查询最新行情 · 第 1 次" [ref=e1088] [cursor=pointer]:
+                                    - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Amarket%3Aagent%3A1%3Atool%3A1%3Acall_18af6f2d42104ccdb8044bb5&history=q%3DNVDA%26status%3Dsucceeded
+                                  - generic [ref=e1089]: 已完成
+                                - list [ref=e1091]:
+                                  - listitem [ref=e1092]:
+                                    - generic [ref=e1093]:
+                                      - link "联系服务 · 第 1 次" [ref=e1094] [cursor=pointer]:
+                                        - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Amarket%3Aagent%3A1%3Atool%3A1%3Acall_18af6f2d42104ccdb8044bb5%3Aattempt%3A1&history=q%3DNVDA%26status%3Dsucceeded
+                                      - generic [ref=e1095]: 已完成
+                              - listitem [ref=e1096]:
+                                - generic [ref=e1097]:
+                                  - link "计算技术指标 · 第 1 次" [ref=e1098] [cursor=pointer]:
+                                    - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Amarket%3Aagent%3A1%3Atool%3A1%3Acall_f4e3dbd76fa6422b90f3d987&history=q%3DNVDA%26status%3Dsucceeded
+                                  - generic [ref=e1099]: 已完成
+                                - list [ref=e1101]:
+                                  - listitem [ref=e1102]:
+                                    - generic [ref=e1103]:
+                                      - link "联系服务 · 第 1 次" [ref=e1104] [cursor=pointer]:
+                                        - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Amarket%3Aagent%3A1%3Atool%3A1%3Acall_f4e3dbd76fa6422b90f3d987%3Aattempt%3A1&history=q%3DNVDA%26status%3Dsucceeded
+                                      - generic [ref=e1105]: 已完成
+                      - listitem [ref=e1106]:
+                        - generic [ref=e1107]:
+                          - link "新闻与美国政策分析师 · 第 1 次" [ref=e1108] [cursor=pointer]:
+                            - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Anode%3Anews&history=q%3DNVDA%26status%3Dsucceeded
+                          - generic [ref=e1109]: 已完成
+                        - list [ref=e1111]:
+                          - listitem [ref=e1112]:
+                            - generic [ref=e1113]:
+                              - link "处理任务 · 第 1 次" [ref=e1114] [cursor=pointer]:
+                                - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Anews%3Aagent%3A1&history=q%3DNVDA%26status%3Dsucceeded
+                              - generic [ref=e1115]: 已完成
+                            - list [ref=e1117]:
+                              - listitem [ref=e1118]:
+                                - generic [ref=e1119]:
+                                  - link "生成内容 · 第 1 次" [ref=e1120] [cursor=pointer]:
+                                    - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Anews%3Aagent%3A1%3Amodel%3A1&history=q%3DNVDA%26status%3Dsucceeded
+                                  - generic [ref=e1121]: 已完成
+                                - list [ref=e1123]:
+                                  - listitem [ref=e1124]:
+                                    - generic [ref=e1125]:
+                                      - link "联系服务 · 第 1 次" [ref=e1126] [cursor=pointer]:
+                                        - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Anews%3Aagent%3A1%3Amodel%3A1%3Aattempt%3A1&history=q%3DNVDA%26status%3Dsucceeded
+                                      - generic [ref=e1127]: 已完成
+                              - listitem [ref=e1128]:
+                                - generic [ref=e1129]:
+                                  - link "生成内容 · 第 1 次" [ref=e1130] [cursor=pointer]:
+                                    - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Anews%3Aagent%3A1%3Amodel%3A2&history=q%3DNVDA%26status%3Dsucceeded
+                                  - generic [ref=e1131]: 已完成
+                                - list [ref=e1133]:
+                                  - listitem [ref=e1134]:
+                                    - generic [ref=e1135]:
+                                      - link "联系服务 · 第 1 次" [ref=e1136] [cursor=pointer]:
+                                        - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Anews%3Aagent%3A1%3Amodel%3A2%3Aattempt%3A1&history=q%3DNVDA%26status%3Dsucceeded
+                                      - generic [ref=e1137]: 已完成
+                              - listitem [ref=e1138]:
+                                - generic [ref=e1139]:
+                                  - link "生成内容 · 第 1 次" [ref=e1140] [cursor=pointer]:
+                                    - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Anews%3Aagent%3A1%3Amodel%3A3&history=q%3DNVDA%26status%3Dsucceeded
+                                  - generic [ref=e1141]: 已完成
+                                - list [ref=e1143]:
+                                  - listitem [ref=e1144]:
+                                    - generic [ref=e1145]:
+                                      - link "联系服务 · 第 1 次" [ref=e1146] [cursor=pointer]:
+                                        - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Anews%3Aagent%3A1%3Amodel%3A3%3Aattempt%3A1&history=q%3DNVDA%26status%3Dsucceeded
+                                      - generic [ref=e1147]: 已完成
+                              - listitem [ref=e1148]:
+                                - generic [ref=e1149]:
+                                  - link "查找市场新闻 · 第 1 次" [ref=e1150] [cursor=pointer]:
+                                    - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Anews%3Aagent%3A1%3Atool%3A1%3Acall_41dfcc4bc3fc4fd28d14ce97&history=q%3DNVDA%26status%3Dsucceeded
+                                  - generic [ref=e1151]: 已完成
+                                - list [ref=e1153]:
+                                  - listitem [ref=e1154]:
+                                    - generic [ref=e1155]:
+                                      - link "联系服务 · 第 1 次" [ref=e1156] [cursor=pointer]:
+                                        - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Anews%3Aagent%3A1%3Atool%3A1%3Acall_41dfcc4bc3fc4fd28d14ce97%3Aattempt%3A1&history=q%3DNVDA%26status%3Dsucceeded
+                                      - generic [ref=e1157]: 已完成
+                              - listitem [ref=e1158]:
+                                - generic [ref=e1159]:
+                                  - link "查找市场新闻 · 第 1 次" [ref=e1160] [cursor=pointer]:
+                                    - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Anews%3Aagent%3A1%3Atool%3A1%3Acall_5e3d3fefe0ea4edda716318a&history=q%3DNVDA%26status%3Dsucceeded
+                                  - generic [ref=e1161]: 已完成
+                                - list [ref=e1163]:
+                                  - listitem [ref=e1164]:
+                                    - generic [ref=e1165]:
+                                      - link "联系服务 · 第 1 次" [ref=e1166] [cursor=pointer]:
+                                        - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Anews%3Aagent%3A1%3Atool%3A1%3Acall_5e3d3fefe0ea4edda716318a%3Aattempt%3A1&history=q%3DNVDA%26status%3Dsucceeded
+                                      - generic [ref=e1167]: 已完成
+                              - listitem [ref=e1168]:
+                                - generic [ref=e1169]:
+                                  - link "查找市场新闻 · 第 1 次" [ref=e1170] [cursor=pointer]:
+                                    - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Anews%3Aagent%3A1%3Atool%3A1%3Acall_d9622e99cb304029be48e1e3&history=q%3DNVDA%26status%3Dsucceeded
+                                  - generic [ref=e1171]: 已完成
+                                - list [ref=e1173]:
+                                  - listitem [ref=e1174]:
+                                    - generic [ref=e1175]:
+                                      - link "联系服务 · 第 1 次" [ref=e1176] [cursor=pointer]:
+                                        - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Anews%3Aagent%3A1%3Atool%3A1%3Acall_d9622e99cb304029be48e1e3%3Aattempt%3A1&history=q%3DNVDA%26status%3Dsucceeded
+                                      - generic [ref=e1177]: 已完成
+                              - listitem [ref=e1178]:
+                                - generic [ref=e1179]:
+                                  - link "查找市场新闻 · 第 1 次" [ref=e1180] [cursor=pointer]:
+                                    - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Anews%3Aagent%3A1%3Atool%3A2%3Acall_d21f7f77a23b424ab2e3cf4a&history=q%3DNVDA%26status%3Dsucceeded
+                                  - generic [ref=e1181]: 已完成
+                                - list [ref=e1183]:
+                                  - listitem [ref=e1184]:
+                                    - generic [ref=e1185]:
+                                      - link "联系服务 · 第 1 次" [ref=e1186] [cursor=pointer]:
+                                        - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Anews%3Aagent%3A1%3Atool%3A2%3Acall_d21f7f77a23b424ab2e3cf4a%3Aattempt%3A1&history=q%3DNVDA%26status%3Dsucceeded
+                                      - generic [ref=e1187]: 已完成
+                      - listitem [ref=e1188]:
+                        - generic [ref=e1189]:
+                          - link "证据与风险复核 · 第 1 次" [ref=e1190] [cursor=pointer]:
+                            - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Anode%3Arisk&history=q%3DNVDA%26status%3Dsucceeded
+                          - generic [ref=e1191]: 已完成
+                        - list [ref=e1193]:
+                          - listitem [ref=e1194]:
+                            - generic [ref=e1195]:
+                              - link "处理任务 · 第 1 次" [ref=e1196] [cursor=pointer]:
+                                - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Arisk%3Aagent%3A1&history=q%3DNVDA%26status%3Dsucceeded
+                              - generic [ref=e1197]: 已完成
+                            - list [ref=e1199]:
+                              - listitem [ref=e1200]:
+                                - generic [ref=e1201]:
+                                  - link "生成内容 · 第 1 次" [ref=e1202] [cursor=pointer]:
+                                    - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Arisk%3Aagent%3A1%3Amodel%3A1&history=q%3DNVDA%26status%3Dsucceeded
+                                  - generic [ref=e1203]: 已完成
+                                - list [ref=e1205]:
+                                  - listitem [ref=e1206]:
+                                    - generic [ref=e1207]:
+                                      - link "联系服务 · 第 1 次" [ref=e1208] [cursor=pointer]:
+                                        - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Arisk%3Aagent%3A1%3Amodel%3A1%3Aattempt%3A1&history=q%3DNVDA%26status%3Dsucceeded
+                                      - generic [ref=e1209]: 已完成
+                      - listitem [ref=e1210]:
+                        - generic [ref=e1211]:
+                          - link "保存美股研究报告 · 第 1 次" [ref=e1212] [cursor=pointer]:
+                            - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Anode%3Asave&history=q%3DNVDA%26status%3Dsucceeded
+                          - generic [ref=e1213]: 已完成
+                        - list [ref=e1215]:
+                          - listitem [ref=e1216]:
+                            - generic [ref=e1217]:
+                              - link "处理任务 · 第 1 次" [ref=e1218] [cursor=pointer]:
+                                - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Asave%3Aagent%3A1&history=q%3DNVDA%26status%3Dsucceeded
+                              - generic [ref=e1219]: 已完成
+                            - list [ref=e1221]:
+                              - listitem [ref=e1222]:
+                                - generic [ref=e1223]:
+                                  - link "保存报告 · 第 1 次" [ref=e1224] [cursor=pointer]:
+                                    - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Asave%3Aagent%3A1%3Atool%3Adeterministic&history=q%3DNVDA%26status%3Dsucceeded
+                                  - generic [ref=e1225]: 已完成
+                                - list [ref=e1227]:
+                                  - listitem [ref=e1228]:
+                                    - generic [ref=e1229]:
+                                      - link "联系服务 · 第 1 次" [ref=e1230] [cursor=pointer]:
+                                        - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Asave%3Aagent%3A1%3Atool%3Adeterministic%3Aattempt%3A1&history=q%3DNVDA%26status%3Dsucceeded
+                                      - generic [ref=e1231]: 已完成
+                  - region "所选操作详情" [ref=e1232]:
+                    - heading "多空独立论证" [level=2] [ref=e1233]
+                    - paragraph [ref=e1234]: 第 1 次 · 已完成
+                    - paragraph [ref=e1235]: 开始：2026/9/16 03:56:26 · 完成：2026/9/16 03:56:46
+                    - region "步骤的信息来源" [ref=e1236]:
+                      - heading "本步骤的信息来源" [level=3] [ref=e1237]
+                      - generic [ref=e1238]:
+                        - generic [ref=e1239]:
+                          - term [ref=e1240]: 新闻与政策研究
+                          - definition [ref=e1241]:
+                            - generic [ref=e1242]:
+                              - paragraph [ref=e1243]: 新闻与美国政策分析师的结果 › 分析内容
+                              - generic [ref=e1244]:
+                                - paragraph [ref=e1245]: 未提供时使用：
+                                - text: 新闻与政策研究未取得确认结果；相关事实缺失，必须降低判断确定性，不得补造。
+                        - generic [ref=e1246]:
+                          - term [ref=e1247]: 宏观环境研究
+                          - definition [ref=e1248]:
+                            - generic [ref=e1249]:
+                              - paragraph [ref=e1250]: 宏观环境分析师的结果 › 分析内容
+                              - generic [ref=e1251]:
+                                - paragraph [ref=e1252]: 未提供时使用：
+                                - text: 宏观环境研究未取得确认结果；相关事实缺失，必须降低判断确定性，不得补造。
+                        - generic [ref=e1253]:
+                          - term [ref=e1254]: 行情与技术分析
+                          - definition [ref=e1255]:
+                            - generic [ref=e1256]:
+                              - paragraph [ref=e1257]: 行情与技术分析师的结果 › 分析内容
+                              - generic [ref=e1258]:
+                                - paragraph [ref=e1259]: 未提供时使用：
+                                - text: 行情与技术分析未取得确认结果；相关事实缺失，必须降低判断确定性，不得补造。
+                        - generic [ref=e1260]:
+                          - term [ref=e1261]: 股票代码
+                          - definition [ref=e1262]:
+                            - paragraph [ref=e1264]: 用户填写的信息 › 股票代码
+                        - generic [ref=e1265]:
+                          - term [ref=e1266]: 公司财务研究
+                          - definition [ref=e1267]:
+                            - generic [ref=e1268]:
+                              - paragraph [ref=e1269]: 公司财务分析师的结果 › 分析内容
+                              - generic [ref=e1270]:
+                                - paragraph [ref=e1271]: 未提供时使用：
+                                - text: 公司财务研究未取得确认结果；相关事实缺失，必须降低判断确定性，不得补造。
+                        - generic [ref=e1272]:
+                          - term [ref=e1273]: 分析截止日期
+                          - definition [ref=e1274]:
+                            - paragraph [ref=e1276]: 用户填写的信息 › 分析截止日期
+                        - generic [ref=e1277]:
+                          - term [ref=e1278]: 研究问题
+                          - definition [ref=e1279]:
+                            - paragraph [ref=e1281]: 用户填写的信息 › 研究问题
+                        - generic [ref=e1282]:
+                          - term [ref=e1283]: 信息 8
+                          - definition [ref=e1284]: bear
+                        - generic [ref=e1285]:
+                          - term [ref=e1286]: 判断期限（月）
+                          - definition [ref=e1287]:
+                            - paragraph [ref=e1289]: 用户填写的信息 › 判断期限（月）
+                      - link "查看本次填写的信息" [ref=e1290] [cursor=pointer]:
+                        - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=snapshot&history=q%3DNVDA%26status%3Dsucceeded
+                      - list [ref=e1291]:
+                        - listitem [ref=e1292]:
+                          - paragraph [ref=e1293]: 公司财务分析师：已完成
+                          - paragraph [ref=e1294]: 这个步骤没有单独提供可读正文；可以检查其执行进度，或在结果页阅读已确认内容。
+                          - link "查看公司财务分析师的执行进度" [ref=e1295] [cursor=pointer]:
+                            - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Anode%3Acompany&history=q%3DNVDA%26status%3Dsucceeded
+                        - listitem [ref=e1296]:
+                          - paragraph [ref=e1297]: 宏观环境分析师：已完成
+                          - paragraph [ref=e1298]: 这个步骤没有单独提供可读正文；可以检查其执行进度，或在结果页阅读已确认内容。
+                          - link "查看宏观环境分析师的执行进度" [ref=e1299] [cursor=pointer]:
+                            - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Anode%3Amacro&history=q%3DNVDA%26status%3Dsucceeded
+                        - listitem [ref=e1300]:
+                          - paragraph [ref=e1301]: 行情与技术分析师：已完成
+                          - paragraph [ref=e1302]: 这个步骤没有单独提供可读正文；可以检查其执行进度，或在结果页阅读已确认内容。
+                          - link "查看行情与技术分析师的执行进度" [ref=e1303] [cursor=pointer]:
+                            - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Anode%3Amarket&history=q%3DNVDA%26status%3Dsucceeded
+                        - listitem [ref=e1304]:
+                          - paragraph [ref=e1305]: 新闻与美国政策分析师：已完成
+                          - paragraph [ref=e1306]: 这个步骤没有单独提供可读正文；可以检查其执行进度，或在结果页阅读已确认内容。
+                          - link "查看新闻与美国政策分析师的执行进度" [ref=e1307] [cursor=pointer]:
+                            - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?tab=evidence&target=406ddea2-b8a7-45ba-befb-7efc86534173%3Anode%3Anews&history=q%3DNVDA%26status%3Dsucceeded
+  - region "Notifications alt+T"

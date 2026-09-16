@@ -1,0 +1,104 @@
+- group [ref=f1e2]:
+  - generic [ref=f1e4]:
+    - link "跳到正文" [ref=f1e5] [cursor=pointer]:
+      - /url: "#app-main"
+    - generic [ref=f1e8]:
+      - strong [ref=f1e13]: SignalDeck
+      - generic [ref=f1e15]:
+        - generic [ref=f1e16]: 工作区
+        - list [ref=f1e17]:
+          - listitem [ref=f1e18]:
+            - link "任务" [ref=f1e19] [cursor=pointer]:
+              - /url: http://127.0.0.1:8080/?sdTheme=system&sdExpert=false&sdPlatform=http%3A%2F%2F127.0.0.1%3A8080
+          - listitem [ref=f1e24]:
+            - link "结果" [ref=f1e25] [cursor=pointer]:
+              - /url: http://127.0.0.1:8080/runs?sdTheme=system&sdExpert=false&sdPlatform=http%3A%2F%2F127.0.0.1%3A8080
+          - listitem [ref=f1e30]:
+            - button "报告" [ref=f1e31]
+      - list [ref=f1e37]:
+        - listitem [ref=f1e38]:
+          - link "设置" [ref=f1e39] [cursor=pointer]:
+            - /url: http://127.0.0.1:8080/settings?sdTheme=system&sdExpert=false&sdPlatform=http%3A%2F%2F127.0.0.1%3A8080
+    - generic [ref=f1e44]:
+      - banner [ref=f1e45]:
+        - button "Open sidebar" [ref=f1e46] [cursor=pointer]
+        - generic [ref=f1e48]: 报告
+        - generic [ref=f1e49]:
+          - switch "专家模式" [ref=f1e50]
+          - text: 专家模式
+        - button "切换外观" [ref=f1e51] [cursor=pointer]
+      - main [ref=f1e54]:
+        - heading "报告" [level=1] [ref=f1e55]
+        - paragraph [ref=f1e56]: 阅读研究结果，或选择已有格式生成报告。
+        - navigation "报告工作区" [ref=f1e57]:
+          - button "历史报告" [pressed] [ref=f1e58] [cursor=pointer]
+          - button "使用已有格式" [ref=f1e59] [cursor=pointer]
+        - generic [ref=f1e60]:
+          - searchbox "搜索全部报告或格式" [ref=f1e61]
+          - combobox "来源" [ref=f1e62]:
+            - option "所有来源" [selected]
+            - option "任务生成"
+            - option "格式生成"
+            - option "文件上传"
+            - option "手动创建"
+          - textbox "证券代码" [ref=f1e63]
+          - textbox "标签" [ref=f1e64]
+          - textbox "研究类型" [ref=f1e65]
+          - combobox "排序" [ref=f1e66]:
+            - option "最新优先" [selected]
+            - option "最早优先"
+            - option "名称排序"
+          - button "查询" [ref=f1e67] [cursor=pointer]
+        - generic [ref=f1e68]:
+          - generic [ref=f1e69]:
+            - generic "查询结果" [ref=f1e70]:
+              - button [ref=f1e71] [cursor=pointer]:
+                - strong [ref=f1e72]: NVIDIA（NVDA）未来三个月研究判断：证据不足
+                - text: 任务生成 · 2026/9/16 03:58:55
+              - button [ref=f1e73] [cursor=pointer]:
+                - strong [ref=f1e74]: NVDA未来三个月（至2026-12-15）研究判断：证据不足（insufficient_evidence）
+                - text: 任务生成 · 2026/9/16 03:52:34
+              - button [ref=f1e75] [cursor=pointer]:
+                - strong [ref=f1e76]: NVDA未来三个月（截至2026-09-15）研究判断：证据不足
+                - text: 任务生成 · 2026/9/16 02:43:29
+              - button [ref=f1e77] [cursor=pointer]:
+                - strong [ref=f1e78]: NVDA未来三个月研究判断：证据不足（截至2026-09-15）
+                - text: 任务生成 · 2026/9/16 02:33:20
+              - button [ref=f1e79] [cursor=pointer]:
+                - strong [ref=f1e80]: NVDA未来三个月研究判断（截至2026-09-15）：证据不足
+                - text: 任务生成 · 2026/9/16 02:24:15
+            - generic [ref=f1e81]:
+              - button "上一页" [disabled] [ref=f1e82]
+              - generic [ref=f1e83]: 第 1 页
+              - button "下一页" [disabled] [ref=f1e84]
+          - generic [ref=f1e86]:
+            - heading "NVIDIA（NVDA）未来三个月研究判断：证据不足" [level=2] [ref=f1e87]
+            - generic [ref=f1e88]: 任务生成 · 创建 2026/9/16 03:58:55 · 更新 2026/9/16 03:58:55
+            - button "下载 Markdown" [ref=f1e90] [cursor=pointer]
+            - article "报告正文" [ref=f1e91]:
+              - generic [ref=f1e92]:
+                - heading "NVIDIA（NVDA）未来三个月研究判断" [level=1] [ref=f1e93]
+                - paragraph [ref=f1e94]: 截至2026-09-15，未来3个月，方向：证据不足；证据可信度：低。本报告基于本次输入的U1-U6官方摘要、工具返回的市场/宏观/新闻结果，以及公司、宏观、市场、新闻四路分析、多空回应和独立风险复核形成；这是给定证据和期限下的研究判断，不代表已执行任何交易。
+                - heading "关键依据" [level=2] [ref=f1e95]
+                - paragraph [ref=f1e96]: U1（2026-08-26）显示：FY2027 Q2营收962.2亿美元，同比+106%；数据中心营收890亿美元，同比+117%；GAAP毛利率75.0%；单季稀释EPS为2.46美元。Q3指引为营收1080亿美元±2%、GAAP毛利率74.0%±50基点，未计入中国数据中心compute收入，且指引是前瞻估计而非已实现收入。U2（2026-08-26）显示：供应与产能承诺由119十亿美元升至279十亿美元，但这是未来承诺而非当期收入或费用；上半年已就H200过剩库存及采购义务计提0.4十亿美元费用；获许可H200对华出货占最新季度数据中心收入不足1%；25%关税暂不能转嫁客户。U6（2026-01-13）BIS对华逐案许可不等于销售，也不能直接当作未来收入。
+                - heading "公司财务与估值基础" [level=2] [ref=f1e97]
+                - paragraph [ref=f1e98]: 营收、数据中心增速和Q3指引支持盈利动量，但279B供应承诺对应未来采购义务，若需求不及预期反而可能成为库存风险。没有可靠市值/PE、10-K全文和现金流数据，无法判断当前估值高低，也不能把单季EPS外推为全年EPS。
+                - heading "行情与技术" [level=2] [ref=f1e99]
+                - paragraph [ref=f1e100]: M2（2026-09-14）显示收盘210.96美元，SMA20约219.45，RSI14约45.7，股价已跌破20日线，短期动量转弱；M1（2026-09-15）收212.17美元但标记stale。技术面偏弱是短期压制，但不足以单独决定三个月方向，且09-15指标缺失。
+                - heading "宏观环境" [level=2] [ref=f1e101]
+                - paragraph [ref=f1e102]: U3/E1：8月CPI环比+0.4%、同比+3.4%，核心同比+2.4%；U4/E2：失业率4.1%；E3：联邦基金利率8月为3.63%，较2025年11月的3.88%下行；U5/E4：Q2实际GDP环比年化+1.5%，为第二次估计。N1报道10年期收益率处于2007年以来高位、FOMC决议在即。通胀回升与长端利率上行偏空，就业稳健和短端利率回落偏多，但FOMC结果晚于截止日，宏观路径仍未定。
+                - heading "新闻与政策" [level=2] [ref=f1e103]
+                - paragraph [ref=f1e104]: U6是2026-01-13的BIS许可审查公告，不覆盖截至研究日的全部政策变化；许可证不等于销售，Q3指引不含中国数据中心compute收入，不能因许可变化直接断言指引收入减少。N2/N3（AI放缓呼声、TSMC警告）和N4/N5（Meta部署、TSMC 2nm）均为二手标题，缺金额与时点，不作事实支柱。
+                - heading "多空分歧及回应" [level=2] [ref=f1e105]
+                - paragraph [ref=f1e106]: 公司分析总体偏多但置信度受限，宏观分析为有条件偏多，市场分析为中性，新闻分析为偏多；空方经回应后撤回“偏空概率大于偏多”的强度表述，改为条件性偏空，多方也撤回“利率温和下行利好估值”的表述。独立风险复核指出，关键缺口未补齐前无法裁定方向，不能用中性替代缺数据；本报告据此采用证据不足。
+                - heading "风险和失效条件" [level=2] [ref=f1e107]
+                - paragraph [ref=f1e108]: 最大反向风险是：高预期下若Q3实际营收明显低于105.8B或毛利率低于74%，加上政策收紧、利率上行或云厂商资本开支放缓，回调可能被放大。失效与重估条件包括上述情形出现，或补齐市值/PE、10-K/现金流、内部人方向以及9月CPI、FOMC结果后，多空分歧不再无法裁定。
+                - heading "较上次的变化" [level=2] [ref=f1e109]
+                - paragraph [ref=f1e110]: 未提供上一份报告，本次建立比较基线。本报告不虚构历史，也不把未提供的上一份报告当作已核实事实；因此不进行历史方向变化推断，只说明未发现可核实的比较对象。
+                - heading "尚缺资料" [level=2] [ref=f1e111]
+                - paragraph [ref=f1e112]: 缺少可靠市值/PE、全年EPS与一致预期、10-K全文和现金流；内部人Form 4方向无法解析；9月CPI、GDP第三次估计和FOMC结果晚于截止日；U1-U6为人工整理、未经本流程独立核实；M1标记stale，09-15技术指标缺失。以上缺口直接影响对估值水平和政策弹性空间的判断。
+                - heading "来源（编号-日期）" [level=2] [ref=f1e113]
+                - paragraph [ref=f1e114]: U1：NVIDIA官方新闻稿，2026-08-26；U2：SEC 10-Q，2026-08-26；U3：BLS CPI，2026-09-11；U4：BLS就业，2026-09-04；U5：BEA GDP，2026-08-26；U6：BIS公告，2026-01-13；E1-E4：FRED宏观序列，2026-08；M1/M2：Yahoo Finance行情，2026-09-14/15；N1：10年期美债/FOMC报道，2026-09-15；F1/F2：SEC EDGAR工具结果。U系列为人工补充的官方摘要，未经独立核实；F类只确认提交行为，未读取正文。总体证据可信度低，不输出胜率、目标价或仓位。
+            - region "报告来源" [ref=f1e115]:
+              - heading "报告来源" [level=3] [ref=f1e116]
+              - paragraph [ref=f1e117]: 这份报告由任务生成并保存，保留当时的原始结果。请结合正文中的资料来源核对结论。

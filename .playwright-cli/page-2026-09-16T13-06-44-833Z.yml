@@ -1,0 +1,215 @@
+- generic [ref=f11e2]:
+  - generic [ref=f11e3]:
+    - link "Skip to main content" [ref=f11e4] [cursor=pointer]:
+      - /url: "#app-main"
+    - generic [ref=f11e7]:
+      - paragraph [ref=f11e13]: SignalDeck
+      - generic [ref=f11e15]:
+        - generic [ref=f11e16]: 日常操作
+        - list [ref=f11e18]:
+          - listitem [ref=f11e19]:
+            - link "任务" [ref=f11e20] [cursor=pointer]:
+              - /url: /
+          - listitem [ref=f11e27]:
+            - link "结果" [ref=f11e28] [cursor=pointer]:
+              - /url: /runs
+          - listitem [ref=f11e33]:
+            - link "执行更新" [ref=f11e34] [cursor=pointer]:
+              - /url: /attention
+      - list [ref=f11e40]:
+        - listitem [ref=f11e41]:
+          - link "设置" [ref=f11e42] [cursor=pointer]:
+            - /url: /settings
+    - generic [ref=f11e48]:
+      - banner [ref=f11e49]:
+        - button "Open sidebar" [ref=f11e50] [cursor=pointer]
+        - navigation "breadcrumb" [ref=f11e53]:
+          - list [ref=f11e54]:
+            - listitem [ref=f11e55]:
+              - link "结果" [ref=f11e281] [cursor=pointer]:
+                - /url: /runs
+            - listitem [aria-hidden] [ref=f11e282]
+            - listitem [ref=f11e285]:
+              - generic [ref=f11e286]: 结果详情
+        - generic [ref=f11e57]:
+          - switch "专家模式" [ref=f11e58]
+          - text: 专家模式
+        - button "切换外观" [ref=f11e59] [cursor=pointer]
+      - main [ref=f11e61]:
+        - generic [ref=f11e287]:
+          - generic [ref=f11e289]:
+            - generic [ref=f11e291]:
+              - heading "NVDA" [level=1] [ref=f11e292]
+              - paragraph [ref=f11e293]: 手动开始 · 2026/9/16 02:08:30
+            - generic [ref=f11e294]:
+              - generic [ref=f11e295]: 执行失败
+              - link "全部结果" [ref=f11e299] [cursor=pointer]:
+                - /url: /runs
+          - generic [ref=f11e300]:
+            - alert [ref=f11e302]:
+              - generic [ref=f11e303]: 读取结果未确认
+              - generic [ref=f11e304]: 只读调用未取得确认结果，可检查执行过程或重新运行。此读取不涉及保存。
+            - generic [ref=f11e305]:
+              - alert [ref=f11e306]:
+                - generic [ref=f11e307]: 本次任务未能完成
+              - generic [ref=f11e308]:
+                - paragraph [ref=f11e310]: 模型没有按任务要求提供可用结果。可以重试，或检查助手的结果要求。
+                - link "保留输入并检查连接" [ref=f11e311] [cursor=pointer]:
+                  - /url: /tasks/new?fromRun=701b6a78-c6d6-4368-bd7d-dea89c93b913
+            - generic [ref=f11e312]:
+              - alert [ref=f11e313]:
+                - generic [ref=f11e314]: 资料不完整
+              - list [ref=f11e316]:
+                - listitem [ref=f11e317]: 美股研究报告
+                - listitem [ref=f11e318]: 方向判断
+                - listitem [ref=f11e319]: 报告保存凭据
+            - generic [ref=f11e320]:
+              - alert [ref=f11e321]:
+                - generic [ref=f11e322]: 执行未完成
+              - generic [ref=f11e323]:
+                - paragraph [ref=f11e324]: 保存美股研究报告：前置条件未满足，尚未执行
+                - paragraph [ref=f11e325]: 美股方向裁决：未能完成
+                - paragraph [ref=f11e326]: 新闻与美国政策分析师：未能完成
+                - paragraph [ref=f11e327]: 行情与技术分析师：未能完成
+                - paragraph [ref=f11e328]: 公司财务分析师：未能完成
+            - region "独立风险复核" [ref=f11e329]:
+              - heading "独立风险复核" [level=2] [ref=f11e330]
+              - generic [ref=f11e331]:
+                - paragraph [ref=f11e332]:
+                  - strong [ref=f11e333]: 结论：insufficient_evidence
+                  - text: 。asOfDate=2026-09-15、horizonMonths=3，现有证据不足以支撑偏多/偏空方向；“中性”不能替代数据缺口。
+                - paragraph [ref=f11e334]:
+                  - strong [ref=f11e335]: 可采信证据（事实）
+                  - text: ：FRED E1-E4显示失业率4.1%、有效联邦基金利率由3.88%降至3.63%、8月总CPI环比+0.4%/核心+0.3%、Q2实际GDP环比年化+1.5%；E3与BLS U3同源，作一份证据。U1/U2为人工整理的官方来源摘要，未独立核实，暂作低优先级参考：FY27Q2营收$96.2B、数据中心$89.0B、Q3指引$108B±2%、毛利率74.0%；供应承诺$119B增至$279B；H200关税25%未转嫁；对华许可出货<数据中心收入1%。
+                - paragraph [ref=f11e336]:
+                  - strong [ref=f11e337]: 应排除/降权
+                  - text: ：U6（2026-01-13）偏旧，不视为当前政策；“财报兑现→股价偏多”和“高估值承压”均缺股价/估值证据，属推论；“CPI环比为正→降息路径确信/反转”是未经证实的假设；U1/U2来源存在不等于内容已证实。
+                - paragraph [ref=f11e338]:
+                  - strong [ref=f11e339]: 最大风险
+                  - text: ：下行——$279B承诺在需求反转时构成库存/减值，对华限制若较U6加码或致指引下修；上行——$108B指引与$279B承诺显示需求锁定，若财报兑现且利率续降，估值可能获支撑。
+                - paragraph [ref=f11e340]:
+                  - strong [ref=f11e341]: 失效条件
+                  - text: ：若出现独立核实的毛利率<74%或对华实质加码，下行权重上升；若财报兑现且无高估值证据，上行权重上升。
+                - paragraph [ref=f11e342]:
+                  - strong [ref=f11e343]: 关键缺口
+                  - text: ：无NVDA股价/估值、远期盈利、Hyperscaler资本开支、最新对华政策全文；U1/U2待独立核实；CPI同比缺基期。故只能给 insufficient_evidence。
+              - link "查看相关步骤" [ref=f11e344] [cursor=pointer]:
+                - /url: /runs/701b6a78-c6d6-4368-bd7d-dea89c93b913?tab=evidence&target=701b6a78-c6d6-4368-bd7d-dea89c93b913%3Anode%3Arisk
+            - region "看多方回应" [ref=f11e345]:
+              - heading "看多方回应" [level=2] [ref=f11e346]
+              - generic [ref=f11e347]:
+                - paragraph [ref=f11e348]:
+                  - strong [ref=f11e349]: 对方论据1：关税与利润率压制
+                  - text: U2确认H200关税25%尚未转嫁、对华许可出货<数据中心收入1%，该事实成立。但U1显示Q3指引GAAP毛利率74.0%，已是含税后指引；且中国相关收入占比极低，短期影响有限。修订：不应将“未转嫁”直接等同于利润大幅承压。
+                - paragraph [ref=f11e350]:
+                  - strong [ref=f11e351]: 对方论据2：$279B承诺的尾部风险
+                  - text: U2确认供应承诺由$119B增至$279B，事实成立。但U2也显示订单与产能锁定增强，U1的Q3指引$108B±2%环比约+12%，表明需求方证据更强。风险与需求证据并存，无法仅凭该数字看空。
+                - paragraph [ref=f11e352]:
+                  - strong [ref=f11e353]: 对方论据3：通胀环比回升
+                  - text: E3确认CPI环比+0.4%、核心+0.3%，事实成立。但E2显示有效联邦基金利率已由3.88%降至3.63%，E1失业率4.1%；核心通胀仍温和。降息路径不确定成立，但不足以推翻偏多条件。
+                - paragraph [ref=f11e354]:
+                  - strong [ref=f11e355]: 修订ownCase
+                  - text: ：原“利率下行利好高估值资产”因无估值数据，降为假设；由指引高增推出股价偏多更是推论，需11月中旬财报验证。
+                - paragraph [ref=f11e356]:
+                  - strong [ref=f11e357]: 仍未解决
+                  - text: ：双方缺股价/估值、远期盈利、Hyperscaler资本开支、最新对华政策全文；U1/U2为用户提供，未独立核实；U6（2026-01-13）偏旧，无法覆盖当前政策。这些缺口使最终方向不能高置信裁定，偏多仅在有条件下成立；若条件未满足，应回归证据不足。
+              - link "查看相关步骤" [ref=f11e358] [cursor=pointer]:
+                - /url: /runs/701b6a78-c6d6-4368-bd7d-dea89c93b913?tab=evidence&target=701b6a78-c6d6-4368-bd7d-dea89c93b913%3Anode%3Abull_reply
+            - region "看空方回应" [ref=f11e359]:
+              - heading "看空方回应" [level=2] [ref=f11e360]
+              - generic [ref=f11e361]:
+                - heading "回应 opposingCase 最强论据（bear 视角）" [level=2] [ref=f11e362]
+                - paragraph [ref=f11e363]:
+                  - strong [ref=f11e364]: 对方论据1：高增长与Q3指引
+                  - text: 。U1确实记录FY27Q2营收$96.2B/同比+106%、数据中心$89.0B/+117%、Q3指引$108B±2%、毛利率74%。该事实成立，但U1为人工整理、未独立核实，且从指引到“股价偏多”还需估值与盈利预期证据；market、news均为缺失状态，故该推论得不到完整材料支持。我方修订：不否认U1数字，只把它当作待兑现的指引。
+                - paragraph [ref=f11e365]:
+                  - strong [ref=f11e366]: 对方论据2：$279B供应承诺增强收入能见度
+                  - text: 。U2支持该承诺，但同一证据显示对华许可出货<数据中心收入1%、H200关税25%未转嫁。承诺反映需求锁定，也在需求反转时构成库存/减值尾部风险；对方最强反证已承认，双方分歧缩小，净方向仍无法裁定。
+                - paragraph [ref=f11e367]:
+                  - strong [ref=f11e368]: 对方论据3：利率下行利好高估值资产
+                  - text: 。E2支持有效联邦基金利率从3.88%降至3.63%，E1失业率4.1%；但E3显示总CPI环比+0.4%、核心+0.3%为正增长，且FRED发布时点未知、9月数据截止日后。“降息路径确信”是假设，不能直接推出利好。
+                - paragraph [ref=f11e369]:
+                  - strong [ref=f11e370]: 未解决分歧与缺口
+                  - text: ：无NVDA股价/估值、远期盈利、Hyperscaler资本开支计划；U6（2026-01-13）偏旧；公司/market/news均未独立核实或缺失。故我修正ownCase中“盈利修正方向偏下”为无证据支持的假设，不再作为主论据。维持条件性看空（低置信）：若财报毛利率低于74%指引或对华限制较U6加码，下行风险上升；否则证据不足。
+              - link "查看相关步骤" [ref=f11e371] [cursor=pointer]:
+                - /url: /runs/701b6a78-c6d6-4368-bd7d-dea89c93b913?tab=evidence&target=701b6a78-c6d6-4368-bd7d-dea89c93b913%3Anode%3Abear_reply
+            - region "复制与导出" [ref=f11e372]:
+              - group [ref=f11e373]:
+                - generic "选择复制与导出的内容（已选 3 / 3 项）" [ref=f11e374] [cursor=pointer]
+              - generic [ref=f11e375]:
+                - button "复制所选正文" [ref=f11e376] [cursor=pointer]
+                - button "导出 Markdown" [ref=f11e377] [cursor=pointer]
+            - region "个人结果标记" [ref=f11e378]:
+              - heading "个人标记与备注" [level=2] [ref=f11e379]
+              - generic [ref=f11e380]:
+                - button "收藏结果" [ref=f11e381] [cursor=pointer]
+                - button "标为已读" [ref=f11e382] [cursor=pointer]
+                - button "编辑个人备注" [ref=f11e383] [cursor=pointer]
+              - paragraph [ref=f11e384]: 结果未读。个人备注与执行正文分别保存；标为已读同时确认当前更新，后续状态变化仍会提示。
+            - generic [ref=f11e385]:
+              - generic [ref=f11e386]:
+                - heading "来源与时间" [level=2] [ref=f11e387]
+                - paragraph [ref=f11e388]: 数据时间：未提供
+                - paragraph [ref=f11e389]: 完成时间：2026/9/16 02:13:18
+                - paragraph [ref=f11e390]: 未记录资料来源
+              - group [ref=f11e392]:
+                - generic "本次输入" [ref=f11e393] [cursor=pointer]
+            - generic [ref=f11e394]:
+              - generic [ref=f11e396]:
+                - heading "模型用量" [level=4] [ref=f11e397]
+                - paragraph [ref=f11e398]: 用量按服务报告的计量单位显示；今日按处理开始时间统计。不表示账户余额或最终账单。
+              - generic [ref=f11e399]:
+                - region "本次模型用量" [ref=f11e400]:
+                  - heading "本次模型用量" [level=3] [ref=f11e401]
+                  - generic [ref=f11e402]:
+                    - generic [ref=f11e403]:
+                      - generic [ref=f11e404]:
+                        - term [ref=f11e405]: 输入用量
+                        - definition [ref=f11e406]: 50,867
+                      - generic [ref=f11e407]:
+                        - term [ref=f11e408]: 输出用量
+                        - definition [ref=f11e409]: 39,816
+                      - generic [ref=f11e410]:
+                        - term [ref=f11e411]: 模型处理次数
+                        - definition [ref=f11e412]: "14"
+                      - generic [ref=f11e413]:
+                        - term [ref=f11e414]: 累计处理耗时
+                        - definition [ref=f11e415]: 354.66 秒
+                    - paragraph [ref=f11e416]: 14 次已确认成功，0 次失败，0 次未确认。
+                    - paragraph [ref=f11e417]: 联系服务 14 次，其中失败 0 次、未确认 0 次。 失败尝试未报告的消耗不包含在用量中。
+                  - paragraph [ref=f11e418]: 本次运行耗时：286.85 秒
+                  - group [ref=f11e419]:
+                    - generic "按模型查看用量" [ref=f11e420] [cursor=pointer]
+                - region "今日模型用量 · 2026-09-16 · Europe/Helsinki" [ref=f11e421]:
+                  - heading "今日模型用量 · 2026-09-16 · Europe/Helsinki" [level=3] [ref=f11e422]
+                  - generic [ref=f11e423]:
+                    - generic [ref=f11e424]:
+                      - generic [ref=f11e425]:
+                        - term [ref=f11e426]: 输入用量
+                        - definition [ref=f11e427]: 548,447
+                      - generic [ref=f11e428]:
+                        - term [ref=f11e429]: 输出用量
+                        - definition [ref=f11e430]: 295,819
+                      - generic [ref=f11e431]:
+                        - term [ref=f11e432]: 模型处理次数
+                        - definition [ref=f11e433]: "150"
+                      - generic [ref=f11e434]:
+                        - term [ref=f11e435]: 累计处理耗时
+                        - definition [ref=f11e436]: 3,059.96 秒
+                    - paragraph [ref=f11e437]: 125 次已确认成功，23 次失败，2 次未确认。 25 次缺少完整用量；显示的用量仅包含已报告部分，未知不是 0。
+                    - paragraph [ref=f11e438]: 联系服务 150 次，其中失败 23 次、未确认 2 次。 失败尝试未报告的消耗不包含在用量中。
+                  - group [ref=f11e439]:
+                    - generic "按模型查看用量" [ref=f11e440] [cursor=pointer]
+            - generic [ref=f11e441]:
+              - link "查看未确认的读取" [ref=f11e442] [cursor=pointer]:
+                - /url: /runs/701b6a78-c6d6-4368-bd7d-dea89c93b913?tab=evidence&target=701b6a78-c6d6-4368-bd7d-dea89c93b913%3Amarket%3Aagent%3A1%3Atool%3A1%3Acall_eed9051b02444aab81505641
+              - link "比较两次结果" [ref=f11e443] [cursor=pointer]:
+                - /url: /runs/compare?left=701b6a78-c6d6-4368-bd7d-dea89c93b913
+              - button "再运行一次" [ref=f11e444] [cursor=pointer]
+              - link "修改输入后开始" [ref=f11e445] [cursor=pointer]:
+                - /url: /tasks/new?fromRun=701b6a78-c6d6-4368-bd7d-dea89c93b913
+              - link "设置重复执行" [ref=f11e446] [cursor=pointer]:
+                - /url: /scheduled-tasks/new
+              - link "查看执行过程" [ref=f11e447] [cursor=pointer]:
+                - /url: /runs/701b6a78-c6d6-4368-bd7d-dea89c93b913?tab=evidence
+  - region "Notifications alt+T"

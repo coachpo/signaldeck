@@ -1,5 +1,17 @@
 .git
 .env
+**/.env
+**/.env.*
+**/*.pem
+**/*.key
+**/*.log
+**/*.db
+**/*.sqlite
+**/*.sqlite3
+.data/
+.cache/
+experiments/
+results/
 .mypy_cache/
 .pytest_cache/
 .ruff_cache/

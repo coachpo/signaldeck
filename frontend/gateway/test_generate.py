@@ -19,6 +19,8 @@ class GatewayTests(unittest.TestCase):
     def test_fixed_mount_auth_and_late_resolution(self):
         config = render(self.registry(), "backend:8000")
         self.assertIn("resolver 127.0.0.11", config)
+        self.assertIn('set $auth_upstream "http://backend:8000";', config)
+        self.assertIn("proxy_pass $auth_upstream/api/plugin-auth;", config)
         self.assertIn('set $plugin_upstream "http://absent-plugin:8000"', config)
         self.assertIn("proxy_pass $plugin_upstream;", config)
         self.assertIn("location ^~ /_plugins/demo_v1/api/", config)

@@ -1,0 +1,132 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - link "Skip to main content" [ref=e4] [cursor=pointer]:
+      - /url: "#app-main"
+    - generic [ref=e7]:
+      - paragraph [ref=e13]: SignalDeck
+      - generic [ref=e15]:
+        - generic [ref=e16]: 日常操作
+        - list [ref=e18]:
+          - listitem [ref=e19]:
+            - link "任务" [ref=e20] [cursor=pointer]:
+              - /url: /
+          - listitem [ref=e27]:
+            - link "结果" [ref=e28] [cursor=pointer]:
+              - /url: /runs
+          - listitem [ref=e33]:
+            - link "执行更新" [ref=e34] [cursor=pointer]:
+              - /url: /attention
+      - list [ref=e40]:
+        - listitem [ref=e41]:
+          - link "设置" [ref=e42] [cursor=pointer]:
+            - /url: /settings
+    - generic [ref=e48]:
+      - banner [ref=e49]:
+        - button "Open sidebar" [ref=e50] [cursor=pointer]
+        - navigation "breadcrumb" [ref=e53]:
+          - list [ref=e54]:
+            - listitem [ref=e55]:
+              - generic [ref=e56]: 结果
+        - generic [ref=e57]:
+          - switch "专家模式" [ref=e58]
+          - text: 专家模式
+        - button "切换外观" [ref=e59] [cursor=pointer]
+      - main [ref=e61]:
+        - generic [ref=e113]:
+          - generic [ref=e115]:
+            - generic [ref=e117]:
+              - heading "结果" [level=1] [ref=e118]
+              - paragraph [ref=e119]: 查找和阅读所有执行记录
+            - generic [ref=e122]:
+              - link "执行更新" [ref=e123] [cursor=pointer]:
+                - /url: /attention
+              - button "刷新" [ref=e124] [cursor=pointer]
+          - generic [ref=e125]:
+            - group "结果分组" [ref=e126]:
+              - button "全部结果" [ref=e127] [cursor=pointer]
+              - button "进行中" [ref=e128] [cursor=pointer]
+              - button "需要处理" [ref=e129] [cursor=pointer]
+            - generic [ref=e130]:
+              - generic [ref=e131]:
+                - search [ref=e132]:
+                  - generic [ref=e133]: 搜索全部历史
+                  - textbox "搜索全部历史" [ref=e134]:
+                    - /placeholder: 搜索标题或任务
+                    - text: NVDA
+                - generic [ref=e135]:
+                  - generic [ref=e136]: 收藏筛选
+                  - combobox "收藏筛选" [ref=e137] [cursor=pointer]:
+                    - generic: 全部收藏状态
+                - generic [ref=e138]:
+                  - generic [ref=e139]: 阅读筛选
+                  - combobox "阅读筛选" [ref=e140] [cursor=pointer]:
+                    - generic: 全部阅读状态
+                - generic [ref=e141]:
+                  - generic [ref=e142]: 执行状态
+                  - combobox "执行状态" [active] [ref=e143] [cursor=pointer]:
+                    - generic: 已完成
+                - generic [ref=e144]:
+                  - generic [ref=e145]: 任务类型
+                  - combobox "任务类型" [ref=e146] [cursor=pointer]:
+                    - generic: 所有任务
+                - generic [ref=e147]:
+                  - generic [ref=e148]: 执行来源
+                  - combobox "执行来源" [ref=e149] [cursor=pointer]:
+                    - generic: 所有来源
+                - generic [ref=e150]:
+                  - text: 起始日期
+                  - textbox "起始日期" [ref=e151]
+                - generic [ref=e152]:
+                  - text: 结束日期
+                  - textbox "结束日期" [ref=e153]
+                - generic [ref=e154]:
+                  - generic [ref=e155]: 排序
+                  - combobox "排序" [ref=e156] [cursor=pointer]:
+                    - generic: 最新在前
+                - button "清除筛选" [ref=e158] [cursor=pointer]
+              - generic [ref=e159]: 共 2 条记录
+            - table [ref=e349]:
+              - rowgroup [ref=e350]:
+                - row [ref=e351]:
+                  - columnheader "标题" [ref=e352]
+                  - columnheader "状态" [ref=e353]
+                  - columnheader "任务" [ref=e354]
+                  - columnheader "来源" [ref=e355]
+                  - columnheader "时间" [ref=e356]
+                  - columnheader "操作" [ref=e357]
+              - rowgroup [ref=e358]:
+                - row [ref=e359]:
+                  - cell [ref=e360]:
+                    - link "NVDA" [ref=e361] [cursor=pointer]:
+                      - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?history=q%3DNVDA%26status%3Dsucceeded
+                    - paragraph [ref=e362]: 未读
+                  - cell "已完成" [ref=e363]
+                  - cell "美股多空研究" [ref=e365]
+                  - cell "调整后开始" [ref=e366]
+                  - cell "2026/9/16 03:53:32" [ref=e367]
+                  - cell [ref=e368]:
+                    - generic [ref=e370]:
+                      - button "收藏 NVDA" [ref=e371] [cursor=pointer]: 收藏
+                      - button "标为已读 NVDA" [ref=e372] [cursor=pointer]: 标为已读
+                    - link "修改输入" [ref=e373] [cursor=pointer]:
+                      - /url: /tasks/new?fromRun=406ddea2-b8a7-45ba-befb-7efc86534173
+                - row [ref=e374]:
+                  - cell [ref=e375]:
+                    - link "NVDA" [ref=e376] [cursor=pointer]:
+                      - /url: /runs/c910f828-166b-451e-b398-ae9286c89e5c?history=q%3DNVDA%26status%3Dsucceeded
+                    - paragraph [ref=e377]: 未读
+                  - cell "已完成" [ref=e378]
+                  - cell "美股多空研究" [ref=e380]
+                  - cell "手动开始" [ref=e381]
+                  - cell "2026/9/16 02:41:59" [ref=e382]
+                  - cell [ref=e383]:
+                    - generic [ref=e385]:
+                      - button "收藏 NVDA" [ref=e386] [cursor=pointer]: 收藏
+                      - button "标为已读 NVDA" [ref=e387] [cursor=pointer]: 标为已读
+                    - link "修改输入" [ref=e388] [cursor=pointer]:
+                      - /url: /tasks/new?fromRun=c910f828-166b-451e-b398-ae9286c89e5c
+            - navigation "结果分页" [ref=e389]:
+              - button "上一页" [disabled]
+              - generic [ref=e390]: 第 1 页 · 共 1 页
+              - button "下一页" [disabled]
+  - region "Notifications alt+T"

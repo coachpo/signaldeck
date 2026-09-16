@@ -1,0 +1,134 @@
+- generic [ref=f3e2]:
+  - generic [ref=f3e3]:
+    - link "Skip to main content" [ref=f3e4] [cursor=pointer]:
+      - /url: "#app-main"
+    - generic [ref=f3e7]:
+      - paragraph [ref=f3e13]: SignalDeck
+      - generic [ref=f3e15]:
+        - generic [ref=f3e16]: 日常操作
+        - list [ref=f3e18]:
+          - listitem [ref=f3e19]:
+            - link "任务" [ref=f3e20] [cursor=pointer]:
+              - /url: /
+          - listitem [ref=f3e27]:
+            - link "结果" [ref=f3e28] [cursor=pointer]:
+              - /url: /runs
+          - listitem [ref=f3e33]:
+            - link "执行更新" [ref=f3e34] [cursor=pointer]:
+              - /url: /attention
+      - list [ref=f3e40]:
+        - listitem [ref=f3e41]:
+          - link "设置" [ref=f3e42] [cursor=pointer]:
+            - /url: /settings
+    - generic [ref=f3e48]:
+      - banner [ref=f3e49]:
+        - button "Open sidebar" [ref=f3e50] [cursor=pointer]
+        - navigation "breadcrumb" [ref=f3e53]:
+          - list [ref=f3e54]:
+            - listitem [ref=f3e55]:
+              - link "结果" [ref=f3e56] [cursor=pointer]:
+                - /url: /runs
+            - listitem [aria-hidden] [ref=f3e57]
+            - listitem [ref=f3e60]:
+              - generic [ref=f3e61]: 结果详情
+        - generic [ref=f3e62]:
+          - switch "专家模式" [ref=f3e63]
+          - text: 专家模式
+        - button "切换外观" [ref=f3e64] [cursor=pointer]
+      - main [ref=f3e66]:
+        - generic [ref=f3e68]:
+          - generic [ref=f3e70]:
+            - generic [ref=f3e72]:
+              - heading "美股多空研究" [level=1] [ref=f3e73]
+              - paragraph [ref=f3e74]: 执行过程 · 2026/9/16 03:53:32
+            - generic [ref=f3e75]:
+              - generic [ref=f3e76]: 已完成
+              - link "返回结果" [ref=f3e80] [cursor=pointer]:
+                - /url: /runs/406ddea2-b8a7-45ba-befb-7efc86534173?history=q%3DNVDA%26status%3Dsucceeded
+          - region "Workspace body" [ref=f3e82]:
+            - generic [ref=f3e84]:
+              - tablist [ref=f3e85]:
+                - tab "步骤进度" [active] [selected] [ref=f3e86]
+                - tab "执行过程" [ref=f3e87]
+                - tab "资料与附件" [ref=f3e88]
+                - tab "本次设置" [ref=f3e89]
+              - tabpanel "步骤进度" [ref=f3e1661]:
+                - list "任务步骤" [ref=f3e1662]:
+                  - listitem [ref=f3e1663]:
+                    - generic [ref=f3e1664]:
+                      - generic [ref=f3e1665]: "1"
+                      - button "公司财务分析师" [ref=f3e1666] [cursor=pointer]
+                      - generic [ref=f3e1667]: 已完成
+                    - paragraph [ref=f3e1668]: 无需等待其他步骤
+                    - paragraph [ref=f3e1669]: 开始：2026/9/16 03:53:34 · 完成：2026/9/16 03:55:02 · 已尝试 1 次
+                  - listitem [ref=f3e1670]:
+                    - generic [ref=f3e1671]:
+                      - generic [ref=f3e1672]: "2"
+                      - button "宏观环境分析师" [ref=f3e1673] [cursor=pointer]
+                      - generic [ref=f3e1674]: 已完成
+                    - paragraph [ref=f3e1675]: 无需等待其他步骤
+                    - paragraph [ref=f3e1676]: 开始：2026/9/16 03:53:34 · 完成：2026/9/16 03:54:17 · 已尝试 1 次
+                  - listitem [ref=f3e1677]:
+                    - generic [ref=f3e1678]:
+                      - generic [ref=f3e1679]: "3"
+                      - button "行情与技术分析师" [ref=f3e1680] [cursor=pointer]
+                      - generic [ref=f3e1681]: 已完成
+                    - paragraph [ref=f3e1682]: 无需等待其他步骤
+                    - paragraph [ref=f3e1683]: 开始：2026/9/16 03:54:17 · 完成：2026/9/16 03:55:14 · 已尝试 1 次
+                  - listitem [ref=f3e1684]:
+                    - generic [ref=f3e1685]:
+                      - generic [ref=f3e1686]: "4"
+                      - button "新闻与美国政策分析师" [ref=f3e1687] [cursor=pointer]
+                      - generic [ref=f3e1688]: 已完成
+                    - paragraph [ref=f3e1689]: 无需等待其他步骤
+                    - paragraph [ref=f3e1690]: 开始：2026/9/16 03:55:02 · 完成：2026/9/16 03:56:26 · 已尝试 1 次
+                  - listitem [ref=f3e1691]:
+                    - generic [ref=f3e1692]:
+                      - generic [ref=f3e1693]: "5"
+                      - button "多空独立论证" [ref=f3e1694] [cursor=pointer]
+                      - generic [ref=f3e1695]: 已完成
+                    - paragraph [ref=f3e1696]: 前置步骤：公司财务分析师、宏观环境分析师、行情与技术分析师、新闻与美国政策分析师
+                    - paragraph [ref=f3e1697]: 开始：2026/9/16 03:56:26 · 完成：2026/9/16 03:56:46 · 已尝试 1 次
+                  - listitem [ref=f3e1698]:
+                    - generic [ref=f3e1699]:
+                      - generic [ref=f3e1700]: "6"
+                      - button "多空独立论证" [ref=f3e1701] [cursor=pointer]
+                      - generic [ref=f3e1702]: 已完成
+                    - paragraph [ref=f3e1703]: 前置步骤：公司财务分析师、宏观环境分析师、行情与技术分析师、新闻与美国政策分析师
+                    - paragraph [ref=f3e1704]: 开始：2026/9/16 03:56:26 · 完成：2026/9/16 03:57:05 · 已尝试 1 次
+                  - listitem [ref=f3e1705]:
+                    - generic [ref=f3e1706]:
+                      - generic [ref=f3e1707]: "7"
+                      - button "多空相互回应" [ref=f3e1708] [cursor=pointer]
+                      - generic [ref=f3e1709]: 已完成
+                    - paragraph [ref=f3e1710]: 前置步骤：多空独立论证、多空独立论证、公司财务分析师、宏观环境分析师、行情与技术分析师、新闻与美国政策分析师
+                    - paragraph [ref=f3e1711]: 开始：2026/9/16 03:57:05 · 完成：2026/9/16 03:57:23 · 已尝试 1 次
+                  - listitem [ref=f3e1712]:
+                    - generic [ref=f3e1713]:
+                      - generic [ref=f3e1714]: "8"
+                      - button "多空相互回应" [ref=f3e1715] [cursor=pointer]
+                      - generic [ref=f3e1716]: 已完成
+                    - paragraph [ref=f3e1717]: 前置步骤：多空独立论证、多空独立论证、公司财务分析师、宏观环境分析师、行情与技术分析师、新闻与美国政策分析师
+                    - paragraph [ref=f3e1718]: 开始：2026/9/16 03:57:05 · 完成：2026/9/16 03:57:27 · 已尝试 1 次
+                  - listitem [ref=f3e1719]:
+                    - generic [ref=f3e1720]:
+                      - generic [ref=f3e1721]: "9"
+                      - button "证据与风险复核" [ref=f3e1722] [cursor=pointer]
+                      - generic [ref=f3e1723]: 已完成
+                    - paragraph [ref=f3e1724]: 前置步骤：多空独立论证、多空相互回应、多空独立论证、多空相互回应、公司财务分析师、宏观环境分析师、行情与技术分析师、新闻与美国政策分析师
+                    - paragraph [ref=f3e1725]: 开始：2026/9/16 03:57:27 · 完成：2026/9/16 03:57:58 · 已尝试 1 次
+                  - listitem [ref=f3e1726]:
+                    - generic [ref=f3e1727]:
+                      - generic [ref=f3e1728]: "10"
+                      - button "美股方向裁决" [ref=f3e1729] [cursor=pointer]
+                      - generic [ref=f3e1730]: 已完成
+                    - paragraph [ref=f3e1731]: 前置步骤：多空独立论证、多空相互回应、多空独立论证、多空相互回应、公司财务分析师、宏观环境分析师、行情与技术分析师、新闻与美国政策分析师、证据与风险复核
+                    - paragraph [ref=f3e1732]: 开始：2026/9/16 03:57:58 · 完成：2026/9/16 03:58:54 · 已尝试 1 次
+                  - listitem [ref=f3e1733]:
+                    - generic [ref=f3e1734]:
+                      - generic [ref=f3e1735]: "11"
+                      - button "保存美股研究报告" [ref=f3e1736] [cursor=pointer]
+                      - generic [ref=f3e1737]: 已完成
+                    - paragraph [ref=f3e1738]: 前置步骤：美股方向裁决
+                    - paragraph [ref=f3e1739]: 开始：2026/9/16 03:58:54 · 完成：2026/9/16 03:58:55 · 已尝试 1 次
+  - region "Notifications alt+T"

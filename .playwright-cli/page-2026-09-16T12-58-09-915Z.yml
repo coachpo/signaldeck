@@ -1,0 +1,116 @@
+- generic:
+  - generic:
+    - generic [aria-hidden]:
+      - link:
+        - /url: "#app-main"
+        - text: Skip to main content
+      - generic:
+        - generic:
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - paragraph: SignalDeck
+            - generic:
+              - generic:
+                - generic: 日常操作
+                - generic:
+                  - list:
+                    - listitem:
+                      - link:
+                        - /url: /
+                        - generic: 任务
+                    - listitem:
+                      - link:
+                        - /url: /runs
+                        - generic: 结果
+                    - listitem:
+                      - link:
+                        - /url: /attention
+                        - generic: 执行更新
+            - generic:
+              - list:
+                - listitem:
+                  - link:
+                    - /url: /settings
+                    - generic: 设置
+      - generic:
+        - banner:
+          - button:
+            - generic: Open sidebar
+          - generic:
+            - navigation:
+              - list:
+                - listitem:
+                  - link:
+                    - /url: /scheduled-tasks
+                    - text: 自动执行
+                - listitem [aria-hidden]
+                - listitem:
+                  - generic: 新建重复安排
+          - generic:
+            - switch
+            - text: 专家模式
+          - button:
+            - generic: 切换外观
+        - main:
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - generic:
+                      - heading [level=1]: 安排重复执行
+                      - paragraph: 选择任务，填写业务信息，再启用自动执行。
+                  - generic:
+                    - generic:
+                      - generic:
+                        - button [disabled]: 启用自动执行
+              - generic:
+                - region:
+                  - generic:
+                    - group:
+                      - generic:
+                        - generic:
+                          - generic: 安排名称
+                          - textbox
+                        - generic:
+                          - generic: 选择任务
+                          - combobox:
+                            - generic: 请选择…
+                        - generic:
+                          - generic:
+                            - generic: 重复频率
+                            - combobox [expanded]:
+                              - generic: 每天
+                          - generic:
+                            - generic: 当地时间
+                            - textbox: 09:00
+                          - group:
+                            - generic: 时区
+                            - combobox: Europe/Helsinki
+                            - paragraph: 保存后时区保持固定，不随旅行地点改变。可搜索或填写城市时区。
+                          - paragraph: 每天 09:00 · Europe/Helsinki.
+                          - button: 预览下次时间
+                        - paragraph: 上一次尚未结束时： 跳过本次执行。错过执行超过 60 秒不再补跑。
+                        - generic:
+                          - generic:
+                            - generic: 上一次尚未结束时
+                            - combobox:
+                              - generic: 跳过本次执行
+                          - generic:
+                            - generic: 错过后多久内补做（秒）
+                            - spinbutton: "60"
+                        - generic:
+                          - generic: 自动执行状态
+                          - combobox:
+                            - generic: 启用自动执行
+                        - paragraph: 暂停只停止未来自动执行，不会取消当前任务。每次执行使用当时已保存的任务和连接，已有结果保持不变。
+    - region "Notifications alt+T"
+  - listbox [ref=f4e1894]:
+    - group [ref=f4e1895]:
+      - option "每天" [active] [selected] [ref=f4e1896]
+      - option "每周" [ref=f4e1900]
+      - option "每月" [ref=f4e1903]
+      - option "组合日期与时刻" [ref=f4e1906]
+      - option "固定间隔" [ref=f4e1909]

@@ -48,6 +48,11 @@ jobs:
           print(f'frontend version OK: {frontend_version}')
           PY
 
+      - name: Validate deployment configuration
+        run: |
+          python3 -m unittest discover -s docker -p 'test_*.py'
+          python3 -m unittest discover -s frontend/gateway -p 'test_*.py'
+
   backend-quality:
     runs-on: ubuntu-latest
     timeout-minutes: 25

@@ -56,6 +56,7 @@ class Settings(BaseSettings):
     model_config: ClassVar[SettingsConfigDict] = SettingsConfigDict(
         extra="ignore",
         populate_by_name=True,
+        hide_input_in_errors=True,
     )
 
     @field_validator(
@@ -100,6 +101,7 @@ class Settings(BaseSettings):
 
         if (
             "agent_platform_encryption_key" not in self.model_fields_set
+            or not self.agent_platform_encryption_key
             or self.agent_platform_encryption_key in PLACEHOLDER_AGENT_PLATFORM_ENCRYPTION_KEYS
         ):
             message = (

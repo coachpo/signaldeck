@@ -1,0 +1,416 @@
+- generic [ref=f4e2]:
+  - generic [ref=f4e3]:
+    - link "Skip to main content" [ref=f4e4] [cursor=pointer]:
+      - /url: "#app-main"
+    - generic [ref=f4e7]:
+      - paragraph [ref=f4e13]: SignalDeck
+      - generic [ref=f4e15]:
+        - generic [ref=f4e16]: 日常操作
+        - list [ref=f4e18]:
+          - listitem [ref=f4e19]:
+            - link "任务" [ref=f4e20] [cursor=pointer]:
+              - /url: /
+          - listitem [ref=f4e27]:
+            - link "结果" [ref=f4e28] [cursor=pointer]:
+              - /url: /runs
+          - listitem [ref=f4e33]:
+            - link "执行更新" [ref=f4e34] [cursor=pointer]:
+              - /url: /attention
+      - list [ref=f4e40]:
+        - listitem [ref=f4e41]:
+          - link "设置" [ref=f4e42] [cursor=pointer]:
+            - /url: /settings
+    - generic [ref=f4e48]:
+      - banner [ref=f4e49]:
+        - button "Open sidebar" [ref=f4e50] [cursor=pointer]
+        - navigation "breadcrumb" [ref=f4e53]:
+          - list [ref=f4e54]:
+            - listitem [ref=f4e55]:
+              - link "结果" [ref=f4e236] [cursor=pointer]:
+                - /url: /runs
+            - listitem [aria-hidden] [ref=f4e237]
+            - listitem [ref=f4e240]:
+              - generic [ref=f4e241]: 结果详情
+        - generic [ref=f4e57]:
+          - switch "专家模式" [ref=f4e58]
+          - text: 专家模式
+        - button "切换外观" [ref=f4e59] [cursor=pointer]
+      - main [ref=f4e61]:
+        - generic [ref=f4e974]:
+          - generic [ref=f4e976]:
+            - generic [ref=f4e978]:
+              - heading "美股多空研究" [level=1] [ref=f4e979]
+              - paragraph [ref=f4e980]: 执行过程 · 2026/9/16 03:50:20
+            - generic [ref=f4e981]:
+              - generic [ref=f4e982]: 执行失败
+              - link "返回结果" [ref=f4e986] [cursor=pointer]:
+                - /url: /runs/d1a3b46c-a5d7-4314-8729-5982313a20d2?history=group%3Dattention
+          - region "Workspace body" [ref=f4e988]:
+            - generic [ref=f4e989]:
+              - paragraph [ref=f4e991]: 模型没有按任务要求提供可用结果。可以重试，或检查助手的结果要求。
+              - generic [ref=f4e992]:
+                - tablist [ref=f4e993]:
+                  - tab "步骤进度" [ref=f4e994]
+                  - tab "执行过程" [selected] [ref=f4e995]
+                  - tab "资料与附件" [ref=f4e996]
+                  - tab "本次设置" [ref=f4e997]
+                - tabpanel "执行过程" [ref=f4e998]:
+                  - generic [ref=f4e999]:
+                    - generic "步骤与服务操作" [ref=f4e1000]:
+                      - list [ref=f4e1001]:
+                        - listitem [ref=f4e1002]:
+                          - generic [ref=f4e1003]:
+                            - link "多空独立论证 · 第 1 次" [ref=f4e1004] [cursor=pointer]:
+                              - /url: /runs/d1a3b46c-a5d7-4314-8729-5982313a20d2?tab=evidence&target=d1a3b46c-a5d7-4314-8729-5982313a20d2%3Anode%3Abear&history=group%3Dattention
+                            - generic [ref=f4e1005]: 已完成
+                          - list [ref=f4e1007]:
+                            - listitem [ref=f4e1008]:
+                              - generic [ref=f4e1009]:
+                                - link "处理任务 · 第 1 次" [ref=f4e1010] [cursor=pointer]:
+                                  - /url: /runs/d1a3b46c-a5d7-4314-8729-5982313a20d2?tab=evidence&target=d1a3b46c-a5d7-4314-8729-5982313a20d2%3Abear%3Aagent%3A1&history=group%3Dattention
+                                - generic [ref=f4e1011]: 已完成
+                              - list [ref=f4e1013]:
+                                - listitem [ref=f4e1014]:
+                                  - generic [ref=f4e1015]:
+                                    - link "生成内容 · 第 1 次" [ref=f4e1016] [cursor=pointer]:
+                                      - /url: /runs/d1a3b46c-a5d7-4314-8729-5982313a20d2?tab=evidence&target=d1a3b46c-a5d7-4314-8729-5982313a20d2%3Abear%3Aagent%3A1%3Amodel%3A1&history=group%3Dattention
+                                    - generic [ref=f4e1017]: 已完成
+                                  - list [ref=f4e1019]:
+                                    - listitem [ref=f4e1020]:
+                                      - generic [ref=f4e1021]:
+                                        - link "联系服务 · 第 1 次" [ref=f4e1022] [cursor=pointer]:
+                                          - /url: /runs/d1a3b46c-a5d7-4314-8729-5982313a20d2?tab=evidence&target=d1a3b46c-a5d7-4314-8729-5982313a20d2%3Abear%3Aagent%3A1%3Amodel%3A1%3Aattempt%3A1&history=group%3Dattention
+                                        - generic [ref=f4e1023]: 已完成
+                        - listitem [ref=f4e1024]:
+                          - generic [ref=f4e1025]:
+                            - link "多空相互回应 · 第 1 次" [ref=f4e1026] [cursor=pointer]:
+                              - /url: /runs/d1a3b46c-a5d7-4314-8729-5982313a20d2?tab=evidence&target=d1a3b46c-a5d7-4314-8729-5982313a20d2%3Anode%3Abear_reply&history=group%3Dattention
+                            - generic [ref=f4e1027]: 已完成
+                          - list [ref=f4e1029]:
+                            - listitem [ref=f4e1030]:
+                              - generic [ref=f4e1031]:
+                                - link "处理任务 · 第 1 次" [ref=f4e1032] [cursor=pointer]:
+                                  - /url: /runs/d1a3b46c-a5d7-4314-8729-5982313a20d2?tab=evidence&target=d1a3b46c-a5d7-4314-8729-5982313a20d2%3Abear_reply%3Aagent%3A1&history=group%3Dattention
+                                - generic [ref=f4e1033]: 已完成
+                              - list [ref=f4e1035]:
+                                - listitem [ref=f4e1036]:
+                                  - generic [ref=f4e1037]:
+                                    - link "生成内容 · 第 1 次" [ref=f4e1038] [cursor=pointer]:
+                                      - /url: /runs/d1a3b46c-a5d7-4314-8729-5982313a20d2?tab=evidence&target=d1a3b46c-a5d7-4314-8729-5982313a20d2%3Abear_reply%3Aagent%3A1%3Amodel%3A1&history=group%3Dattention
+                                    - generic [ref=f4e1039]: 已完成
+                                  - list [ref=f4e1041]:
+                                    - listitem [ref=f4e1042]:
+                                      - generic [ref=f4e1043]:
+                                        - link "联系服务 · 第 1 次" [ref=f4e1044] [cursor=pointer]:
+                                          - /url: /runs/d1a3b46c-a5d7-4314-8729-5982313a20d2?tab=evidence&target=d1a3b46c-a5d7-4314-8729-5982313a20d2%3Abear_reply%3Aagent%3A1%3Amodel%3A1%3Aattempt%3A1&history=group%3Dattention
+                                        - generic [ref=f4e1045]: 已完成
+                        - listitem [ref=f4e1046]:
+                          - generic [ref=f4e1047]:
+                            - link "多空独立论证 · 第 1 次" [ref=f4e1048] [cursor=pointer]:
+                              - /url: /runs/d1a3b46c-a5d7-4314-8729-5982313a20d2?tab=evidence&target=d1a3b46c-a5d7-4314-8729-5982313a20d2%3Anode%3Abull&history=group%3Dattention
+                            - generic [ref=f4e1049]: 已完成
+                          - list [ref=f4e1051]:
+                            - listitem [ref=f4e1052]:
+                              - generic [ref=f4e1053]:
+                                - link "处理任务 · 第 1 次" [ref=f4e1054] [cursor=pointer]:
+                                  - /url: /runs/d1a3b46c-a5d7-4314-8729-5982313a20d2?tab=evidence&target=d1a3b46c-a5d7-4314-8729-5982313a20d2%3Abull%3Aagent%3A1&history=group%3Dattention
+                                - generic [ref=f4e1055]: 已完成
+                              - list [ref=f4e1057]:
+                                - listitem [ref=f4e1058]:
+                                  - generic [ref=f4e1059]:
+                                    - link "生成内容 · 第 1 次" [ref=f4e1060] [cursor=pointer]:
+                                      - /url: /runs/d1a3b46c-a5d7-4314-8729-5982313a20d2?tab=evidence&target=d1a3b46c-a5d7-4314-8729-5982313a20d2%3Abull%3Aagent%3A1%3Amodel%3A1&history=group%3Dattention
+                                    - generic [ref=f4e1061]: 已完成
+                                  - list [ref=f4e1063]:
+                                    - listitem [ref=f4e1064]:
+                                      - generic [ref=f4e1065]:
+                                        - link "联系服务 · 第 1 次" [ref=f4e1066] [cursor=pointer]:
+                                          - /url: /runs/d1a3b46c-a5d7-4314-8729-5982313a20d2?tab=evidence&target=d1a3b46c-a5d7-4314-8729-5982313a20d2%3Abull%3Aagent%3A1%3Amodel%3A1%3Aattempt%3A1&history=group%3Dattention
+                                        - generic [ref=f4e1067]: 已完成
+                        - listitem [ref=f4e1068]:
+                          - generic [ref=f4e1069]:
+                            - link "多空相互回应 · 第 1 次" [ref=f4e1070] [cursor=pointer]:
+                              - /url: /runs/d1a3b46c-a5d7-4314-8729-5982313a20d2?tab=evidence&target=d1a3b46c-a5d7-4314-8729-5982313a20d2%3Anode%3Abull_reply&history=group%3Dattention
+                            - generic [ref=f4e1071]: 已完成
+                          - list [ref=f4e1073]:
+                            - listitem [ref=f4e1074]:
+                              - generic [ref=f4e1075]:
+                                - link "处理任务 · 第 1 次" [ref=f4e1076] [cursor=pointer]:
+                                  - /url: /runs/d1a3b46c-a5d7-4314-8729-5982313a20d2?tab=evidence&target=d1a3b46c-a5d7-4314-8729-5982313a20d2%3Abull_reply%3Aagent%3A1&history=group%3Dattention
+                                - generic [ref=f4e1077]: 已完成
+                              - list [ref=f4e1079]:
+                                - listitem [ref=f4e1080]:
+                                  - generic [ref=f4e1081]:
+                                    - link "生成内容 · 第 1 次" [ref=f4e1082] [cursor=pointer]:
+                                      - /url: /runs/d1a3b46c-a5d7-4314-8729-5982313a20d2?tab=evidence&target=d1a3b46c-a5d7-4314-8729-5982313a20d2%3Abull_reply%3Aagent%3A1%3Amodel%3A1&history=group%3Dattention
+                                    - generic [ref=f4e1083]: 已完成
+                                  - list [ref=f4e1085]:
+                                    - listitem [ref=f4e1086]:
+                                      - generic [ref=f4e1087]:
+                                        - link "联系服务 · 第 1 次" [ref=f4e1088] [cursor=pointer]:
+                                          - /url: /runs/d1a3b46c-a5d7-4314-8729-5982313a20d2?tab=evidence&target=d1a3b46c-a5d7-4314-8729-5982313a20d2%3Abull_reply%3Aagent%3A1%3Amodel%3A1%3Aattempt%3A1&history=group%3Dattention
+                                        - generic [ref=f4e1089]: 已完成
+                        - listitem [ref=f4e1090]:
+                          - generic [ref=f4e1091]:
+                            - link "公司财务分析师 · 第 1 次" [active] [ref=f4e1092] [cursor=pointer]:
+                              - /url: /runs/d1a3b46c-a5d7-4314-8729-5982313a20d2?tab=evidence&target=d1a3b46c-a5d7-4314-8729-5982313a20d2%3Anode%3Acompany&history=group%3Dattention
+                            - generic [ref=f4e1093]: 执行失败
+                          - list [ref=f4e1095]:
+                            - listitem [ref=f4e1096]:
+                              - generic [ref=f4e1097]:
+                                - link "处理任务 · 第 1 次" [ref=f4e1098] [cursor=pointer]:
+                                  - /url: /runs/d1a3b46c-a5d7-4314-8729-5982313a20d2?tab=evidence&target=d1a3b46c-a5d7-4314-8729-5982313a20d2%3Acompany%3Aagent%3A1&history=group%3Dattention
+                                - generic [ref=f4e1099]: 执行失败
+                              - list [ref=f4e1101]:
+                                - listitem [ref=f4e1102]:
+                                  - generic [ref=f4e1103]:
+                                    - link "生成内容 · 第 1 次" [ref=f4e1104] [cursor=pointer]:
+                                      - /url: /runs/d1a3b46c-a5d7-4314-8729-5982313a20d2?tab=evidence&target=d1a3b46c-a5d7-4314-8729-5982313a20d2%3Acompany%3Aagent%3A1%3Amodel%3A1&history=group%3Dattention
+                                    - generic [ref=f4e1105]: 已完成
+                                  - list [ref=f4e1107]:
+                                    - listitem [ref=f4e1108]:
+                                      - generic [ref=f4e1109]:
+                                        - link "联系服务 · 第 1 次" [ref=f4e1110] [cursor=pointer]:
+                                          - /url: /runs/d1a3b46c-a5d7-4314-8729-5982313a20d2?tab=evidence&target=d1a3b46c-a5d7-4314-8729-5982313a20d2%3Acompany%3Aagent%3A1%3Amodel%3A1%3Aattempt%3A1&history=group%3Dattention
+                                        - generic [ref=f4e1111]: 已完成
+                            - listitem [ref=f4e1112]:
+                              - generic [ref=f4e1113]:
+                                - link "处理任务 · 第 2 次" [ref=f4e1114] [cursor=pointer]:
+                                  - /url: /runs/d1a3b46c-a5d7-4314-8729-5982313a20d2?tab=evidence&target=d1a3b46c-a5d7-4314-8729-5982313a20d2%3Acompany%3Aagent%3A2&history=group%3Dattention
+                                - generic [ref=f4e1115]: 执行失败
+                              - list [ref=f4e1117]:
+                                - listitem [ref=f4e1118]:
+                                  - generic [ref=f4e1119]:
+                                    - link "生成内容 · 第 1 次" [ref=f4e1120] [cursor=pointer]:
+                                      - /url: /runs/d1a3b46c-a5d7-4314-8729-5982313a20d2?tab=evidence&target=d1a3b46c-a5d7-4314-8729-5982313a20d2%3Acompany%3Aagent%3A2%3Amodel%3A1&history=group%3Dattention
+                                    - generic [ref=f4e1121]: 已完成
+                                  - list [ref=f4e1123]:
+                                    - listitem [ref=f4e1124]:
+                                      - generic [ref=f4e1125]:
+                                        - link "联系服务 · 第 1 次" [ref=f4e1126] [cursor=pointer]:
+                                          - /url: /runs/d1a3b46c-a5d7-4314-8729-5982313a20d2?tab=evidence&target=d1a3b46c-a5d7-4314-8729-5982313a20d2%3Acompany%3Aagent%3A2%3Amodel%3A1%3Aattempt%3A1&history=group%3Dattention
+                                        - generic [ref=f4e1127]: 已完成
+                        - listitem [ref=f4e1128]:
+                          - generic [ref=f4e1129]:
+                            - link "美股方向裁决 · 第 1 次" [ref=f4e1130] [cursor=pointer]:
+                              - /url: /runs/d1a3b46c-a5d7-4314-8729-5982313a20d2?tab=evidence&target=d1a3b46c-a5d7-4314-8729-5982313a20d2%3Anode%3Adecision&history=group%3Dattention
+                            - generic [ref=f4e1131]: 已完成
+                          - list [ref=f4e1133]:
+                            - listitem [ref=f4e1134]:
+                              - generic [ref=f4e1135]:
+                                - link "处理任务 · 第 1 次" [ref=f4e1136] [cursor=pointer]:
+                                  - /url: /runs/d1a3b46c-a5d7-4314-8729-5982313a20d2?tab=evidence&target=d1a3b46c-a5d7-4314-8729-5982313a20d2%3Adecision%3Aagent%3A1&history=group%3Dattention
+                                - generic [ref=f4e1137]: 已完成
+                              - list [ref=f4e1139]:
+                                - listitem [ref=f4e1140]:
+                                  - generic [ref=f4e1141]:
+                                    - link "生成内容 · 第 1 次" [ref=f4e1142] [cursor=pointer]:
+                                      - /url: /runs/d1a3b46c-a5d7-4314-8729-5982313a20d2?tab=evidence&target=d1a3b46c-a5d7-4314-8729-5982313a20d2%3Adecision%3Aagent%3A1%3Amodel%3A1&history=group%3Dattention
+                                    - generic [ref=f4e1143]: 已完成
+                                  - list [ref=f4e1145]:
+                                    - listitem [ref=f4e1146]:
+                                      - generic [ref=f4e1147]:
+                                        - link "联系服务 · 第 1 次" [ref=f4e1148] [cursor=pointer]:
+                                          - /url: /runs/d1a3b46c-a5d7-4314-8729-5982313a20d2?tab=evidence&target=d1a3b46c-a5d7-4314-8729-5982313a20d2%3Adecision%3Aagent%3A1%3Amodel%3A1%3Aattempt%3A1&history=group%3Dattention
+                                        - generic [ref=f4e1149]: 已完成
+                        - listitem [ref=f4e1150]:
+                          - generic [ref=f4e1151]:
+                            - link "宏观环境分析师 · 第 1 次" [ref=f4e1152] [cursor=pointer]:
+                              - /url: /runs/d1a3b46c-a5d7-4314-8729-5982313a20d2?tab=evidence&target=d1a3b46c-a5d7-4314-8729-5982313a20d2%3Anode%3Amacro&history=group%3Dattention
+                            - generic [ref=f4e1153]: 执行失败
+                          - list [ref=f4e1155]:
+                            - listitem [ref=f4e1156]:
+                              - generic [ref=f4e1157]:
+                                - link "处理任务 · 第 1 次" [ref=f4e1158] [cursor=pointer]:
+                                  - /url: /runs/d1a3b46c-a5d7-4314-8729-5982313a20d2?tab=evidence&target=d1a3b46c-a5d7-4314-8729-5982313a20d2%3Amacro%3Aagent%3A1&history=group%3Dattention
+                                - generic [ref=f4e1159]: 执行失败
+                              - list [ref=f4e1161]:
+                                - listitem [ref=f4e1162]:
+                                  - generic [ref=f4e1163]:
+                                    - link "生成内容 · 第 1 次" [ref=f4e1164] [cursor=pointer]:
+                                      - /url: /runs/d1a3b46c-a5d7-4314-8729-5982313a20d2?tab=evidence&target=d1a3b46c-a5d7-4314-8729-5982313a20d2%3Amacro%3Aagent%3A1%3Amodel%3A1&history=group%3Dattention
+                                    - generic [ref=f4e1165]: 已完成
+                                  - list [ref=f4e1167]:
+                                    - listitem [ref=f4e1168]:
+                                      - generic [ref=f4e1169]:
+                                        - link "联系服务 · 第 1 次" [ref=f4e1170] [cursor=pointer]:
+                                          - /url: /runs/d1a3b46c-a5d7-4314-8729-5982313a20d2?tab=evidence&target=d1a3b46c-a5d7-4314-8729-5982313a20d2%3Amacro%3Aagent%3A1%3Amodel%3A1%3Aattempt%3A1&history=group%3Dattention
+                                        - generic [ref=f4e1171]: 已完成
+                            - listitem [ref=f4e1172]:
+                              - generic [ref=f4e1173]:
+                                - link "处理任务 · 第 2 次" [ref=f4e1174] [cursor=pointer]:
+                                  - /url: /runs/d1a3b46c-a5d7-4314-8729-5982313a20d2?tab=evidence&target=d1a3b46c-a5d7-4314-8729-5982313a20d2%3Amacro%3Aagent%3A2&history=group%3Dattention
+                                - generic [ref=f4e1175]: 执行失败
+                              - list [ref=f4e1177]:
+                                - listitem [ref=f4e1178]:
+                                  - generic [ref=f4e1179]:
+                                    - link "生成内容 · 第 1 次" [ref=f4e1180] [cursor=pointer]:
+                                      - /url: /runs/d1a3b46c-a5d7-4314-8729-5982313a20d2?tab=evidence&target=d1a3b46c-a5d7-4314-8729-5982313a20d2%3Amacro%3Aagent%3A2%3Amodel%3A1&history=group%3Dattention
+                                    - generic [ref=f4e1181]: 已完成
+                                  - list [ref=f4e1183]:
+                                    - listitem [ref=f4e1184]:
+                                      - generic [ref=f4e1185]:
+                                        - link "联系服务 · 第 1 次" [ref=f4e1186] [cursor=pointer]:
+                                          - /url: /runs/d1a3b46c-a5d7-4314-8729-5982313a20d2?tab=evidence&target=d1a3b46c-a5d7-4314-8729-5982313a20d2%3Amacro%3Aagent%3A2%3Amodel%3A1%3Aattempt%3A1&history=group%3Dattention
+                                        - generic [ref=f4e1187]: 已完成
+                        - listitem [ref=f4e1188]:
+                          - generic [ref=f4e1189]:
+                            - link "行情与技术分析师 · 第 1 次" [ref=f4e1190] [cursor=pointer]:
+                              - /url: /runs/d1a3b46c-a5d7-4314-8729-5982313a20d2?tab=evidence&target=d1a3b46c-a5d7-4314-8729-5982313a20d2%3Anode%3Amarket&history=group%3Dattention
+                            - generic [ref=f4e1191]: 执行失败
+                          - list [ref=f4e1193]:
+                            - listitem [ref=f4e1194]:
+                              - generic [ref=f4e1195]:
+                                - link "处理任务 · 第 1 次" [ref=f4e1196] [cursor=pointer]:
+                                  - /url: /runs/d1a3b46c-a5d7-4314-8729-5982313a20d2?tab=evidence&target=d1a3b46c-a5d7-4314-8729-5982313a20d2%3Amarket%3Aagent%3A1&history=group%3Dattention
+                                - generic [ref=f4e1197]: 执行失败
+                              - list [ref=f4e1199]:
+                                - listitem [ref=f4e1200]:
+                                  - generic [ref=f4e1201]:
+                                    - link "生成内容 · 第 1 次" [ref=f4e1202] [cursor=pointer]:
+                                      - /url: /runs/d1a3b46c-a5d7-4314-8729-5982313a20d2?tab=evidence&target=d1a3b46c-a5d7-4314-8729-5982313a20d2%3Amarket%3Aagent%3A1%3Amodel%3A1&history=group%3Dattention
+                                    - generic [ref=f4e1203]: 已完成
+                                  - list [ref=f4e1205]:
+                                    - listitem [ref=f4e1206]:
+                                      - generic [ref=f4e1207]:
+                                        - link "联系服务 · 第 1 次" [ref=f4e1208] [cursor=pointer]:
+                                          - /url: /runs/d1a3b46c-a5d7-4314-8729-5982313a20d2?tab=evidence&target=d1a3b46c-a5d7-4314-8729-5982313a20d2%3Amarket%3Aagent%3A1%3Amodel%3A1%3Aattempt%3A1&history=group%3Dattention
+                                        - generic [ref=f4e1209]: 已完成
+                            - listitem [ref=f4e1210]:
+                              - generic [ref=f4e1211]:
+                                - link "处理任务 · 第 2 次" [ref=f4e1212] [cursor=pointer]:
+                                  - /url: /runs/d1a3b46c-a5d7-4314-8729-5982313a20d2?tab=evidence&target=d1a3b46c-a5d7-4314-8729-5982313a20d2%3Amarket%3Aagent%3A2&history=group%3Dattention
+                                - generic [ref=f4e1213]: 执行失败
+                              - list [ref=f4e1215]:
+                                - listitem [ref=f4e1216]:
+                                  - generic [ref=f4e1217]:
+                                    - link "生成内容 · 第 1 次" [ref=f4e1218] [cursor=pointer]:
+                                      - /url: /runs/d1a3b46c-a5d7-4314-8729-5982313a20d2?tab=evidence&target=d1a3b46c-a5d7-4314-8729-5982313a20d2%3Amarket%3Aagent%3A2%3Amodel%3A1&history=group%3Dattention
+                                    - generic [ref=f4e1219]: 已完成
+                                  - list [ref=f4e1221]:
+                                    - listitem [ref=f4e1222]:
+                                      - generic [ref=f4e1223]:
+                                        - link "联系服务 · 第 1 次" [ref=f4e1224] [cursor=pointer]:
+                                          - /url: /runs/d1a3b46c-a5d7-4314-8729-5982313a20d2?tab=evidence&target=d1a3b46c-a5d7-4314-8729-5982313a20d2%3Amarket%3Aagent%3A2%3Amodel%3A1%3Aattempt%3A1&history=group%3Dattention
+                                        - generic [ref=f4e1225]: 已完成
+                        - listitem [ref=f4e1226]:
+                          - generic [ref=f4e1227]:
+                            - link "新闻与美国政策分析师 · 第 1 次" [ref=f4e1228] [cursor=pointer]:
+                              - /url: /runs/d1a3b46c-a5d7-4314-8729-5982313a20d2?tab=evidence&target=d1a3b46c-a5d7-4314-8729-5982313a20d2%3Anode%3Anews&history=group%3Dattention
+                            - generic [ref=f4e1229]: 已完成
+                          - list [ref=f4e1231]:
+                            - listitem [ref=f4e1232]:
+                              - generic [ref=f4e1233]:
+                                - link "处理任务 · 第 1 次" [ref=f4e1234] [cursor=pointer]:
+                                  - /url: /runs/d1a3b46c-a5d7-4314-8729-5982313a20d2?tab=evidence&target=d1a3b46c-a5d7-4314-8729-5982313a20d2%3Anews%3Aagent%3A1&history=group%3Dattention
+                                - generic [ref=f4e1235]: 执行失败
+                              - list [ref=f4e1237]:
+                                - listitem [ref=f4e1238]:
+                                  - generic [ref=f4e1239]:
+                                    - link "生成内容 · 第 1 次" [ref=f4e1240] [cursor=pointer]:
+                                      - /url: /runs/d1a3b46c-a5d7-4314-8729-5982313a20d2?tab=evidence&target=d1a3b46c-a5d7-4314-8729-5982313a20d2%3Anews%3Aagent%3A1%3Amodel%3A1&history=group%3Dattention
+                                    - generic [ref=f4e1241]: 已完成
+                                  - list [ref=f4e1243]:
+                                    - listitem [ref=f4e1244]:
+                                      - generic [ref=f4e1245]:
+                                        - link "联系服务 · 第 1 次" [ref=f4e1246] [cursor=pointer]:
+                                          - /url: /runs/d1a3b46c-a5d7-4314-8729-5982313a20d2?tab=evidence&target=d1a3b46c-a5d7-4314-8729-5982313a20d2%3Anews%3Aagent%3A1%3Amodel%3A1%3Aattempt%3A1&history=group%3Dattention
+                                        - generic [ref=f4e1247]: 已完成
+                            - listitem [ref=f4e1248]:
+                              - generic [ref=f4e1249]:
+                                - link "处理任务 · 第 2 次" [ref=f4e1250] [cursor=pointer]:
+                                  - /url: /runs/d1a3b46c-a5d7-4314-8729-5982313a20d2?tab=evidence&target=d1a3b46c-a5d7-4314-8729-5982313a20d2%3Anews%3Aagent%3A2&history=group%3Dattention
+                                - generic [ref=f4e1251]: 已完成
+                              - list [ref=f4e1253]:
+                                - listitem [ref=f4e1254]:
+                                  - generic [ref=f4e1255]:
+                                    - link "生成内容 · 第 1 次" [ref=f4e1256] [cursor=pointer]:
+                                      - /url: /runs/d1a3b46c-a5d7-4314-8729-5982313a20d2?tab=evidence&target=d1a3b46c-a5d7-4314-8729-5982313a20d2%3Anews%3Aagent%3A2%3Amodel%3A1&history=group%3Dattention
+                                    - generic [ref=f4e1257]: 已完成
+                                  - list [ref=f4e1259]:
+                                    - listitem [ref=f4e1260]:
+                                      - generic [ref=f4e1261]:
+                                        - link "联系服务 · 第 1 次" [ref=f4e1262] [cursor=pointer]:
+                                          - /url: /runs/d1a3b46c-a5d7-4314-8729-5982313a20d2?tab=evidence&target=d1a3b46c-a5d7-4314-8729-5982313a20d2%3Anews%3Aagent%3A2%3Amodel%3A1%3Aattempt%3A1&history=group%3Dattention
+                                        - generic [ref=f4e1263]: 已完成
+                        - listitem [ref=f4e1264]:
+                          - generic [ref=f4e1265]:
+                            - link "证据与风险复核 · 第 1 次" [ref=f4e1266] [cursor=pointer]:
+                              - /url: /runs/d1a3b46c-a5d7-4314-8729-5982313a20d2?tab=evidence&target=d1a3b46c-a5d7-4314-8729-5982313a20d2%3Anode%3Arisk&history=group%3Dattention
+                            - generic [ref=f4e1267]: 已完成
+                          - list [ref=f4e1269]:
+                            - listitem [ref=f4e1270]:
+                              - generic [ref=f4e1271]:
+                                - link "处理任务 · 第 1 次" [ref=f4e1272] [cursor=pointer]:
+                                  - /url: /runs/d1a3b46c-a5d7-4314-8729-5982313a20d2?tab=evidence&target=d1a3b46c-a5d7-4314-8729-5982313a20d2%3Arisk%3Aagent%3A1&history=group%3Dattention
+                                - generic [ref=f4e1273]: 已完成
+                              - list [ref=f4e1275]:
+                                - listitem [ref=f4e1276]:
+                                  - generic [ref=f4e1277]:
+                                    - link "生成内容 · 第 1 次" [ref=f4e1278] [cursor=pointer]:
+                                      - /url: /runs/d1a3b46c-a5d7-4314-8729-5982313a20d2?tab=evidence&target=d1a3b46c-a5d7-4314-8729-5982313a20d2%3Arisk%3Aagent%3A1%3Amodel%3A1&history=group%3Dattention
+                                    - generic [ref=f4e1279]: 已完成
+                                  - list [ref=f4e1281]:
+                                    - listitem [ref=f4e1282]:
+                                      - generic [ref=f4e1283]:
+                                        - link "联系服务 · 第 1 次" [ref=f4e1284] [cursor=pointer]:
+                                          - /url: /runs/d1a3b46c-a5d7-4314-8729-5982313a20d2?tab=evidence&target=d1a3b46c-a5d7-4314-8729-5982313a20d2%3Arisk%3Aagent%3A1%3Amodel%3A1%3Aattempt%3A1&history=group%3Dattention
+                                        - generic [ref=f4e1285]: 已完成
+                        - listitem [ref=f4e1286]:
+                          - generic [ref=f4e1287]:
+                            - link "保存美股研究报告 · 第 1 次" [ref=f4e1288] [cursor=pointer]:
+                              - /url: /runs/d1a3b46c-a5d7-4314-8729-5982313a20d2?tab=evidence&target=d1a3b46c-a5d7-4314-8729-5982313a20d2%3Anode%3Asave&history=group%3Dattention
+                            - generic [ref=f4e1289]: 已完成
+                          - list [ref=f4e1291]:
+                            - listitem [ref=f4e1292]:
+                              - generic [ref=f4e1293]:
+                                - link "处理任务 · 第 1 次" [ref=f4e1294] [cursor=pointer]:
+                                  - /url: /runs/d1a3b46c-a5d7-4314-8729-5982313a20d2?tab=evidence&target=d1a3b46c-a5d7-4314-8729-5982313a20d2%3Asave%3Aagent%3A1&history=group%3Dattention
+                                - generic [ref=f4e1295]: 已完成
+                              - list [ref=f4e1297]:
+                                - listitem [ref=f4e1298]:
+                                  - generic [ref=f4e1299]:
+                                    - link "保存报告 · 第 1 次" [ref=f4e1300] [cursor=pointer]:
+                                      - /url: /runs/d1a3b46c-a5d7-4314-8729-5982313a20d2?tab=evidence&target=d1a3b46c-a5d7-4314-8729-5982313a20d2%3Asave%3Aagent%3A1%3Atool%3Adeterministic&history=group%3Dattention
+                                    - generic [ref=f4e1301]: 已完成
+                                  - list [ref=f4e1303]:
+                                    - listitem [ref=f4e1304]:
+                                      - generic [ref=f4e1305]:
+                                        - link "联系服务 · 第 1 次" [ref=f4e1306] [cursor=pointer]:
+                                          - /url: /runs/d1a3b46c-a5d7-4314-8729-5982313a20d2?tab=evidence&target=d1a3b46c-a5d7-4314-8729-5982313a20d2%3Asave%3Aagent%3A1%3Atool%3Adeterministic%3Aattempt%3A1&history=group%3Dattention
+                                        - generic [ref=f4e1307]: 已完成
+                    - region "所选操作详情" [ref=f4e1308]:
+                      - heading "公司财务分析师" [level=2] [ref=f4e1381]
+                      - paragraph [ref=f4e1310]: 第 1 次 · 执行失败
+                      - paragraph [ref=f4e1311]: 开始：2026/9/16 03:50:21 · 完成：2026/9/16 03:50:38
+                      - paragraph [ref=f4e1383]: 模型没有按任务要求提供可用结果。可以重试，或检查助手的结果要求。
+                      - region "步骤的信息来源" [ref=f4e1312]:
+                        - heading "本步骤的信息来源" [level=3] [ref=f4e1313]
+                        - generic [ref=f4e1314]:
+                          - generic [ref=f4e1336]:
+                            - term [ref=f4e1337]: 股票代码
+                            - definition [ref=f4e1338]:
+                              - paragraph [ref=f4e1340]: 用户填写的信息 › 股票代码
+                          - generic [ref=f4e1348]:
+                            - term [ref=f4e1349]: 分析截止日期
+                            - definition [ref=f4e1350]:
+                              - paragraph [ref=f4e1352]: 用户填写的信息 › 分析截止日期
+                          - generic [ref=f4e1353]:
+                            - term [ref=f4e1354]: 研究问题
+                            - definition [ref=f4e1355]:
+                              - paragraph [ref=f4e1357]: 用户填写的信息 › 研究问题
+                          - generic [ref=f4e1361]:
+                            - term [ref=f4e1362]: 判断期限（月）
+                            - definition [ref=f4e1363]:
+                              - paragraph [ref=f4e1365]: 用户填写的信息 › 判断期限（月）
+                          - generic [ref=f4e1384]:
+                            - term [ref=f4e1385]: 补充资料
+                            - definition [ref=f4e1386]:
+                              - generic [ref=f4e1387]:
+                                - paragraph [ref=f4e1388]: 用户填写的信息 › 补充资料
+                                - generic [ref=f4e1389]:
+                                  - paragraph [ref=f4e1390]: 未提供时使用：
+                                  - list
+                        - link "查看本次填写的信息" [ref=f4e1366] [cursor=pointer]:
+                          - /url: /runs/d1a3b46c-a5d7-4314-8729-5982313a20d2?tab=snapshot&history=group%3Dattention
+  - region "Notifications alt+T"

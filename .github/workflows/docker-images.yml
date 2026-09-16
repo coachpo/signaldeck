@@ -11,6 +11,8 @@ on:
       - 'backend/**'
       - 'frontend'
       - 'frontend/**'
+      - 'plugins/**'
+      - '.dockerignore'
       - '.github/workflows/docker-images.yml'
   workflow_dispatch:
     inputs:
@@ -23,6 +25,9 @@ on:
           - all
           - backend
           - frontend
+          - finance
+          - notes
+          - digital-oracle
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -30,8 +35,6 @@ concurrency:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME_BACKEND: signaldeck-backend
-  IMAGE_NAME_FRONTEND: signaldeck-frontend
   BUILD_PLATFORM: linux/amd64,linux/arm64
 
 jobs:
@@ -45,13 +48,37 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        service: ${{ fromJSON(github.event_name == 'workflow_dispatch' && inputs.service != 'all' && format('["{0}"]', inputs.service) || '["backend","frontend"]') }}
+        service: ${{ fromJSON(github.event_name == 'workflow_dispatch' && inputs.service != 'all' && format('["{0}"]', inputs.service) || '["backend","frontend","finance","notes","digital-oracle"]') }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
         with:
           fetch-depth: 1
+
+      - name: Resolve build target
+        id: target
+        env:
+          SERVICE: ${{ matrix.service }}
+        run: |
+          case "$SERVICE" in
+            backend|frontend)
+              echo "context=./$SERVICE" >> "$GITHUB_OUTPUT"
+              echo "file=./$SERVICE/Dockerfile" >> "$GITHUB_OUTPUT"
+              ;;
+            finance|notes)
+              echo "context=." >> "$GITHUB_OUTPUT"
+              echo "file=./plugins/$SERVICE/Dockerfile" >> "$GITHUB_OUTPUT"
+              ;;
+            digital-oracle)
+              echo "context=./plugins" >> "$GITHUB_OUTPUT"
+              echo "file=./plugins/digital_oracle/Dockerfile" >> "$GITHUB_OUTPUT"
+              ;;
+            *)
+              echo "Unsupported service: $SERVICE" >&2
+              exit 1
+              ;;
+          esac
 
       - name: Set up QEMU (for arm64 emulation)
         uses: docker/setup-qemu-action@v4
@@ -74,11 +101,12 @@ jobs:
         id: meta
         uses: docker/metadata-action@v6
         with:
-          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.service == 'backend' && env.IMAGE_NAME_BACKEND || env.IMAGE_NAME_FRONTEND }}
+          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/signaldeck-${{ matrix.service }}
           tags: |
             type=ref,event=branch
             type=ref,event=pr
             type=ref,event=tag
+            type=sha,format=long
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=raw,value=latest,enable={{is_default_branch}}
@@ -94,8 +122,8 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           builder: ${{ steps.buildx.outputs.name }}
-          context: ./${{ matrix.service }}
-          file: ./${{ matrix.service }}/Dockerfile
+          context: ${{ steps.target.outputs.context }}
+          file: ${{ steps.target.outputs.file }}
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

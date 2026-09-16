@@ -19,7 +19,8 @@ def render(registry, backend):
         "resolver 127.0.0.11 valid=10s ipv6=off;",
         """location = /_plugin_auth {
     internal;
-    proxy_pass http://BACKEND/api/plugin-auth;
+    set $auth_upstream "http://BACKEND";
+    proxy_pass $auth_upstream/api/plugin-auth;
     proxy_pass_request_body off;
     proxy_set_header Content-Length "";
     proxy_set_header Authorization $http_authorization;
