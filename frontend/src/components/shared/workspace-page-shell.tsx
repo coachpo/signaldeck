@@ -17,7 +17,7 @@ export type WorkspacePageShellProps = {
 };
 
 export function WorkspacePageShell({
-  bodyAriaLabel = "Workspace body",
+  bodyAriaLabel = "页面内容",
   bodyClassName,
   children,
   className,
@@ -79,6 +79,7 @@ export function WorkspacePageShell({
           )}
           data-testid="workspace-page-shell-body"
           data-workspace-shell-region="body"
+          tabIndex={0}
         >
           {children}
         </section>

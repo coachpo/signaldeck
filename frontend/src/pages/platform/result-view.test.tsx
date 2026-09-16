@@ -108,6 +108,18 @@ describe("ordinary results", () => {
     expect(await screen.findByText("原始内容")).toBeVisible();
   });
 
+  it("reads results inside a shell-owned scroll region that keeps the bottom actions reachable", async () => {
+    vi.stubGlobal("fetch", fetcher());
+    mount();
+    expect(await screen.findByRole("heading", { name: "研究正文" })).toBeVisible();
+    const body = screen.getByTestId("workspace-page-shell-body");
+    expect(body).toHaveClass("min-h-0", "flex-1", "overflow-auto");
+    expect(body).toHaveAttribute("tabindex", "0");
+    expect(body).toContainElement(
+      screen.getByRole("link", { name: "查看执行过程" }),
+    );
+  });
+
   it("explains a model failure while retaining the input-reuse and evidence destinations", async () => {
     vi.stubGlobal("fetch", fetcher({ status: "failed", errorCode: "model_http_error", errorCategory: "quota", missing: [] }));
     mount();

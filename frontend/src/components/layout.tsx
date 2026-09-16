@@ -396,8 +396,11 @@ export function Layout() {
             </div>
           ) : (
             <div
+              aria-label="页面内容"
               className="h-full min-w-0 overflow-x-hidden overflow-y-auto"
               data-slot="layout-scroll-viewport"
+              role="region"
+              tabIndex={0}
             >
               <div
                 className={routeWidthWrapperClassName(routeMetadata.widthMode)}

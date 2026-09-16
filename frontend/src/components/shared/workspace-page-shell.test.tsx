@@ -64,6 +64,20 @@ describe("WorkspacePageShell", () => {
     expect(rail).not.toContainElement(content);
   });
 
+  it("keeps the scrollable body reachable by keyboard under a product-language name", () => {
+    render(
+      <WorkspacePageShell contextBar={<PageContextBar title="Run context" />}>
+        <p>Scrollable workspace body</p>
+      </WorkspacePageShell>,
+    );
+
+    const body = screen.getByTestId("workspace-page-shell-body");
+
+    expect(body).toHaveClass("overflow-auto");
+    expect(body).toHaveAttribute("tabindex", "0");
+    expect(body).toHaveAttribute("aria-label", "页面内容");
+  });
+
   it("renders without a left rail and keeps body as the only content region", () => {
     render(
       <WorkspacePageShell

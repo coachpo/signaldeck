@@ -7,7 +7,8 @@ import { Link, useParams, useSearchParams } from "react-router";
 import { MarkdownContent } from "@/components/shared/markdown-content";
 import { ExecutionDiagnostic } from "./execution-diagnostic";
 import { Button } from "@/components/ui/button";
-import { InventoryPageShell } from "@/components/shared/inventory-page-shell";
+import { WorkspacePageShell } from "@/components/shared/workspace-page-shell";
+import { PageContextBar } from "@/components/shared/page-context-bar";
 import { InventoryStatePanel } from "@/components/shared/inventory-state-panel";
 import { InlineStatePanel } from "@/components/shared/inline-state-panel";
 import { ResourceStatusBadge } from "@/components/shared/resource-status-strip";
@@ -55,43 +56,47 @@ function ResultContent({ result }: { result: RunResult }) {
   const mutations = usePlatformMutations();
   const active = result.status === "queued" || result.status === "running";
   return (
-    <InventoryPageShell
-      pageContext={{
-        title: result.title,
-        description: `${originLabels[result.origin.kind] ?? "任务开始"} · ${new Date(result.createdAt).toLocaleString()}`,
-        status: (
-          <ResourceStatusBadge
-            label={resultStatusLabels[result.status] ?? "状态待确认"}
-            tone={resultStatusTone(result.status)}
-          />
-        ),
-        actions: (
-          <div className="flex flex-wrap gap-2">
-            <Button asChild variant="outline">
-              <Link
-                to={`/runs${search.get("history") ? `?${search.get("history")}` : ""}`}
-              >
-                全部结果
-              </Link>
-            </Button>
-            {active && (
-              <Button
-                variant="outline"
-                disabled={
-                  !!result.cancelRequestedAt || mutations.cancel.isPending
-                }
-                onClick={() =>
-                  void mutations.cancel
-                    .mutateAsync(result.runId)
-                    .catch(() => {})
-                }
-              >
-                取消本次运行
+    <WorkspacePageShell
+      bodyAriaLabel="结果内容"
+      bodyClassName="gap-4"
+      contextBar={
+        <PageContextBar
+          title={result.title}
+          description={`${originLabels[result.origin.kind] ?? "任务开始"} · ${new Date(result.createdAt).toLocaleString()}`}
+          status={
+            <ResourceStatusBadge
+              label={resultStatusLabels[result.status] ?? "状态待确认"}
+              tone={resultStatusTone(result.status)}
+            />
+          }
+          actions={
+            <div className="flex flex-wrap gap-2">
+              <Button asChild variant="outline">
+                <Link
+                  to={`/runs${search.get("history") ? `?${search.get("history")}` : ""}`}
+                >
+                  全部结果
+                </Link>
               </Button>
-            )}
-          </div>
-        ),
-      }}
+              {active && (
+                <Button
+                  variant="outline"
+                  disabled={
+                    !!result.cancelRequestedAt || mutations.cancel.isPending
+                  }
+                  onClick={() =>
+                    void mutations.cancel
+                      .mutateAsync(result.runId)
+                      .catch(() => {})
+                  }
+                >
+                  取消本次运行
+                </Button>
+              )}
+            </div>
+          }
+        />
+      }
     >
       <RequestError error={mutations.cancel.error || original.error} />
       {result.cancelRequestedAt && (
@@ -302,6 +307,6 @@ function ResultContent({ result }: { result: RunResult }) {
           </Link>
         </Button>
       </div>
-    </InventoryPageShell>
+    </WorkspacePageShell>
   );
 }

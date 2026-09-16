@@ -46,6 +46,15 @@ describe("platform shell", () => {
       "scroll",
     );
   });
+  it("gives scroll routes a keyboard-reachable scroll viewport", async () => {
+    renderRoute("/runs");
+    const main = await screen.findByRole("main");
+    expect(main).toHaveAttribute("data-route-shell-mode", "scroll");
+    const viewport = main.querySelector('[data-slot="layout-scroll-viewport"]');
+    expect(viewport).toHaveClass("overflow-y-auto");
+    expect(viewport).toHaveAttribute("tabindex", "0");
+    expect(viewport).toHaveAttribute("aria-label", "页面内容");
+  });
   it("gives the definition editor a full-height route shell", async () => {
     renderRoute("/workflow-packages/new");
     expect(await screen.findByRole("main")).toHaveAttribute(
