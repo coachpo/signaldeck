@@ -49,3 +49,4 @@ export function confirmDelete(options: { title: string; description: string }): 
 export const mountShell = mountPluginShell;
 
 export { pluginFetch, pluginUrl, navigate, relativeLocation } from "./bridge";
+export { copyText } from "@/lib/clipboard";

@@ -7,7 +7,8 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../.
 const require = createRequire(path.join(root, 'frontend/package.json'));
 const { chromium, expect } = require('@playwright/test');
 const browser = await chromium.launch({ headless: true });
-const page = await browser.newPage();
+const context = await browser.newContext();
+const page = await context.newPage();
 const errors = [];
 page.on('pageerror', error => errors.push(error.message));
 const screenshots = path.join(root, 'output/playwright/notes-ux');
@@ -69,6 +70,19 @@ try {
   await page.getByRole('button', { name: '复制正文', exact: true }).click();
   await expect(page.getByRole('status')).toHaveText('正文已复制。');
   assert.equal(await page.evaluate(() => navigator.clipboard.readText()), '用户原文 inputs.my_code 保持原样。');
+  // A LAN address over plain HTTP is not a secure context, so that page has no Clipboard API.
+  const plainHttp = await context.newPage();
+  plainHttp.on('pageerror', error => errors.push(error.message));
+  await plainHttp.addInitScript(() => { Reflect.deleteProperty(Navigator.prototype, 'clipboard'); });
+  await plainHttp.goto(page.url());
+  await expect(plainHttp.locator('#noteText')).toHaveText('用户原文 inputs.my_code 保持原样。');
+  await page.evaluate(() => navigator.clipboard.writeText('复制前'));
+  await plainHttp.bringToFront();
+  await plainHttp.getByRole('button', { name: '复制正文', exact: true }).click();
+  await expect(plainHttp.getByRole('status')).toHaveText('正文已复制。');
+  assert.equal(await page.evaluate(() => navigator.clipboard.readText()), '用户原文 inputs.my_code 保持原样。');
+  await plainHttp.close();
+  await page.bringToFront();
   await page.goBack();
   await page.getByRole('link', { name: '访谈原始记录', exact: true }).waitFor();
   await page.reload();
@@ -98,5 +112,5 @@ try {
   await expect(page.locator('#summary')).toHaveText('本页 2 条笔记');
   await expect(page.getByLabel('检索范围')).toHaveValue('true');
   assert.deepEqual(errors, []);
-  console.log(JSON.stringify({ status: 'passed', screenshots, checks: ['initial loading controls', 'shared theme and platform navigation', 'compact responsive layout', 'source title', 'body preservation and copy', 'back and refresh', 'source failure and recovery'] }));
+  console.log(JSON.stringify({ status: 'passed', screenshots, checks: ['initial loading controls', 'shared theme and platform navigation', 'compact responsive layout', 'source title', 'body preservation and copy', 'copy over plain HTTP', 'back and refresh', 'source failure and recovery'] }));
 } finally { await browser.close(); }

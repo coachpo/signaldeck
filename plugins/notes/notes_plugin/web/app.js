@@ -98,6 +98,6 @@ async function render() {
 $('search').addEventListener('submit', event => { event.preventDefault(); navigate(new URLSearchParams({collection: $('collection').value, query: $('query').value, includeDerived: $('includeDerived').value})); });
 $('next').addEventListener('click', () => { if (nextCursor === null) return; const params = new URLSearchParams(location.search); params.append('cursor', nextCursor); navigate(params); });
 $('previous').addEventListener('click', () => { const params = new URLSearchParams(location.search); const cursors = params.getAll('cursor'); params.delete('cursor'); cursors.slice(0, -1).forEach(cursor => params.append('cursor', cursor)); navigate(params); });
-$('copy').addEventListener('click', async () => { if (!currentNote) return; try { await navigator.clipboard.writeText(currentNote.text); $('status').textContent = '正文已复制。'; } catch { $('status').textContent = '浏览器未允许复制，请选择正文后手动复制。'; } });
+$('copy').addEventListener('click', async () => { if (!currentNote) return; try { await window.SignalDeckUI.copyText(currentNote.text); $('status').textContent = '正文已复制。'; } catch { $('status').textContent = '浏览器未允许复制，请选择正文后手动复制。'; } });
 window.addEventListener('popstate', render);
 render();

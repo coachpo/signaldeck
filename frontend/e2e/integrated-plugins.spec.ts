@@ -133,9 +133,11 @@ test("Finance deep links refresh, all three plugin pages fit four widths inside 
   }
 });
 
-test("a confirmed Notes result opens its workspace and retains its source navigation", async ({ page, request }, testInfo) => {
+test("a confirmed Notes result opens its workspace, copies its body over plain HTTP and retains its source navigation", async ({ page, request }, testInfo) => {
   test.setTimeout(150_000);
   await page.addInitScript(() => {
+    // A LAN address over plain HTTP is not a secure context, so no frame has the Clipboard API.
+    Reflect.deleteProperty(Navigator.prototype, "clipboard");
     const messages: unknown[] = [];
     Object.assign(window, { integratedBridgeMessages: messages });
     window.addEventListener("message", event => {
@@ -173,6 +175,14 @@ test("a confirmed Notes result opens its workspace and retains its source naviga
   await testInfo.attach("forward-bridge-messages", { body: JSON.stringify(await page.evaluate(() => Reflect.get(window, "integratedBridgeMessages"))), contentType: "application/json" });
   await page.reload();
   await expect(frame.getByRole("heading", { name: title, exact: true })).toBeVisible();
+  await frame.getByRole("button", { name: "复制正文", exact: true }).click();
+  await expect(frame.getByRole("status")).toHaveText("正文已复制。");
+  // Read the clipboard from a loopback page, which is a secure context.
+  await page.context().grantPermissions(["clipboard-read"]);
+  const reader = await page.context().newPage();
+  await reader.goto(new URL("/health", apiBase).href);
+  expect(await reader.evaluate(() => navigator.clipboard.readText())).toBe("Original evidence from the real durable Notes operation.");
+  await reader.close();
   await page.getByRole("link", { name: "返回来源结果", exact: true }).click();
   await expect(page).toHaveURL(resultUrl);
 });
