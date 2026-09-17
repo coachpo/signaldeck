@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
+import { apiBase, seed } from "./platform-fixtures";
 async function openSavedTaskCatalog(page: Page) {
   const loading = page.waitForResponse((response) => new URL(response.url()).pathname === "/api/workflow-packages" && response.request().method() === "GET");
   await page.goto("/");
@@ -60,6 +61,92 @@ test("generic navigation owns one route shell without statically compiled busine
   await expect(
     page.getByRole("heading", { name: "找不到页面" }),
   ).toBeVisible();
+});
+test("opens creation, edit and detail pages when plain HTTP withholds secure-context APIs", async ({
+  page,
+  request,
+}) => {
+  const { key } = await seed(request);
+  const launched = await request.post(`${apiBase}/workflow-packages/${key}/launches`, {
+    data: { workflowKey: "main", parameters: { summary: "Plain HTTP result" }, launchId: crypto.randomUUID() },
+  });
+  expect(launched.ok(), await launched.text()).toBeTruthy();
+  const run = await launched.json();
+  const scheduleName = `Plain HTTP ${key}`;
+  const created = await request.post(`${apiBase}/schedules`, {
+    data: {
+      name: scheduleName,
+      packageKey: key,
+      workflowKey: "main",
+      parameters: { summary: "Plain HTTP schedule" },
+      cron: "0 9 * * *",
+      timeZone: "UTC",
+      overlapPolicy: "skip",
+      catchupWindowSeconds: 60,
+      paused: true,
+    },
+  });
+  expect(created.ok(), await created.text()).toBeTruthy();
+  const schedule = await created.json();
+  await expect
+    .poll(async () => (await (await request.get(`${apiBase}/runs/${run.id}`)).json()).status, { timeout: 60000 })
+    .toBe("succeeded");
+  // Browsers expose these only in secure contexts, which a LAN address over HTTP is not.
+  await page.addInitScript(() => {
+    Reflect.deleteProperty(Crypto.prototype, "randomUUID");
+    Reflect.deleteProperty(Crypto.prototype, "subtle");
+    Reflect.deleteProperty(Navigator.prototype, "clipboard");
+  });
+  const pageErrors: string[] = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+  const pages: [string, (page: Page) => Promise<void>][] = [
+    [`/tasks/new?packageKey=${key}&workflowKey=main`, (p) => expect(p.getByRole("button", { name: "开始任务" })).toBeVisible()],
+    ["/workflow-packages/new", (p) => expect(p.getByLabel("工作流集名称")).toBeVisible()],
+    ["/resources", (p) => expect(p.getByRole("heading", { name: "服务连接", level: 1 })).toBeVisible()],
+    ["/scheduled-tasks", (p) => expect(p.getByRole("heading", { name: scheduleName })).toBeVisible()],
+    ["/scheduled-tasks/new", (p) => expect(p.getByRole("button", { name: "启用自动执行" })).toBeVisible()],
+    [`/scheduled-tasks/${schedule.id}`, (p) => expect(p.getByRole("button", { name: "保存安排" })).toBeVisible()],
+    [`/runs/${run.id}`, (p) => expect(p.getByRole("button", { name: "再运行一次" })).toBeVisible()],
+    [`/workflow-packages/${key}`, async (p) => {
+      await p.getByRole("button", { name: "添加任务流程" }).click();
+      await expect(p.getByRole("button", { name: "任务流程 2", exact: true })).toBeVisible();
+    }],
+  ];
+  for (const [path, ready] of pages) {
+    await page.goto(path);
+    await ready(page);
+    await expect(page.getByTestId("route-error-page")).toHaveCount(0);
+  }
+  expect(pageErrors).toEqual([]);
+});
+test("reopens a page whose file failed to load once and stops after one reload when it keeps failing", async ({ page }) => {
+  let loads = 0;
+  page.on("load", () => loads++);
+  let failures = 1;
+  // Stands in for a file replaced by a restart or redeploy while the tab stayed open.
+  await page.route(/\/assets\/attention-[^/]+\.js$/, (route) => (failures-- > 0 ? route.abort() : route.continue()));
+  await page.goto("/");
+  await expect(page.getByTestId("route-tasks")).toBeVisible();
+  await Promise.all([page.waitForEvent("load"), page.getByTestId("nav-attention").click()]);
+  await expect(page.getByRole("heading", { name: "执行更新", level: 1 })).toBeVisible();
+  await expect(page).toHaveURL("/attention");
+  expect(loads).toBe(2);
+
+  failures = Number.POSITIVE_INFINITY;
+  await page.goto("/");
+  await expect(page.getByTestId("route-tasks")).toBeVisible();
+  await Promise.all([page.waitForEvent("load"), page.getByTestId("nav-attention").click()]);
+  await expect(page.getByTestId("route-error-page")).toBeVisible();
+  await expect(page).toHaveURL("/attention");
+  expect(loads).toBe(4);
+  const reloadedAgain = await page.waitForEvent("load", { timeout: 3_000 }).then(() => true, () => false);
+  expect(reloadedAgain).toBe(false);
+  await expect(page.getByTestId("route-error-page")).toBeVisible();
+});
+test("opens the task home for a location path with repeated leading slashes", async ({ page, baseURL }) => {
+  await page.goto(`${baseURL}//`);
+  await expect(page.getByTestId("route-tasks")).toBeVisible();
+  await expect(page.getByTestId("route-error-page")).toHaveCount(0);
 });
 for (const width of [375, 768, 1024, 1440])
   test(`definition workspace and resources fit width ${width}`, async ({

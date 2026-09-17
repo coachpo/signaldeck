@@ -7,6 +7,7 @@ import { RunPage } from "./runs";
 import { ResultHistoryPage } from "./result-history";
 import { runFixture } from "./fixtures";
 import type { RunResult } from "@/lib/types/result";
+import { stubInsecureContext } from "@/test/insecure-context";
 vi.mock("@/hooks/use-model-usage", () => ({
   useModelUsage: () => ({ run: {}, day: {}, selectedDay: { date: "2026-09-10", timezone: "UTC" } }),
 }));
@@ -510,4 +511,24 @@ it("recovers an uncertain rerun after refresh without persisting input or connec
   await waitFor(() => expect(router.state.location.pathname).toBe("/runs/accepted-after-refresh"));
   expect(requests[1]).toEqual(requests[0]);
   expect(sessionStorage.getItem("signaldeck:pending-rerun:run-1")).toBeNull();
+});
+
+it("opens a result over plain HTTP and starts a rerun with a generated identity", async () => {
+  stubInsecureContext();
+  const identities: string[] = [];
+  const fallback = fetcher();
+  vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => {
+    if (url.endsWith("/rerun")) {
+      identities.push(JSON.parse(init!.body as string).launchId);
+      return response({ ...runFixture, id: "rerun-over-http" });
+    }
+    return fallback(url);
+  }));
+  const router = mount();
+  expect(await screen.findByRole("heading", { name: "研究正文" })).toBeVisible();
+  await waitFor(() => expect(screen.getByRole("button", { name: "再运行一次" })).toBeEnabled());
+  fireEvent.click(screen.getByRole("button", { name: "再运行一次" }));
+  fireEvent.click(await screen.findByRole("button", { name: "确认并开始新运行" }));
+  await waitFor(() => expect(router.state.location.pathname).toBe("/runs/rerun-over-http"));
+  expect(identities).toEqual([expect.stringMatching(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/)]);
 });

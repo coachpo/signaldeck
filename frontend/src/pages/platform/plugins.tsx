@@ -14,8 +14,10 @@ import { PluginHealth } from "./plugin-health";
 import { RequestError } from "./feedback";
 import { safePluginPageUrl, usePluginNavigationUrl } from "./plugin-links";
 import { capabilityName, pluginName } from "./connection-model";
+import { registerRetainedWork } from "@/lib/retained-work";
 
 let installationDraft: { release: PluginRelease; fileName: string } | null = null;
+registerRetainedWork(() => installationDraft !== null);
 function readInstallation(text: string): PluginRelease {
   const parsed = JSON.parse(text);
   const value = parsed?.release ?? parsed;

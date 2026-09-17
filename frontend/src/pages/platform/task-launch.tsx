@@ -3,6 +3,8 @@ import type { TaskDraft, TaskDraftWrite } from "@/lib/types/task-drafts";
 import { useRef, useState } from "react";
 import { useUnsavedWork } from "@/hooks/use-unsaved-work";
 import { ApiRequestError } from "@/lib/api-client";
+import { randomUUID } from "@/lib/random-uuid";
+import { registerRetainedWork } from "@/lib/retained-work";
 import { useNavigate } from "react-router";
 import {
   useTaskMutations,
@@ -45,6 +47,7 @@ const drafts = new Map<
     changed?: boolean;
   }
 >();
+registerRetainedWork(() => [...drafts.values()].some((draft) => draft.changed || draft.uncertain));
 export function TaskForm({
   formKey,
   packageKey,
@@ -85,7 +88,7 @@ export function TaskForm({
         executionOptions: restored?.executionOptions ?? historical?.executionOptions ?? preset?.executionOptions,
         hasParameters: restored?.hasParameters ?? true,
         launchId: restored?.launchId ?? initialLaunchId,
-        serverId: restored?.id ?? crypto.randomUUID(),
+        serverId: restored?.id ?? randomUUID(),
         serverRevision: restored?.revision ?? 0,
         jsonText: restored?.jsonText ?? null,
         uncertain: restored?.pending ?? false,
@@ -161,7 +164,7 @@ export function TaskForm({
   }
   function draftPayload(pending = uncertain, token = draft.prepared?.bindingToken ?? null): TaskDraftWrite & { id: string } {
     return {
-      id: draft.serverId ?? crypto.randomUUID(), revision: draft.serverRevision ?? 0,
+      id: draft.serverId ?? randomUUID(), revision: draft.serverRevision ?? 0,
       name: name.trim() || descriptor.title, packageKey, workflowKey, packageHash,
       sourceRunId: restored?.sourceRunId ?? historical?.sourceRunId ?? null,
       hasParameters: draft.hasParameters ?? true, parameters,
@@ -173,7 +176,7 @@ export function TaskForm({
   async function persistDraft(asCopy = false) {
     try {
       setError(null);
-      const savedDraft = await draftMutations.save.mutateAsync({ ...draftPayload(), ...(asCopy ? { id: crypto.randomUUID(), revision: 0 } : {}) });
+      const savedDraft = await draftMutations.save.mutateAsync({ ...draftPayload(), ...(asCopy ? { id: randomUUID(), revision: 0 } : {}) });
       const next = { ...draft, serverId: savedDraft.id, serverRevision: savedDraft.revision, name, changed: false };
       setDraft(next); drafts.set(draftKey, next);
       setDraftChanged(false); setDraftNotice("草稿已保存，可以关闭页面后继续填写。");

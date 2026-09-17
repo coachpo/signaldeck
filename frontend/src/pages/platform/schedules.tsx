@@ -3,6 +3,7 @@ import { useUnsavedWork } from "@/hooks/use-unsaved-work";
 import { scheduleDrafts, scheduleTriggerDrafts, scheduleConfigKey } from "./schedule-drafts";
 import { Link, useNavigate, useParams, useLocation } from "react-router";
 import { ApiRequestError } from "@/lib/api-client";
+import { randomUUID } from "@/lib/random-uuid";
 import { Button } from "@/components/ui/button";
 import { useDisplayMode } from "@/hooks/use-display-mode";
 import {
@@ -67,7 +68,7 @@ function ScheduleEditor({ schedule }: { schedule?: Schedule }) {
   const restored = scheduleDrafts.get(draftKey);
   const [draft, setDraft] = useState<ScheduleConfig>(
     restored?.value ?? schedule ?? {
-      creationId: crypto.randomUUID(),
+      creationId: randomUUID(),
       name:
         inherited?.name ??
         (inherited ? "任务自动执行" : ""),
@@ -90,7 +91,7 @@ function ScheduleEditor({ schedule }: { schedule?: Schedule }) {
   const [error, setError] = useState<unknown>(null);
   const [acceptedTrigger, setAcceptedTrigger] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [triggerId, setTriggerId] = useState(() => restored?.triggerId ?? scheduleTriggerDrafts.get(schedule?.id ?? "") ?? crypto.randomUUID());
+  const [triggerId, setTriggerId] = useState(() => restored?.triggerId ?? scheduleTriggerDrafts.get(schedule?.id ?? "") ?? randomUUID());
   const [triggerUncertain, setTriggerUncertain] = useState(restored?.triggerUncertain ?? scheduleTriggerDrafts.has(schedule?.id ?? ""));
   const changed = scheduleConfigKey(draft) !== savedValue;
   const unsaved = changed || parametersDirty || creationUncertain || triggerUncertain;
@@ -156,7 +157,7 @@ function ScheduleEditor({ schedule }: { schedule?: Schedule }) {
       setAcceptedTrigger(true);
       setTriggerUncertain(false);
       scheduleTriggerDrafts.delete(schedule!.id);
-      setTriggerId(crypto.randomUUID());
+      setTriggerId(randomUUID());
     } catch (e) {
       if (e instanceof ApiRequestError && [400, 404, 422].includes(e.status)) {
         setTriggerUncertain(false);

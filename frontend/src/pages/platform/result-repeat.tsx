@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router";
 import { Button } from "@/components/ui/button";
 import { useResultRerun, usePendingResultRerun } from "@/hooks/use-results";
 import { ApiRequestError } from "@/lib/api-client";
+import { randomUUID } from "@/lib/random-uuid";
 import { useTaskMutations } from "@/hooks/use-task-experience";
 import type { RunResult } from "@/lib/types/result";
 import type { ReuseInput } from "@/lib/types/task-experience";
@@ -17,7 +18,7 @@ export function ResultRepeat({
   original?: ReuseInput;
 }) {
   const command = usePendingResultRerun(result.runId);
-  const [launchId] = useState(() => command.pending?.launchId ?? crypto.randomUUID());
+  const [launchId] = useState(() => command.pending?.launchId ?? randomUUID());
   const [showRepeat, setShowRepeat] = useState(!!command.pending);
   const [unknownChecked, setUnknownChecked] = useState(!!command.pending);
   const task = useTaskMutations();

@@ -1,8 +1,9 @@
 import type { AgentDefinition, Diagnostic, Json, JsonObject, PackageDefinition, WorkflowDefinition } from "@/lib/types/workflow-platform";
+import { randomUUID } from "@/lib/random-uuid";
 import { initialPackageSource, updateSource } from "./package-source";
 
 export function freshKey(prefix: string) {
-  return `${prefix}-${crypto.randomUUID().replaceAll("-", "").slice(0, 16)}`;
+  return `${prefix}-${randomUUID().replaceAll("-", "").slice(0, 16)}`;
 }
 
 export function newAgent(index: number, modelRef = ""): AgentDefinition {

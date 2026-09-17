@@ -7,7 +7,7 @@ import { storeExpert, storeTheme } from "@/lib/display-preferences";
 import { queryKeys } from "@/lib/query-keys";
 import type { PluginPage } from "@/lib/api/plugin-pages";
 import { PluginHost } from "./plugin-host";
-import { localPath, ownedPluginUrl, PLUGIN_UI_PROTOCOL } from "./navigation";
+import { localPath, ownedPluginUrl, PLUGIN_UI_PROTOCOL, pluginRoute } from "./navigation";
 
 const page: PluginPage = { mountKey: "third-v1", pluginId: "third", artifactDigest: "sha256:third", title: "访谈", pageUrl: "/apps/third-v1/", enabled: true };
 function setup(path = "/apps/third-v1/detail/123?view=full#summary") {
@@ -142,5 +142,9 @@ describe("generic plugin host", () => {
     expect(ownedPluginUrl("/apps/unknown/")).toBe("/apps/unknown/");
     expect(localPath("/detail?id=123#body")).toBe(true);
     expect(localPath("/a/../api")).toBe(false);
+  });
+  it("reads location paths with repeated leading slashes on the platform origin", () => {
+    for (const path of ["//", "///", "//?x=1", "//apps/third-v1/"]) expect(pluginRoute(path)).toBeNull();
+    expect(pluginRoute("/apps/third-v1/detail?x=1#top")).toEqual({ mountKey: "third-v1", path: "/detail?x=1#top" });
   });
 });

@@ -7,8 +7,10 @@ import { useResultMetadata, usePatchResultMetadata } from "@/hooks/use-result-me
 import type { ResultMetadata } from "@/lib/types/result-metadata";
 import { ApiRequestError } from "@/lib/api-client";
 import { RequestError } from "./feedback";
+import { registerRetainedWork } from "@/lib/retained-work";
 type NoteDraft = { note: string; revision: number };
 const noteDrafts = new Map<string, NoteDraft>();
+registerRetainedWork(() => noteDrafts.size > 0);
 
 export function ResultMetadataControls({ runId }: { runId: string }) {
   const query = useResultMetadata(runId);

@@ -25,6 +25,7 @@ import { findArtifacts } from "./artifact-references";
 import { safePluginPageUrl } from "./plugin-links";
 import { packageFixture, runFixture } from "./fixtures";
 import type { ReactNode } from "react";
+import { stubInsecureContext } from "@/test/insecure-context";
 function renderPage(element: ReactNode, path = "/") {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -77,6 +78,20 @@ describe("frozen definition editing", () => {
     expect(Object.keys(result.workflows)).toHaveLength(2);
     expect(result.agents).toEqual(parseDefinition(initialPackageSource).agents);
     expect(result.workflows.main).toEqual(parseDefinition(initialPackageSource).workflows.main);
+  });
+  it("adds steps, workflows and assistants over plain HTTP", () => {
+    stubInsecureContext();
+    const onChange = vi.fn();
+    render(<PackageStructure source={initialPackageSource} onChange={onChange} />);
+    fireEvent.click(screen.getByRole("button", { name: /添加步骤$/ }));
+    fireEvent.click(screen.getByRole("button", { name: "添加任务流程" }));
+    fireEvent.click(screen.getByRole("button", { name: "添加助手" }));
+    const [step, workflow, assistant] = onChange.mock.calls.map(([source]) => parseDefinition(source));
+    const initial = parseDefinition(initialPackageSource);
+    const [workflowKey] = Object.keys(initial.workflows);
+    expect(Object.keys(step.workflows[workflowKey].nodes)).toEqual([...Object.keys(initial.workflows[workflowKey].nodes), expect.stringMatching(/^step-[0-9a-f]{16}$/)]);
+    expect(Object.keys(workflow.workflows)).toEqual([workflowKey, expect.stringMatching(/^task-[0-9a-f]{16}$/)]);
+    expect(Object.keys(assistant.agents)).toEqual([...Object.keys(initial.agents), expect.stringMatching(/^assistant-[0-9a-f]{16}$/)]);
   });
   it("uses the saved document rather than stale summary metadata", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(response({ ...packageFixture, name: "Summary is stale" })));

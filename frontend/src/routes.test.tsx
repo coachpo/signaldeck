@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ThemeProvider } from "./components/theme-provider";
 import { router } from "./routes";
+import { stubInsecureContext } from "./test/insecure-context";
 
 Object.defineProperty(globalThis, "localStorage", {
   configurable: true,
@@ -89,7 +90,11 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("router", () => {
-  it("renders every registered route without crashing", async () => {
+  it.each([
+    ["in a secure context", () => undefined],
+    ["over plain HTTP without secure-context APIs", stubInsecureContext],
+  ])("renders every registered route without crashing %s", async (_context, setup) => {
+    setup();
     for (const route of childRoutes()) {
       const handle = route.handle as RouteHandle | undefined;
 

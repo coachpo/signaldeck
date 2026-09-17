@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useTaskDraft } from "@/hooks/use-task-drafts";
 import { usePackages } from "@/hooks/use-workflow-platform";
 import { useTaskPresets, useTaskReuse } from "@/hooks/use-task-experience";
+import { randomUUID } from "@/lib/random-uuid";
 import { InventoryStatePanel } from "@/components/shared/inventory-state-panel";
 import { RequestError } from "./feedback";
 import { taskDefaults } from "./task-catalog";
@@ -12,7 +13,7 @@ import { TaskForm } from "./task-launch";
 export function TaskPage() {
   const location = useLocation();
   const [params] = useSearchParams();
-  const [initialLaunchId] = useState(() => crypto.randomUUID());
+  const [initialLaunchId] = useState(() => randomUUID());
   const draftId = params.get("draftId") ?? undefined;
   const storedDraft = useTaskDraft(draftId);
   const restored = storedDraft.data;

@@ -28,5 +28,19 @@ export default tseslint.config(
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
       ],
     },
+  },
+  {
+    files: ["src/**/*.{ts,tsx}"],
+    ignores: ["src/lib/random-uuid.ts"],
+    rules: {
+      "no-restricted-properties": [
+        "error",
+        {
+          property: "randomUUID",
+          message:
+            "crypto.randomUUID is unavailable over plain HTTP; use randomUUID from @/lib/random-uuid.",
+        },
+      ],
+    },
   }
 );

@@ -7,6 +7,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/com
 import { ResourceStatusBadge } from "@/components/shared/resource-status-strip";
 import { useResources, usePlugins, usePlatformMutations } from "@/hooks/use-workflow-platform";
 import type { Resource } from "@/lib/types/workflow-platform";
+import { randomUUID } from "@/lib/random-uuid";
 import { RequestError } from "./feedback";
 import { ModelObservationDetails } from "./execution-diagnostic";
 import { ConnectionConfigFields, ConnectionCredentials } from "./connection-config";
@@ -47,7 +48,7 @@ export function ResourcesPage() {
 }
 
 function ResourceEditor({ resource, onSaved }: { resource: Resource | null; onSaved: (resource: Resource) => void }) {
-  const [id] = useState(resource?.resourceId ?? `connection-${crypto.randomUUID()}`);
+  const [id] = useState(resource?.resourceId ?? `connection-${randomUUID()}`);
   const draft = useConnectionDraft(resource?.resourceId ?? "new-resource", resource?.config ?? newConnectionConfig("model"));
   const [kind, setKind] = useState<"model" | "tool">(resource?.kind ?? (draft.config.pluginId !== undefined ? "tool" : "model"));
   const [error, setError] = useState<unknown>(null);

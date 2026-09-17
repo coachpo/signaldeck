@@ -18,6 +18,15 @@ import {
 } from "@/hooks/use-schedule-preview";
 import type { ScheduleConfig } from "@/lib/types/workflow-platform";
 
+function previewTime(time: string, timeZone: string): [string, string] {
+  const options = { dateStyle: "medium", timeStyle: "medium" } as const;
+  try {
+    return [new Intl.DateTimeFormat(undefined, { ...options, timeZone }).format(new Date(time)), timeZone];
+  } catch {
+    // The engine can accept zone names this browser cannot display; show the same instant in UTC.
+    return [new Intl.DateTimeFormat(undefined, { ...options, timeZone: "UTC" }).format(new Date(time)), "UTC"];
+  }
+}
 function PreviewTimes({ preview }: { preview: SchedulePreview }) {
   return (
     <div className="flex flex-col gap-1 text-sm">
@@ -36,18 +45,14 @@ function PreviewTimes({ preview }: { preview: SchedulePreview }) {
         )}
       {preview.times.length ? (
         <ul>
-          {preview.times.map((time) => (
-            <li key={time}>
-              <time dateTime={time}>
-                {new Intl.DateTimeFormat(undefined, {
-                  dateStyle: "medium",
-                  timeStyle: "medium",
-                  timeZone: preview.timeZone,
-                }).format(new Date(time))}
-              </time>{" "}
-              · {preview.timeZone}
-            </li>
-          ))}
+          {preview.times.map((time) => {
+            const [text, zone] = previewTime(time, preview.timeZone);
+            return (
+              <li key={time}>
+                <time dateTime={time}>{text}</time> · {zone}
+              </li>
+            );
+          })}
         </ul>
       ) : (
         <p>未查到后续执行时间。</p>

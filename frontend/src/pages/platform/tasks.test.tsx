@@ -2,11 +2,12 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, useLocation } from "react-router";
 import { useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { beforeEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { TaskPage, TasksPage } from "./tasks";
 import { ApiRequestError } from "@/lib/api-client";
 import type { ReuseInput, TaskPreset } from "@/lib/types/task-experience";
 import type { Json, JsonObject } from "@/lib/types/workflow-platform";
+import { stubInsecureContext } from "@/test/insecure-context";
 const mocks = vi.hoisted(() => ({
   saveDraft: vi.fn(),
   getDraft: vi.fn(),
@@ -115,6 +116,7 @@ beforeEach(() => {
   });
   mocks.launch.mockReset();
 });
+afterEach(() => vi.unstubAllGlobals());
 it("shows the catalog authoring entry only in expert mode while keeping ordinary tasks", () => {
   const view = render(<Page path="/tasks" />);
   const taskHref = "/tasks/new?packageKey=task-form-fixture&workflowKey=capture";
@@ -204,6 +206,20 @@ it("shows effective settings automatically and starts with one user action", asy
   fireEvent.click(start);
   await waitFor(() => expect(mocks.launch).toHaveBeenCalledTimes(1));
   expect(mocks.launch.mock.calls[0][0].parameters).toEqual({ title: "一次开始", text: "保留业务原文" });
+});
+it("opens a new task over plain HTTP and starts it with generated identities", async () => {
+  stubInsecureContext();
+  mocks.launch.mockResolvedValue({ id: "plain-http-run" });
+  render(<Page />);
+  fireEvent.change(screen.getByLabelText("标题"), { target: { value: "局域网访问" } });
+  fireEvent.change(screen.getByLabelText("原文"), { target: { value: "保留业务原文" } });
+  const start = screen.getByRole("button", { name: "开始任务" });
+  await waitFor(() => expect(start).toBeEnabled());
+  fireEvent.click(start);
+  await waitFor(() => expect(mocks.launch).toHaveBeenCalledTimes(1));
+  const version4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+  expect(mocks.saveDraft.mock.calls[0][0].id).toMatch(version4);
+  expect(mocks.launch.mock.calls[0][0].launchId).toMatch(version4);
 });
 it("lets experts recheck ready settings without changing the ordinary task input", async () => {
   const view = render(<Page />);

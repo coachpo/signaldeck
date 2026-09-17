@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useUnsavedWork } from "@/hooks/use-unsaved-work";
 import { scheduleTriggerDrafts } from "./schedule-drafts";
 import { ApiRequestError } from "@/lib/api-client";
+import { randomUUID } from "@/lib/random-uuid";
 import { Link } from "react-router";
 import { Button } from "@/components/ui/button";
 import { InventoryPageShell } from "@/components/shared/inventory-page-shell";
@@ -37,7 +38,7 @@ function ScheduleRow({
   const latest = fires.data?.items
     .slice()
     .sort((a, b) => b.scheduledAt.localeCompare(a.scheduledAt))[0];
-  const [triggerId, setTriggerId] = useState(() => scheduleTriggerDrafts.get(s.id) ?? crypto.randomUUID());
+  const [triggerId, setTriggerId] = useState(() => scheduleTriggerDrafts.get(s.id) ?? randomUUID());
   const [triggerUncertain, setTriggerUncertain] = useState(scheduleTriggerDrafts.has(s.id));
   useUnsavedWork(triggerUncertain);
   const [notice, setNotice] = useState("");
@@ -133,7 +134,7 @@ function ScheduleRow({
                   setNotice("已请求执行，打开安排可跟进结果。");
                   setTriggerUncertain(false);
                   scheduleTriggerDrafts.delete(s.id);
-                  setTriggerId(crypto.randomUUID());
+                  setTriggerId(randomUUID());
                 })
                 .catch(error => {
                   if (error instanceof ApiRequestError && [400, 404, 422].includes(error.status)) {

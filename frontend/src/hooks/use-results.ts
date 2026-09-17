@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import type { Preparation } from "@/lib/types/task-experience";
 import { queryKeys } from "@/lib/query-keys";
+import { registerRetainedWork } from "@/lib/retained-work";
 import { resultsApi, rerunResult } from "@/lib/api/results";
 import { isRunActive } from "./use-workflow-platform";
 type PendingRerun = { launchId: string; preparation: Preparation };
@@ -30,6 +31,8 @@ export function usePendingResultRerun(runId: string) {
       if (!commands) {
         commands = new Map();
         pendingReruns.set(client, commands);
+        const retained = commands;
+        registerRetainedWork(() => retained.size > 0);
       }
       commands.set(runId, command);
       try { sessionStorage.setItem(`signaldeck:pending-rerun:${runId}`, JSON.stringify({

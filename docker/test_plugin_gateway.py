@@ -92,6 +92,9 @@ HTTPServer(('0.0.0.0',8000),Handler).serve_forever()
                 .replace("127.0.0.1:${BACKEND_PORT}", "core-original:8000")
             )
             (root / "plugin-locations.conf").write_text(gateway.render(registry))
+            (root / "html/assets").mkdir(parents=True)
+            (root / "html/index.html").write_text("<!doctype html><title>shell</title>")
+            (root / "html/assets/app-0123abcd.js").write_text("export {};\n")
             nginx = docker(
                 "run",
                 "-d",
@@ -103,6 +106,8 @@ HTTPServer(('0.0.0.0',8000),Handler).serve_forever()
                 f"{root}/default.conf:/etc/nginx/conf.d/default.conf:ro",
                 "-v",
                 f"{root}/plugin-locations.conf:/etc/nginx/plugin-locations.conf:ro",
+                "-v",
+                f"{root}/html:/usr/share/nginx/html:ro",
                 "nginx:alpine",
             )
             containers.append(nginx)
@@ -175,6 +180,19 @@ HTTPServer(('0.0.0.0',8000),Handler).serve_forever()
             assert request("/_plugins/unknown/")[0] == 404
             assert request("/_plugins/offline/")[0] == 502
             assert request("/")[0] == 200
+            # Browsers must revalidate the shell and never receive it for a
+            # retired build asset, which would break lazy pages after a restart.
+            for path in ("/", "/index.html", "/runs/example"):
+                with urllib.request.urlopen(base + path) as response:
+                    assert response.headers.get("Cache-Control") == "no-cache", path
+                    assert response.read() == b"<!doctype html><title>shell</title>"
+            with urllib.request.urlopen(base + "/assets/app-0123abcd.js") as response:
+                assert (
+                    response.headers.get("Cache-Control")
+                    == "public, max-age=31536000, immutable"
+                )
+                assert "javascript" in response.headers.get("Content-Type")
+            assert request("/assets/app-retired.js")[0] == 404
             # Attach the replacement before detaching the old endpoint so Docker
             # must assign a different IP; keep Nginx running throughout the change.
             replacement = docker(
@@ -217,8 +235,8 @@ HTTPServer(('0.0.0.0',8000),Handler).serve_forever()
             }
             print(
                 "Gateway integration passed: anonymous Core/plugin API, credential stripping, "
-                "paths, static methods, uploads, absent plugin, shell isolation "
-                "and plugin DNS refresh."
+                "paths, static methods, uploads, absent plugin, shell isolation, "
+                "shell caching, retired assets and plugin DNS refresh."
             )
     finally:
         for container in reversed(containers):

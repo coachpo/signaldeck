@@ -15,9 +15,11 @@ import { DependencyGraph } from "./dependency-graph";
 import { PackageStructure } from "./package-structure";
 import type { AuthoringCatalog } from "./package-controls";
 import { RequestError } from "./feedback";
+import { registerRetainedWork } from "@/lib/retained-work";
 
 // Drafts stay in this page session; browser persistent storage never receives workflow text.
 const drafts = new Map<string, { source: string; savedSource: string; selection: string[]; tab: string }>();
+registerRetainedWork(() => drafts.size > 0);
 
 export function PackageEditorPage() {
   const { packageId } = useParams();

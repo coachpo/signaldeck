@@ -72,6 +72,17 @@ it("shows authoritative pending preview without internal revisions or notes", as
   expect(screen.queryByText(/SignalDeck|revision|internal-schedule|调度服务|版本/)).not.toBeInTheDocument();
   expect(screen.getByText(/9:00/)).toBeVisible();
 });
+it("shows the applied times in UTC when the browser cannot display the saved zone", async () => {
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
+    scope: "applied", paused: false, timeZone: "posixrules", times: ["2026-09-15T06:00:00Z"],
+    observedAt: "2026-09-12T08:00:00Z", desiredRevision: 1, syncedRevision: 1,
+  }))));
+  render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+    <AppliedSchedulePreview id="unusual-zone" revision={1} syncStatus="synced" />
+  </QueryClientProvider>);
+  expect(await screen.findByText("接下来计划执行的时间")).toBeVisible();
+  expect(screen.getByRole("listitem")).toHaveTextContent(/6:00.*· UTC$/);
+});
 
 it("edits a fixed interval and its reference time through ordinary controls", () => {
   render(<Form cron="@every 14h/3h" />);

@@ -1,4 +1,5 @@
 import type { ScheduleConfig } from "@/lib/types/workflow-platform";
+import { registerRetainedWork } from "@/lib/retained-work";
 
 export type ScheduleDraft = {
   value: ScheduleConfig;
@@ -15,3 +16,4 @@ export function scheduleConfigKey(value: ScheduleConfig) {
     overlapPolicy: value.overlapPolicy, catchupWindowSeconds: value.catchupWindowSeconds, paused: value.paused });
 }
 export const scheduleTriggerDrafts = new Map<string, string>();
+registerRetainedWork(() => scheduleDrafts.size > 0 || scheduleTriggerDrafts.size > 0);

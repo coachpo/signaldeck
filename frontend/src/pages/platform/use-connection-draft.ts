@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { useUnsavedWork } from "@/hooks/use-unsaved-work";
 import type { JsonObject } from "@/lib/types/workflow-platform";
+import { registerRetainedWork } from "@/lib/retained-work";
 
 type Draft = { config: JsonObject; credentials: Record<string, string> };
 const drafts = new Map<string, Draft>();
+registerRetainedWork(() => drafts.size > 0);
 export function useConnectionDraft(key: string, initial: JsonObject) {
   const [draft, setState] = useState<Draft>(() => drafts.get(key) ?? { config: initial, credentials: {} });
   const dirty = drafts.has(key);

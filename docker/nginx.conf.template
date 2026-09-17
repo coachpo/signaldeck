@@ -53,6 +53,19 @@ server {
 
     include /etc/nginx/plugin-locations.conf;
 
+    # Build assets are content-hashed; a missing one must fail instead of
+    # returning the HTML shell after a restart or redeploy.
+    location ^~ /assets/ {
+        try_files $uri =404;
+        add_header Cache-Control "public, max-age=31536000, immutable";
+    }
+
+    # Every SPA path is served through this shell; revalidate it so browsers
+    # never keep running asset names from a previous build.
+    location = /index.html {
+        add_header Cache-Control "no-cache";
+    }
+
     location / {
         try_files $uri $uri/ /index.html;
     }
