@@ -11,7 +11,12 @@ function mount(input = result) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(<QueryClientProvider client={client}><ResultExport result={input} /></QueryClientProvider>);
 }
-afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+  Reflect.deleteProperty(navigator, "clipboard");
+  Reflect.deleteProperty(document, "execCommand");
+});
 it("copies confirmed content and keeps clipboard failure recoverable", async () => {
   const writeText = vi.fn().mockRejectedValueOnce(new Error("denied")).mockResolvedValue(undefined);
   Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
@@ -21,6 +26,20 @@ it("copies confirmed content and keeps clipboard failure recoverable", async () 
   fireEvent.click(screen.getByRole("button", { name: "复制所选正文" }));
   expect(await screen.findByText("所选确认内容已复制。")).toBeVisible();
   expect(writeText.mock.calls[1][0]).toContain("# 确认正文");
+});
+it("copies confirmed content over plain HTTP, where browsers omit the Clipboard API", async () => {
+  // jsdom has neither navigator.clipboard nor execCommand; record what the copy command would take.
+  const copied: string[] = [];
+  Object.defineProperty(document, "execCommand", { configurable: true, value: vi.fn((command: string) => {
+    const field = document.activeElement as HTMLTextAreaElement;
+    copied.push(`${command}:${field.value.slice(field.selectionStart, field.selectionEnd)}`);
+    return true;
+  }) });
+  mount();
+  fireEvent.click(screen.getByRole("button", { name: "复制所选正文" }));
+  expect(await screen.findByText("所选确认内容已复制。")).toBeVisible();
+  expect(copied).toHaveLength(1);
+  expect(copied[0]).toMatch(/^copy:# 正文\n[\s\S]*# 确认正文/);
 });
 it("reads selected artifacts only and blocks delivery until loaded, with retry", async () => {
   const fetch = vi.fn().mockRejectedValueOnce(new Error("offline")).mockResolvedValue(new Response("artifact content"));

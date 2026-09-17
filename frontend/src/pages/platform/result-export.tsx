@@ -2,6 +2,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useResultArtifactSelection } from "@/hooks/use-result-delivery";
+import { copyText } from "@/lib/clipboard";
 import type { RunResult } from "@/lib/types/result";
 import type { RunDetail } from "@/lib/types/workflow-platform";
 import { confirmedContents, downloadMarkdown, exportMarkdown, readableContent, type ConfirmedContent } from "./result-delivery";
@@ -21,7 +22,7 @@ export function ResultExport({ result, run, pendingRun = false }: { result: RunR
       const resultUrl = new URL(`/runs/${encodeURIComponent(result.runId)}`, window.location.origin).href;
       const text = exportMarkdown(result, selected, artifacts.loaded, resultUrl);
       if (copy) {
-        await navigator.clipboard.writeText(text);
+        await copyText(text);
         setStatus("所选确认内容已复制。");
       } else {
         downloadMarkdown(result.title, text);

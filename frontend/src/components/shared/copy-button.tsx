@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { copyText } from "@/lib/clipboard";
 
 export function CopyButton({
   value,
@@ -20,7 +21,7 @@ export function CopyButton({
         onClick={() => {
           void (async () => {
             try {
-              await navigator.clipboard.writeText(value);
+              await copyText(value);
               setResult("已复制");
             } catch {
               setResult("复制未完成，请手动选择文本");

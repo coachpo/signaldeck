@@ -31,7 +31,7 @@ export default tseslint.config(
   },
   {
     files: ["src/**/*.{ts,tsx}"],
-    ignores: ["src/lib/random-uuid.ts"],
+    ignores: ["src/lib/random-uuid.ts", "src/lib/clipboard.ts"],
     rules: {
       "no-restricted-properties": [
         "error",
@@ -39,6 +39,12 @@ export default tseslint.config(
           property: "randomUUID",
           message:
             "crypto.randomUUID is unavailable over plain HTTP; use randomUUID from @/lib/random-uuid.",
+        },
+        {
+          object: "navigator",
+          property: "clipboard",
+          message:
+            "navigator.clipboard is unavailable over plain HTTP; use copyText from @/lib/clipboard.",
         },
       ],
     },

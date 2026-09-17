@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { mkdirSync } from "node:fs";
+import { mkdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { apiBase, seed } from "./platform-fixtures";
 async function openSavedTaskCatalog(page: Page) {
@@ -106,7 +106,20 @@ test("opens creation, edit and detail pages when plain HTTP withholds secure-con
     ["/scheduled-tasks", (p) => expect(p.getByRole("heading", { name: scheduleName })).toBeVisible()],
     ["/scheduled-tasks/new", (p) => expect(p.getByRole("button", { name: "启用自动执行" })).toBeVisible()],
     [`/scheduled-tasks/${schedule.id}`, (p) => expect(p.getByRole("button", { name: "保存安排" })).toBeVisible()],
-    [`/runs/${run.id}`, (p) => expect(p.getByRole("button", { name: "再运行一次" })).toBeVisible()],
+    [`/runs/${run.id}`, async (p) => {
+      await expect(p.getByRole("button", { name: "再运行一次" })).toBeVisible();
+      await p.getByRole("button", { name: "复制所选正文", exact: true }).click();
+      await expect(p.getByText("所选确认内容已复制。", { exact: true })).toBeVisible();
+      const download = p.waitForEvent("download");
+      await p.getByRole("button", { name: "导出 Markdown", exact: true }).click();
+      const exported = readFileSync(await (await download).path(), "utf8");
+      // This page has no Clipboard API; read what it copied from a loopback page, which is a secure context.
+      await p.context().grantPermissions(["clipboard-read"]);
+      const reader = await p.context().newPage();
+      await reader.goto(new URL("/health", apiBase).href);
+      expect(await reader.evaluate(() => navigator.clipboard.readText())).toBe(exported);
+      await reader.close();
+    }],
     [`/workflow-packages/${key}`, async (p) => {
       await p.getByRole("button", { name: "添加任务流程" }).click();
       await expect(p.getByRole("button", { name: "任务流程 2", exact: true })).toBeVisible();
