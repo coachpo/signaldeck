@@ -90,6 +90,14 @@ Finance 1.3.0 新增只读工具 `price_events_lookup`：对至多 5 个已授�
 
 修改未提交、推送或部署。新工具改变 Finance 合同与制品摘要，实际启用须登记新的不可变发布和 endpoint，并保留旧 Run 的原绑定。
 
+### K 线事件复权与降噪（2026-09-19）
+
+Finance 1.4.0 的 `price_events_lookup` 改为按分红复权价格识别事件：复权因子取 provider 复权收盘价与收盘价之比，以最后一个完成交易日为基准，同一分红区段内的浮点噪声不拆分因子；每个事件增加 provider 原始收盘价 `rawClose`，每只证券标明 `priceBasis`，缺少复权收盘价时退回拆股调整价格并告警。新增 `near_high_low`、`drawdown`、`failed_breakout`、`window_move`、`spike_reversal`、`engulfing`、`pin_bar` 七条规则；`new_high_low`、`breakout`、`relative_strength` 增加 `minBaseSessions`，默认不过滤。范围仍是美股日线和 `allowedSymbols` 内的自选证券，不含回测或事件后收益统计；定时扫描、研究证据和监测接入尚未实施。未修改 Core、前端或插件存储；合同见[插件接入](docs/writing-extensions.md#finance-k-线事件合同)。
+
+新增 11 项、调整 4 项规则与工具测试；Finance、研究与插件相关回归共 482 项通过，改动文件的 ruff/black/isort 通过。真实 Yahoo 日线复核（28 只美股、近 250 个交易日、默认参数）：除息日被识别的向下缺口从 9 个降到 2 个；每只每年约有 `window_move` 2.1、`spike_reversal` 0.8、`near_high_low` 6.7、`engulfing` 9.0、`failed_breakout` 10.6、`pin_bar` 11.6、`drawdown`（10%）15.4 个事件；`minBaseSessions=20` 使 60 日新高/新低从 34.2 个降到 3.8 个，相对强弱从 34.1 个降到 3.3 个。规则没有用真实行情评估预测准确率。
+
+修改未提交、推送或部署。新规则和字段改变 Finance 合同与制品摘要，实际启用须登记新的不可变发布和 endpoint，并保留旧 Run 的原绑定。
+
 ## 部署与使用
 
 当前部署边界是本地内网，使用对象是个人和单一操作者。项目优先保持本地启动、调试、观察和日常使用便利；这项偏好不取消现有的正确性、数据完整性、密钥保护和必要验证边界。

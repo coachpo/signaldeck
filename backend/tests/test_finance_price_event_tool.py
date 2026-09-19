@@ -30,6 +30,7 @@ from app.domain.schema_contract import validate_schema, validate_value  # noqa: 
 
 TOOL = "signaldeck/finance/price_events_lookup"
 JUMP = date(2026, 9, 14)
+EX_DIVIDEND = date(2026, 9, 16)
 
 
 class ScriptedProvider:
@@ -58,6 +59,36 @@ class ScriptedProvider:
                         low=opening - 1,
                         close=close,
                         volume=5000 if day == JUMP else 1000,
+                        adjusted_close=close,
+                    )
+                )
+            day += timedelta(days=1)
+        return ProviderOhlcvSeries(symbol=symbol, currency="USD", provider="scripted", rows=rows)
+
+
+class DividendProvider:
+    """Flat weekday bars at 100 that trade 2 lower from a 2 dividend on EX_DIVIDEND."""
+
+    provider_name = "scripted"
+
+    def __init__(self, adjusted: bool) -> None:
+        self.adjusted = adjusted
+
+    def fetch_ohlcv(self, symbol, *, start_date, end_date, interval):
+        rows, day = [], start_date.date()
+        while day <= end_date.date():
+            if day.weekday() < 5:
+                close = Decimal(98 if day >= EX_DIVIDEND else 100)
+                adjusted = close * Decimal("0.98") if day < EX_DIVIDEND else close
+                rows.append(
+                    ProviderOhlcvRow(
+                        at=datetime.combine(day, time(13, 30), UTC),
+                        open=close,
+                        high=close + 1,
+                        low=close - 1,
+                        close=close,
+                        volume=5000 if day == JUMP else 1000,
+                        adjusted_close=adjusted if self.adjusted else None,
                     )
                 )
             day += timedelta(days=1)
@@ -114,6 +145,7 @@ def test_published_contract_validates_a_real_scan() -> None:
         "2026-09-07",
         500,
     )
+    assert series["priceBasis"] == "dividend_adjusted"
     assert [
         (event["detector"]["type"], event["direction"], event["session"])
         for event in series["events"]
@@ -125,6 +157,12 @@ def test_published_contract_validates_a_real_scan() -> None:
     ]
     gap, move = series["events"][0], series["events"][1]
     assert gap["detector"] == {"type": "gap", "minPercent": "1"}
+    assert series["events"][2]["detector"] == {
+        "type": "new_high_low",
+        "lookback": 60,
+        "minBaseSessions": 1,
+    }
+    assert (gap["close"], gap["rawClose"]) == ("110.0000", "110.0000")
     assert (gap["level"], gap["levelLabel"], gap["changePercent"]) == (
         "101.0000",
         "prior_high",
@@ -150,6 +188,40 @@ def test_published_contract_validates_a_real_scan() -> None:
         "sessionsSinceHigh": 0,
         "sessionsSinceLow": 5,
     }
+
+
+def test_rules_read_dividend_adjusted_prices_and_report_raw_closes() -> None:
+    scan = arguments(detectors=[{"type": "gap"}, {"type": "volume_spike"}])
+
+    def scanned(adjusted: bool) -> dict:
+        app = create_app("postgresql+psycopg://localhost/unused", DividendProvider(adjusted))
+        result = app.state.execute(TOOL, scan, grant("MSFT"))
+        validate_value(contract(app)["outputSchema"], result)
+        return result
+
+    adjusted = scanned(True)
+    series = adjusted["series"][0]
+    assert (series["priceBasis"], adjusted["warnings"]) == ("dividend_adjusted", [])
+    assert [
+        (event["detector"]["type"], event["session"], event["close"], event["rawClose"])
+        for event in series["events"]
+    ] == [("volume_spike", "2026-09-14", "98.0000", "100.0000")]
+    assert series["state"]["ranges"][0]["highestClose"] == "98.0000"
+
+    unadjusted = scanned(False)
+    series = unadjusted["series"][0]
+    assert series["priceBasis"] == "split_adjusted"
+    assert [
+        (event["detector"]["type"], event["direction"], event["session"], event["rawClose"])
+        for event in series["events"]
+    ] == [
+        ("gap", "down", "2026-09-16", "98.0000"),
+        ("volume_spike", "neutral", "2026-09-14", "100.0000"),
+    ]
+    assert series["state"]["ranges"][0]["highestClose"] == "100.0000"
+    assert [(item["code"], item["details"]) for item in unadjusted["warnings"]] == [
+        ("price_events_dividend_unadjusted", [{"key": "symbol", "value": "MSFT"}])
+    ]
 
 
 def test_symbols_and_benchmark_must_be_granted() -> None:

@@ -1,7 +1,7 @@
 """Completed New York daily sessions with memoized indicator series and latest state."""
 
 from collections.abc import Callable, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date, datetime, time
 from decimal import ROUND_HALF_EVEN, Decimal
 from itertools import pairwise
@@ -15,6 +15,9 @@ from .research_report_validation import NY
 SESSION_COMPLETE_AT = time(16, 30)
 STATE_RANGES = (20, 60, 250)
 FOUR_PLACES = Decimal("0.0001")
+# Yahoo's float32 prices leave up to about 3e-7 of noise in adjusted/close ratios, while the
+# smallest real dividend step is about 5e-5; ratios closer than this share one factor.
+FACTOR_TOLERANCE = Decimal("0.00001")
 _T = TypeVar("_T")
 
 
@@ -25,6 +28,7 @@ class ProviderBar(Protocol):
     low: Decimal
     close: Decimal
     volume: Decimal | None
+    adjusted_close: Decimal | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -35,6 +39,7 @@ class Session:
     low: Decimal
     close: Decimal
     volume: Decimal | None
+    adjusted_close: Decimal | None = None
 
 
 def complete_sessions(
@@ -59,8 +64,40 @@ def complete_sessions(
             anomalies.add((day, "price_outside_range"))
         if row.volume == 0:
             anomalies.add((day, "zero_volume"))
-        sessions.append(Session(day, row.open, row.high, row.low, row.close, row.volume))
+        sessions.append(
+            Session(day, row.open, row.high, row.low, row.close, row.volume, row.adjusted_close)
+        )
     return sessions, sorted(anomalies)
+
+
+def dividend_adjusted(sessions: Sequence[Session]) -> list[Session] | None:
+    """Scale prices by the provider's dividend adjustment so the last session keeps its prices.
+
+    None when a session has no positive adjusted close.
+    """
+    if not sessions or any(
+        session.adjusted_close is None or session.adjusted_close <= 0 for session in sessions
+    ):
+        return None
+    last = sessions[-1]
+    anchor = cast(Decimal, last.adjusted_close) / last.close
+    adjusted: list[Session] = []
+    factor: Decimal | None = None
+    for session in reversed(sessions):
+        ratio = cast(Decimal, session.adjusted_close) / session.close / anchor
+        if factor is None or abs(ratio / factor - 1) >= FACTOR_TOLERANCE:
+            factor = ratio
+        adjusted.append(
+            replace(
+                session,
+                open=session.open * factor,
+                high=session.high * factor,
+                low=session.low * factor,
+                close=session.close * factor,
+            )
+        )
+    adjusted.reverse()
+    return adjusted
 
 
 def quantize(value: Decimal, places: Decimal = FOUR_PLACES) -> Decimal:
@@ -78,14 +115,19 @@ def last_index(values: Sequence[Decimal], target: Decimal) -> int:
 
 class PriceSeries:
     def __init__(
-        self, sessions: Sequence[Session], benchmark: Mapping[date, Decimal] | None = None
+        self,
+        sessions: Sequence[Session],
+        benchmark: Mapping[date, Decimal] | None = None,
+        raw_closes: Sequence[Decimal] | None = None,
     ) -> None:
+        """Rules read these session prices; raw_closes are the provider closes to report."""
         self.sessions = list(sessions)
         self.days = [session.day for session in self.sessions]
         self.opens = [session.open for session in self.sessions]
         self.highs = [session.high for session in self.sessions]
         self.lows = [session.low for session in self.sessions]
         self.closes = [session.close for session in self.sessions]
+        self.raw_closes = self.closes if raw_closes is None else list(raw_closes)
         self.volumes = [session.volume for session in self.sessions]
         self.benchmark = benchmark
         self._memo: dict[tuple[object, ...], object] = {}
@@ -161,17 +203,23 @@ class PriceSeries:
 
         return self._cached(("streaks",), compute)
 
-    def return_z_score(self, index: int, lookback: int) -> Decimal | None:
-        """Session return against the mean and deviation of the prior daily returns."""
-        if index <= lookback:
+    def return_moments(self, end: int, lookback: int) -> tuple[Decimal, Decimal] | None:
+        """Mean and population deviation of the daily returns into the lookback sessions to end."""
+        if end < lookback:
             return None
         closes = self.closes
-        returns = [closes[i] / closes[i - 1] - 1 for i in range(index - lookback, index)]
+        returns = [closes[i] / closes[i - 1] - 1 for i in range(end - lookback + 1, end + 1)]
         mean = sum(returns, Decimal(0)) / lookback
         variance = sum(((value - mean) ** 2 for value in returns), Decimal(0)) / lookback
-        if variance == 0:
+        return mean, variance.sqrt()
+
+    def return_z_score(self, index: int, lookback: int) -> Decimal | None:
+        """Session return against the mean and deviation of the prior daily returns."""
+        moments = self.return_moments(index - 1, lookback)
+        if moments is None or moments[1] == 0:
             return None
-        return (closes[index] / closes[index - 1] - 1 - mean) / variance.sqrt()
+        mean, deviation = moments
+        return (self.closes[index] / self.closes[index - 1] - 1 - mean) / deviation
 
 
 def summarize(series: PriceSeries) -> PriceState:

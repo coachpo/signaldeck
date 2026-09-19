@@ -14,9 +14,14 @@ from .research_evidence import decimal_text
 
 DetectorType = Literal[
     "new_high_low",
+    "near_high_low",
+    "drawdown",
     "breakout",
+    "failed_breakout",
     "gap",
     "large_move",
+    "window_move",
+    "spike_reversal",
     "gap_fill",
     "island_reversal",
     "ma_cross",
@@ -27,6 +32,8 @@ DetectorType = Literal[
     "bollinger_squeeze",
     "range_contraction",
     "inside_bar",
+    "engulfing",
+    "pin_bar",
     "volume_spike",
     "streak",
     "relative_strength",
@@ -34,10 +41,15 @@ DetectorType = Literal[
 
 # Accepted parameters and their defaults; None marks a parameter the caller must supply.
 DEFAULTS: dict[str, dict[str, object]] = {
-    "new_high_low": {"lookback": 60},
-    "breakout": {"lookback": 20, "volume_ratio": "1.5"},
+    "new_high_low": {"lookback": 60, "min_base_sessions": 1},
+    "near_high_low": {"lookback": 250, "within_percent": "2"},
+    "drawdown": {"lookback": 60, "min_percent": "10"},
+    "breakout": {"lookback": 20, "volume_ratio": "1.5", "min_base_sessions": 1},
+    "failed_breakout": {"lookback": 20},
     "gap": {"min_percent": "1"},
     "large_move": {"min_percent": "4", "atr_multiple": "2", "window": 14},
+    "window_move": {"window": 5, "sigma_multiple": "3", "min_percent": "0"},
+    "spike_reversal": {"min_percent": "4", "atr_multiple": "2", "window": 14, "max_sessions": 10},
     "gap_fill": {"min_percent": "1", "max_sessions": 10},
     "island_reversal": {"max_sessions": 10},
     "ma_cross": {"fast_window": 50, "slow_window": 200, "average": "sma"},
@@ -48,31 +60,49 @@ DEFAULTS: dict[str, dict[str, object]] = {
     "bollinger_squeeze": {"window": 20, "standard_deviations": "2", "lookback": 120},
     "range_contraction": {"lookback": 7},
     "inside_bar": {},
+    "engulfing": {"trend_sessions": 5},
+    "pin_bar": {"trend_sessions": 5},
     "volume_spike": {"lookback": 20, "volume_ratio": "2"},
     "streak": {"min_length": 5},
-    "relative_strength": {"benchmark": None, "lookback": 60},
+    "relative_strength": {"benchmark": None, "lookback": 60, "min_base_sessions": 1},
 }
 NEUTRAL_DETECTORS = frozenset({"bollinger_squeeze", "range_contraction", "inside_bar"})
 
 DETECTOR_GUIDE = (
-    "Rule and optional parameters with defaults: new_high_low(lookback=60) close above the "
-    "highest or below the lowest of the prior N closes; breakout(lookback=20, volumeRatio=1.5) "
-    "close beyond the prior N highs or lows with volume at least ratio x their average, 0 "
-    "disables the volume check; gap(minPercent=1) open above the prior high or below the prior "
+    "Rule and optional parameters with defaults: new_high_low(lookback=60, minBaseSessions=1) "
+    "close above the highest or below the lowest of the prior N closes; near_high_low("
+    "lookback=250, withinPercent=2) first close within withinPercent below the highest (up) or "
+    "above the lowest (down) of the prior N closes without passing it; drawdown(lookback=60, "
+    "minPercent=10) first close at least minPercent below the highest (down) or above the "
+    "lowest (up, a rebound) of the prior N closes; breakout(lookback=20, volumeRatio=1.5, "
+    "minBaseSessions=1) close beyond the prior N highs or lows with volume at least ratio x "
+    "their average, 0 disables the volume check; failed_breakout(lookback=20) high above the "
+    "prior N highs (down) or low below the prior N lows (up) with the close back inside and "
+    "against the prior close; gap(minPercent=1) open above the prior high or below the prior "
     "low; large_move(minPercent=4, atrMultiple=2, window=14) close change of at least "
-    "max(minPercent, atrMultiple x prior ATR percent); gap_fill(minPercent=1, maxSessions=10) "
-    "first return to the pre-gap level; island_reversal(maxSessions=10) sessions isolated by a "
-    "gap on each side; ma_cross(fastWindow=50, slowWindow=200, average=sma|ema); "
-    "price_ma_cross(window=50, average=sma|ema); macd_cross(fastWindow=12, slowWindow=26, "
-    "signalWindow=9, reference=signal|zero); rsi_threshold(window=14, upper=70, lower=30) RSI "
-    "entering overbought (up) or oversold (down); bollinger_break(window=20, "
-    "standardDeviations=2) first close outside a band; bollinger_squeeze(window=20, "
-    "standardDeviations=2, lookback=120) band width below its prior N-session minimum; "
-    "range_contraction(lookback=7) narrowest high-low range of N sessions; inside_bar; "
+    "max(minPercent, atrMultiple x prior ATR percent); window_move(window=5, sigmaMultiple=3, "
+    "minPercent=0) first close whose change over N sessions reaches max(minPercent, "
+    "sigmaMultiple x the daily return deviation of the 60 sessions before them x sqrt(N)); "
+    "spike_reversal(minPercent=4, atrMultiple=2, window=14, maxSessions=10) first close back "
+    "beyond the pre-move close within maxSessions of a large_move, an up move reversed is a "
+    "down event; gap_fill(minPercent=1, maxSessions=10) first return to the pre-gap level; "
+    "island_reversal(maxSessions=10) sessions isolated by a gap on each side; "
+    "ma_cross(fastWindow=50, slowWindow=200, average=sma|ema); price_ma_cross(window=50, "
+    "average=sma|ema); macd_cross(fastWindow=12, slowWindow=26, signalWindow=9, "
+    "reference=signal|zero); rsi_threshold(window=14, upper=70, lower=30) RSI entering "
+    "overbought (up) or oversold (down); bollinger_break(window=20, standardDeviations=2) first "
+    "close outside a band; bollinger_squeeze(window=20, standardDeviations=2, lookback=120) band "
+    "width below its prior N-session minimum; range_contraction(lookback=7) narrowest high-low "
+    "range of N sessions; inside_bar; engulfing(trendSessions=5) real body engulfing the prior "
+    "opposite body; pin_bar(trendSessions=5) lower (up, hammer) or upper (down, shooting star) "
+    "shadow of at least two thirds of the range; engulfing and pin_bar need the prior close to "
+    "be below (up) or above (down) the close trendSessions earlier, 0 disables this; "
     "volume_spike(lookback=20, volumeRatio=2); streak(minLength=5) consecutive higher or lower "
-    "closes; relative_strength(benchmark required, lookback=60) close/benchmark ratio beyond its "
-    "prior N-session range. Decimal parameters are strings. bollinger_squeeze, "
-    "range_contraction and inside_bar are neutral and do not accept direction."
+    "closes; relative_strength(benchmark required, lookback=60, minBaseSessions=1) "
+    "close/benchmark ratio beyond its prior N-session range. minBaseSessions keeps only breaks "
+    "of an extreme set at least that many sessions earlier; 1 keeps all. Decimal parameters "
+    "are strings. bollinger_squeeze, range_contraction and inside_bar are neutral and do not "
+    "accept direction."
 )
 
 DecimalText = Annotated[str, Field(min_length=1, max_length=20)]
@@ -97,10 +127,21 @@ class PriceEventDetector(CamelModel):
     lower: DecimalText | None = None
     min_length: int | None = Field(default=None, ge=2, le=30)
     max_sessions: int | None = Field(default=None, ge=1, le=30)
+    min_base_sessions: int | None = Field(default=None, ge=1, le=250)
+    sigma_multiple: DecimalText | None = None
+    within_percent: DecimalText | None = None
+    trend_sessions: int | None = Field(default=None, ge=0, le=60)
     benchmark: Symbol | None = None
 
     @field_validator(
-        "standard_deviations", "min_percent", "atr_multiple", "volume_ratio", "upper", "lower"
+        "standard_deviations",
+        "min_percent",
+        "atr_multiple",
+        "volume_ratio",
+        "upper",
+        "lower",
+        "sigma_multiple",
+        "within_percent",
     )
     @classmethod
     def plain_decimal(cls, value: str | None) -> str | None:
@@ -143,6 +184,7 @@ class PriceEventDetector(CamelModel):
 
         deviations, minimum = number("standard_deviations"), number("min_percent")
         multiple, ratio = number("atr_multiple"), number("volume_ratio")
+        sigmas, within = number("sigma_multiple"), number("within_percent")
         if deviations is not None and not 0 < deviations <= 10:
             raise ValueError("standardDeviations must be above 0 and at most 10")
         if minimum is not None and not 0 <= minimum <= 100:
@@ -151,10 +193,24 @@ class PriceEventDetector(CamelModel):
             raise ValueError("atrMultiple must be between 0 and 20")
         if ratio is not None and not 0 <= ratio <= 100:
             raise ValueError("volumeRatio must be between 0 and 100")
+        if sigmas is not None and not 0 <= sigmas <= 20:
+            raise ValueError("sigmaMultiple must be between 0 and 20")
+        if within is not None and not 0 < within <= 100:
+            raise ValueError("withinPercent must be above 0 and at most 100")
         if self.type == "volume_spike" and ratio == 0:
             raise ValueError("volume_spike volumeRatio must be above 0")
-        if self.type == "large_move" and minimum == 0 and multiple == 0:
-            raise ValueError("large_move needs minPercent or atrMultiple above 0")
+        if self.type in {"large_move", "spike_reversal"} and minimum == 0 and multiple == 0:
+            raise ValueError(f"{self.type} needs minPercent or atrMultiple above 0")
+        if self.type == "window_move" and minimum == 0 and sigmas == 0:
+            raise ValueError("window_move needs minPercent or sigmaMultiple above 0")
+        if self.type == "drawdown" and minimum == 0:
+            raise ValueError("drawdown minPercent must be above 0")
+        if (
+            self.min_base_sessions is not None
+            and self.lookback is not None
+            and self.min_base_sessions > self.lookback
+        ):
+            raise ValueError("minBaseSessions must not exceed lookback")
         if self.type == "rsi_threshold":
             upper, lower = number("upper"), number("lower")
             if upper is None or lower is None or not 0 < lower < upper < 100:
@@ -215,12 +271,18 @@ class PriceEventsLookupInput(CamelModel):
 MeasureName = Literal[
     "breakPercent",
     "sessionsSinceLevel",
+    "levelDistancePercent",
+    "intradayBreakPercent",
     "volumeRatio",
     "gapPercent",
     "gapAtr",
     "thresholdPercent",
     "moveAtr",
     "returnZScore",
+    "windowReturnPercent",
+    "moveSigma",
+    "spikePercent",
+    "sessionsToReverse",
     "sessionsToFill",
     "islandSessions",
     "fastAverage",
@@ -233,6 +295,9 @@ MeasureName = Literal[
     "bandwidthPercent",
     "referenceBandwidthPercent",
     "rangePercent",
+    "bodyRatio",
+    "shadowRatio",
+    "trendChangePercent",
     "volume",
     "averageVolume",
     "streakLength",
@@ -255,6 +320,7 @@ class PriceEvent(CamelModel):
     direction: Literal["up", "down", "neutral"]
     session: date
     close: Decimal
+    raw_close: Decimal
     change_percent: Decimal | None = None
     level: Decimal | None = None
     level_label: str | None = Field(default=None, min_length=1, max_length=80)
@@ -291,6 +357,7 @@ class PriceEventSeries(CamelModel):
     symbol: str
     provider: str
     currency: str | None = None
+    price_basis: Literal["dividend_adjusted", "split_adjusted"]
     first_session: date
     last_session: date
     session_count: int

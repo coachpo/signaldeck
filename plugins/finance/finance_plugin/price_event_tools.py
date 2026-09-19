@@ -14,7 +14,7 @@ from .price_event_contracts import (
     PriceEventsLookupResult,
 )
 from .price_event_rules import detect_events
-from .price_series import PriceSeries, complete_sessions, summarize
+from .price_series import PriceSeries, complete_sessions, dividend_adjusted, summarize
 from .providers.market_data_snapshots import MarketDataOhlcvSeries
 from .research_report_validation import NY, day_end
 from .services.market_data_service import MarketDataService
@@ -27,15 +27,19 @@ HISTORY_DAYS = 740
 HISTORY_ROWS = 500
 DESCRIPTION = (
     "Detect rule-based daily K-line events for up to 5 granted US symbols: new closing highs "
-    "or lows, breakouts, opening gaps, large moves, gap fills, island reversals, moving-average, "
-    "MACD, RSI and Bollinger signals, range contraction, inside bars, volume spikes, streaks and "
-    "relative strength. Only completed New York sessions count: a session is complete at 16:30 "
-    "New York time on its date, and asOfDate (default now) bounds the scan. Events come from "
-    "the latest windowSessions sessions (default 20), newest first, at most 50 per symbol, each "
-    "with its effective detector parameters. direction is the price direction of the event "
-    "itself (a filled up-gap is a down event); set a detector's direction to keep one side. "
-    "Results describe past prices only, not forecasts, backtests or trading advice; disclose "
-    "returned warnings."
+    "or lows and approaches to them, drawdowns and rebounds, breakouts and failed breakouts, "
+    "opening gaps, large one-session and multi-session moves, reversed large moves, gap fills, "
+    "island reversals, moving-average, MACD, RSI and Bollinger signals, range contraction, "
+    "inside bars, engulfing and pin-bar candles, volume spikes, streaks and relative strength. "
+    "Only completed New York sessions count: a session is complete at 16:30 New York time on "
+    "its date, and asOfDate (default now) bounds the scan. Rules read split- and "
+    "dividend-adjusted prices scaled so the last completed session keeps its provider prices "
+    "(priceBasis); each event also gives the provider rawClose, which older adjusted prices "
+    "can differ from. Events come from the latest windowSessions sessions (default 20), newest "
+    "first, at most 50 per symbol, each with its effective detector parameters. direction is "
+    "the price direction of the event itself (a filled up-gap is a down event); set a "
+    "detector's direction to keep one side. Results describe past prices only, not forecasts, "
+    "backtests or trading advice; disclose returned warnings."
 )
 
 
@@ -74,7 +78,11 @@ def execute(
     benchmark_closes = None
     if benchmark in provided:
         sessions, _ = complete_sessions(provided[benchmark].rows, cutoff)
-        benchmark_closes = {session.day: session.close for session in sessions}
+        adjusted = dividend_adjusted(sessions)
+        # A scanned benchmark reports its own basis warning.
+        if adjusted is None and sessions and benchmark not in payload.symbols:
+            warnings.append(_unadjusted_warning(benchmark))
+        benchmark_closes = {session.day: session.close for session in adjusted or sessions}
     results = []
     for symbol in payload.symbols:
         if symbol in provided:
@@ -113,7 +121,12 @@ def _scan(
             )
         )
         return None
-    series = PriceSeries(sessions, benchmark_closes)
+    adjusted = dividend_adjusted(sessions)
+    if adjusted is None:
+        warnings.append(_unadjusted_warning(symbol))
+    series = PriceSeries(
+        adjusted or sessions, benchmark_closes, [session.close for session in sessions]
+    )
     events, skipped = detect_events(series, payload.detectors, payload.window_sessions)
     warnings.extend(
         _skip_warning(symbol, detector, reason, count) for detector, reason, count in skipped
@@ -131,6 +144,7 @@ def _scan(
         symbol=symbol,
         provider=provided.provider,
         currency=provided.currency,
+        price_basis="split_adjusted" if adjusted is None else "dividend_adjusted",
         first_session=sessions[0].day,
         last_session=sessions[-1].day,
         session_count=len(sessions),
@@ -163,6 +177,15 @@ def _cutoff(as_of_date: date | None, now: datetime) -> tuple[date, datetime]:
 
 def _warning(code: str, message: str, **details: str) -> RuntimeToolWarning:
     return RuntimeToolWarning(code=code, message=message, details=details)
+
+
+def _unadjusted_warning(symbol: str) -> RuntimeToolWarning:
+    return _warning(
+        "price_events_dividend_unadjusted",
+        f"No dividend adjustment for {symbol}; its prices are split-adjusted only, "
+        "so an ex-dividend drop can register as a down event",
+        symbol=symbol,
+    )
 
 
 def _anomaly_warning(symbol: str, anomalies: list[tuple[date, str]]) -> RuntimeToolWarning:

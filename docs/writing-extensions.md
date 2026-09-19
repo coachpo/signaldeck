@@ -189,16 +189,21 @@ Finance 1.2.0 的 `research_report_compile` 输入可省略 `discussion`。省�
 
 ## Finance K 线事件合同
 
-Finance 1.3.0 新增只读工具 `signaldeck/finance/price_events_lookup`，按闭合规则识别美股日线 K 线事件。它需要 `finance-market-data`，`symbols` 和相对强弱的 `benchmark` 都必须在 `allowedSymbols` 内。结果只描述已完成交易日的价格事实，不预测走势，不做回测，也不构成交易建议。
+Finance 1.3.0 新增只读工具 `signaldeck/finance/price_events_lookup`，按闭合规则识别美股日线 K 线事件；1.4.0 改为读取分红复权价格，增加 7 条规则和 `minBaseSessions` 参数。它需要 `finance-market-data`，`symbols` 和相对强弱的 `benchmark` 都必须在 `allowedSymbols` 内。结果只描述已完成交易日的价格事实，不预测走势，不做回测，也不构成交易建议。
 
 输入包含 1–5 个 `symbols`、1–20 条 `detectors`，可选 `asOfDate`（纽约日期；省略为当前时间，未来日期拒绝）和 `windowSessions`（1–120，默认 20，只报告最近这些交易日内的事件）。每条规则只接受下表所列参数，省略时取默认值；多余参数、越界取值或缺少 `benchmark` 直接拒绝，完全相同的规则去重。小数参数使用十进制字符串。三种中性规则以外都可设 `direction: up|down` 只保留一侧；多条相对强弱规则必须使用同一个基准。
 
 | 规则 | 参数（默认值） | 事件条件 |
 | --- | --- | --- |
-| `new_high_low` | `lookback`(60) | 收盘价高于前 N 个交易日的最高收盘价（up）或低于最低收盘价（down），持平不算 |
-| `breakout` | `lookback`(20)、`volumeRatio`("1.5") | 收盘价突破前 N 日最高价或跌破最低价，且成交量不低于前 N 日均量的倍数；`"0"` 取消量能条件 |
+| `new_high_low` | `lookback`(60)、`minBaseSessions`(1) | 收盘价高于前 N 个交易日的最高收盘价（up）或低于最低收盘价（down），持平不算 |
+| `near_high_low` | `lookback`(250)、`withinPercent`("2") | 收盘价首次进入前 N 日最高收盘价下方 `withinPercent` 以内（up）或最低收盘价上方以内（down），前一日还在该范围外；越过极值属于 `new_high_low` |
+| `drawdown` | `lookback`(60)、`minPercent`("10") | 收盘价首次较前 N 日最高收盘价回撤至少 `minPercent`（down），或较最低收盘价反弹至少 `minPercent`（up） |
+| `breakout` | `lookback`(20)、`volumeRatio`("1.5")、`minBaseSessions`(1) | 收盘价突破前 N 日最高价或跌破最低价，且成交量不低于前 N 日均量的倍数；`"0"` 取消量能条件 |
+| `failed_breakout` | `lookback`(20) | 最高价越过前 N 日最高价，但收盘回到其下方且低于前一日收盘（down）；或最低价跌破前 N 日最低价，但收盘回到其上方且高于前一日收盘（up） |
 | `gap` | `minPercent`("1") | 开盘价高于前一日最高价或低于最低价，缺口幅度不小于阈值 |
 | `large_move` | `minPercent`("4")、`atrMultiple`("2")、`window`(14) | 收盘涨跌幅不小于 max(`minPercent`, `atrMultiple` × 前一日 ATR 占收盘价的百分比) |
+| `window_move` | `window`(5)、`sigmaMultiple`("3")、`minPercent`("0") | N 日累计涨跌幅首次达到 max(`minPercent`, `sigmaMultiple` × 这 N 日之前 60 个交易日的日收益率标准差 × √N)；两者至少一个大于 0 |
+| `spike_reversal` | `minPercent`("4")、`atrMultiple`("2")、`window`(14)、`maxSessions`(10) | 符合 `large_move` 条件的单日大涨（大跌）后 `maxSessions` 日内，收盘价首次回到大涨（大跌）前一日收盘价之下（之上）；大涨被回吐是 down 事件 |
 | `gap_fill` | `minPercent`("1")、`maxSessions`(10) | 缺口在 `maxSessions` 个交易日内首次回到缺口前价位，含缺口当日 |
 | `island_reversal` | `maxSessions`(10) | 至多 `maxSessions` 个交易日的价格区间被前后两个缺口完全隔开 |
 | `ma_cross` | `fastWindow`(50)、`slowWindow`(200)、`average`(`sma`/`ema`) | 快线上穿（up）或下穿（down）慢线 |
@@ -209,15 +214,19 @@ Finance 1.3.0 新增只读工具 `signaldeck/finance/price_events_lookup`，按�
 | `bollinger_squeeze` | `window`(20)、`standardDeviations`("2")、`lookback`(120) | 带宽低于前 N 日最小值（中性） |
 | `range_contraction` | `lookback`(7) | 当日高低价幅是 N 个交易日内最窄的（中性） |
 | `inside_bar` | 无 | 最高价低于前一日、最低价高于前一日（中性） |
+| `engulfing` | `trendSessions`(5) | 当日实体完全覆盖前一日相反方向的实体（阳包阴 up，阴包阳 down），不能只是同一实体倒转 |
+| `pin_bar` | `trendSessions`(5) | 下影线（up，锤子线）或上影线（down，射击之星）至少占当日高低价幅的三分之二 |
 | `volume_spike` | `lookback`(20)、`volumeRatio`("2") | 成交量不低于前 N 日均量的倍数，方向取当日收盘涨跌 |
 | `streak` | `minLength`(5) | 连续上涨或下跌收盘达到 N 日的当天 |
-| `relative_strength` | `benchmark`（必填）、`lookback`(60) | 收盘价与基准收盘价之比高于前 N 日最高值或低于最低值 |
+| `relative_strength` | `benchmark`（必填）、`lookback`(60)、`minBaseSessions`(1) | 收盘价与基准收盘价之比高于前 N 日最高值或低于最低值 |
 
-交易日按纽约日期划分，当日纽约时间 16:30 后才算完成，未完成的 K 线不参与计算。单次读取约两年、最多 500 个交易日。事件 `direction` 表示事件本身的价格方向，例如向上缺口被回补是 down 事件。
+`minBaseSessions` 只保留被突破的前 N 日极值至少在这么多个交易日之前形成的事件，用来去掉趋势中逐日重复的新高、突破和相对强弱；默认 1 表示不过滤，取值不能超过 `lookback`。`engulfing` 和 `pin_bar` 要求形态前一日的收盘价低于（up）或高于（down）`trendSessions` 个交易日之前的收盘价，`0` 取消趋势条件。
 
-输出包含 `asOfDate`、实际截止时间 `cutoffAt`、`windowSessions`、截断前的命中总数 `matchedCount` 和 `warnings`。每只证券给出交易日范围、最新状态 `state`（20/60/250 日收盘区间位置、SMA20/50/200 与均线排列、RSI14、ATR14 百分比、20 日量比、连涨或连跌天数）和按日期从新到旧排列的 `events`（每只最多 50 条，`eventCount` 为截断前数量）。每个事件回显生效的规则参数，并给出参考价位 `level/levelLabel`、关联日期和带单位的 `measures`。价格与派生值保留 4 位小数，交易日数和股数为整数。行情不可用、历史或成交量不足、基准缺少交易日、异常 K 线和截断都通过 warning 披露，不生成替代数据；价格非正的 K 线被剔除，其余异常 K 线保留并告警。
+交易日按纽约日期划分，当日纽约时间 16:30 后才算完成，未完成的 K 线不参与计算。单次读取约两年、最多 500 个交易日。规则读取按拆股和分红复权的开高低收：复权因子取 provider 复权收盘价与收盘价之比，并以最后一个完成交易日为基准，所以最新价格等于 provider 价格，更早的价位按之后的分红相应下调。与所在段因子相差不足十万分之一的交易日沿用该段因子，避免浮点噪声把持平的价格拆成新高或新低。任一交易日缺少正的复权收盘价时，该证券退回只按拆股调整的价格，并给出 `price_events_dividend_unadjusted` warning；相对强弱的基准同样处理。事件 `direction` 表示事件本身的价格方向，例如向上缺口被回补是 down 事件。
 
-限制：只有日线；Yahoo 历史数据是当前版本，不是时点存档；开高低收已按拆股调整、未按分红调整，除息日的低开可能被识别为向下缺口；单根错误报价无法与真实波动自动区分。
+输出包含 `asOfDate`、实际截止时间 `cutoffAt`、`windowSessions`、截断前的命中总数 `matchedCount` 和 `warnings`。每只证券给出价格口径 `priceBasis`（`dividend_adjusted` 或 `split_adjusted`）、交易日范围、最新状态 `state`（20/60/250 日收盘区间位置、SMA20/50/200 与均线排列、RSI14、ATR14 百分比、20 日量比、连涨或连跌天数）和按日期从新到旧排列的 `events`（每只最多 50 条，`eventCount` 为截断前数量）。每个事件回显生效的规则参数，给出按 `priceBasis` 计算的 `close`、`changePercent`、参考价位 `level/levelLabel` 和带单位的 `measures`，并给出 provider 原始收盘价 `rawClose`（已按拆股调整、未按分红调整，与 `market_data_ohlcv_lookup` 的 `close` 一致），以及关联日期。价格与派生值保留 4 位小数，交易日数和股数为整数。行情不可用、历史或成交量不足、基准缺少交易日、缺少分红复权、异常 K 线和截断都通过 warning 披露，不生成替代数据；价格非正的 K 线被剔除，其余异常 K 线保留并告警。
+
+限制：只有日线；Yahoo 历史数据是当前版本，不是时点存档；分红复权依赖 provider 的复权收盘价，provider 未计入的公司行为仍可能表现为跳空；单根错误报价无法与真实波动自动区分。
 
 ## 独立接入与升级
 

@@ -65,6 +65,7 @@ def _event(
             direction=direction,
             session=series.days[index],
             close=quantize(close),
+            raw_close=quantize(series.raw_closes[index]),
             change_percent=quantize(change) if change is not None else None,
             level=quantize(level) if level is not None else None,
             level_label=label,
@@ -102,6 +103,9 @@ def _new_high_low(series: PriceSeries, detector: PriceEventDetector, index: int)
     if direction is None:
         return []
     level = max(prior) if direction == "up" else min(prior)
+    since = lookback - last_index(prior, level)
+    if since < detector.min_base_sessions:
+        return []
     label = "highest_close" if direction == "up" else "lowest_close"
     return _event(
         series,
@@ -112,9 +116,75 @@ def _new_high_low(series: PriceSeries, detector: PriceEventDetector, index: int)
         label=f"{label}_{lookback}",
         measures=[
             _measure("breakPercent", change_percent(close, level), "percent"),
-            _measure("sessionsSinceLevel", lookback - last_index(prior, level), "sessions"),
+            _measure("sessionsSinceLevel", since, "sessions"),
         ],
     )
+
+
+def _extreme_distance(
+    series: PriceSeries, index: int, lookback: int, pick: Callable[[Sequence[Decimal]], Decimal]
+) -> tuple[Decimal, Decimal, int]:
+    """Close change from the picked prior closing extreme, that extreme and its age."""
+    prior = series.closes[index - lookback : index]
+    level = pick(prior)
+    return change_percent(series.closes[index], level), level, lookback - last_index(prior, level)
+
+
+def _near_high_low(series: PriceSeries, detector: PriceEventDetector, index: int) -> Outcome:
+    lookback = detector.lookback
+    if index <= lookback:
+        return INSUFFICIENT
+    within = Decimal(detector.within_percent)
+    events: list[PriceEvent] = []
+    for direction, pick, label, sign in (
+        ("up", max, "highest_close", 1),
+        ("down", min, "lowest_close", -1),
+    ):
+        distance, level, since = _extreme_distance(series, index, lookback, pick)
+        previous = _extreme_distance(series, index - 1, lookback, pick)[0]
+        # Entering the band from outside it; passing the extreme belongs to new_high_low.
+        if -within <= sign * distance <= 0 and sign * previous < -within:
+            events += _event(
+                series,
+                detector,
+                index,
+                direction,
+                level=level,
+                label=f"{label}_{lookback}",
+                measures=[
+                    _measure("levelDistancePercent", distance, "percent"),
+                    _measure("sessionsSinceLevel", since, "sessions"),
+                ],
+            )
+    return events
+
+
+def _drawdown(series: PriceSeries, detector: PriceEventDetector, index: int) -> Outcome:
+    lookback = detector.lookback
+    if index <= lookback:
+        return INSUFFICIENT
+    minimum = Decimal(detector.min_percent)
+    events: list[PriceEvent] = []
+    for direction, pick, label, sign in (
+        ("down", max, "highest_close", -1),
+        ("up", min, "lowest_close", 1),
+    ):
+        distance, level, since = _extreme_distance(series, index, lookback, pick)
+        previous = _extreme_distance(series, index - 1, lookback, pick)[0]
+        if sign * distance >= minimum > sign * previous:
+            events += _event(
+                series,
+                detector,
+                index,
+                direction,
+                level=level,
+                label=f"{label}_{lookback}",
+                measures=[
+                    _measure("levelDistancePercent", distance, "percent"),
+                    _measure("sessionsSinceLevel", since, "sessions"),
+                ],
+            )
+    return events
 
 
 def _breakout(series: PriceSeries, detector: PriceEventDetector, index: int) -> Outcome:
@@ -129,6 +199,9 @@ def _breakout(series: PriceSeries, detector: PriceEventDetector, index: int) -> 
         return []
     prior = highs if direction == "up" else lows
     level = max(highs) if direction == "up" else min(lows)
+    since = lookback - last_index(prior, level)
+    if since < detector.min_base_sessions:
+        return []
     volume = series.volume_ratio(index, lookback)
     required = Decimal(detector.volume_ratio)
     if required > 0:
@@ -146,8 +219,39 @@ def _breakout(series: PriceSeries, detector: PriceEventDetector, index: int) -> 
         label=f"{label}_{lookback}",
         measures=[
             _measure("breakPercent", change_percent(close, level), "percent"),
-            _measure("sessionsSinceLevel", lookback - last_index(prior, level), "sessions"),
+            _measure("sessionsSinceLevel", since, "sessions"),
             _measure("volumeRatio", volume[0], "ratio") if volume else None,
+        ],
+    )
+
+
+def _failed_breakout(series: PriceSeries, detector: PriceEventDetector, index: int) -> Outcome:
+    lookback = detector.lookback
+    if index < lookback:
+        return INSUFFICIENT
+    highs = series.highs[index - lookback : index]
+    lows = series.lows[index - lookback : index]
+    top, bottom = max(highs), min(lows)
+    close, previous = series.closes[index], series.closes[index - 1]
+    # A failed break up is a down event, and a failed break down an up event.
+    if series.highs[index] > top and close < top and close < previous:
+        direction, level, extreme, prior = "down", top, series.highs[index], highs
+    elif series.lows[index] < bottom and close > bottom and close > previous:
+        direction, level, extreme, prior = "up", bottom, series.lows[index], lows
+    else:
+        return []
+    label = "highest_high" if direction == "down" else "lowest_low"
+    return _event(
+        series,
+        detector,
+        index,
+        direction,
+        level=level,
+        label=f"{label}_{lookback}",
+        measures=[
+            _measure("intradayBreakPercent", change_percent(extreme, level), "percent"),
+            _measure("levelDistancePercent", change_percent(close, level), "percent"),
+            _measure("sessionsSinceLevel", lookback - last_index(prior, level), "sessions"),
         ],
     )
 
@@ -191,18 +295,29 @@ def _gap(series: PriceSeries, detector: PriceEventDetector, index: int) -> Outco
     )
 
 
+def _move_threshold(
+    series: PriceSeries, detector: PriceEventDetector, index: int
+) -> Decimal | None:
+    """Close change percent a large move needs at this session; None without ATR history."""
+    threshold = Decimal(detector.min_percent)
+    multiple = Decimal(detector.atr_multiple)
+    if multiple > 0:
+        atr = series.atr(detector.window)[index - 1]
+        if atr is None:
+            return None
+        threshold = max(threshold, multiple * atr / series.closes[index - 1] * 100)
+    return threshold
+
+
 def _large_move(series: PriceSeries, detector: PriceEventDetector, index: int) -> Outcome:
     if index < 1:
         return INSUFFICIENT
-    atr = series.atr(detector.window)[index - 1]
-    multiple = Decimal(detector.atr_multiple)
-    if multiple > 0 and atr is None:
+    threshold = _move_threshold(series, detector, index)
+    if threshold is None:
         return INSUFFICIENT
+    atr = series.atr(detector.window)[index - 1]
     previous, close = series.closes[index - 1], series.closes[index]
     change = change_percent(close, previous)
-    threshold = Decimal(detector.min_percent)
-    if atr is not None and multiple > 0:
-        threshold = max(threshold, multiple * atr / previous * 100)
     if change == 0 or abs(change) < threshold:
         return []
     z_score = series.return_z_score(index, Z_SCORE_LOOKBACK)
@@ -219,6 +334,92 @@ def _large_move(series: PriceSeries, detector: PriceEventDetector, index: int) -
             _measure("volumeRatio", volume[0], "ratio") if volume else None,
         ],
     )
+
+
+def _window_change(
+    series: PriceSeries, detector: PriceEventDetector, index: int
+) -> tuple[str | None, Decimal, Decimal, Decimal | None] | None:
+    """Side reached by the move over the window ending here, its size, threshold and scale."""
+    start = index - detector.window
+    change = change_percent(series.closes[index], series.closes[start])
+    threshold = Decimal(detector.min_percent)
+    multiple = Decimal(detector.sigma_multiple)
+    scale = None
+    if multiple > 0:
+        # Deviation of the daily returns before the window, so the move cannot dilute it.
+        moments = series.return_moments(start, Z_SCORE_LOOKBACK)
+        if moments is None:
+            return None
+        scale = moments[1] * Decimal(detector.window).sqrt() * 100
+        threshold = max(threshold, multiple * scale)
+    side = None
+    if change != 0 and abs(change) >= threshold:
+        side = "up" if change > 0 else "down"
+    return side, change, threshold, scale
+
+
+def _window_move(series: PriceSeries, detector: PriceEventDetector, index: int) -> Outcome:
+    if index <= detector.window:
+        return INSUFFICIENT
+    current = _window_change(series, detector, index)
+    previous = _window_change(series, detector, index - 1)
+    if current is None or previous is None:
+        return INSUFFICIENT
+    side, change, threshold, scale = current
+    if side is None or side == previous[0]:
+        return []
+    start = index - detector.window
+    return _event(
+        series,
+        detector,
+        index,
+        side,
+        level=series.closes[start],
+        label="window_start_close",
+        related=start,
+        measures=[
+            _measure("windowReturnPercent", change, "percent"),
+            _measure("thresholdPercent", threshold, "percent"),
+            _measure("moveSigma", change / scale, "sigma") if scale else None,
+        ],
+    )
+
+
+def _spike_reversal(series: PriceSeries, detector: PriceEventDetector, index: int) -> Outcome:
+    limit = detector.max_sessions
+    if index <= limit:
+        return INSUFFICIENT
+    close = series.closes[index]
+    events: list[PriceEvent] = []
+    for spike in range(index - limit, index):
+        threshold = _move_threshold(series, detector, spike)
+        if threshold is None:
+            return INSUFFICIENT
+        base = series.closes[spike - 1]
+        move = change_percent(series.closes[spike], base)
+        if move == 0 or abs(move) < threshold:
+            continue
+        sign = 1 if move > 0 else -1
+        # Only the first close back beyond the pre-move close reverses the move.
+        if sign * (close - base) >= 0 or any(
+            sign * (series.closes[later] - base) < 0 for later in range(spike, index)
+        ):
+            continue
+        events += _event(
+            series,
+            detector,
+            index,
+            "down" if sign > 0 else "up",
+            level=base,
+            label="pre_move_close",
+            related=spike,
+            measures=[
+                _measure("spikePercent", move, "percent"),
+                _measure("sessionsToReverse", index - spike, "sessions"),
+                _measure("levelDistancePercent", change_percent(close, base), "percent"),
+            ],
+        )
+    return events
 
 
 def _fills(series: PriceSeries, index: int, direction: str, reference: Decimal) -> bool:
@@ -460,6 +661,80 @@ def _inside_bar(series: PriceSeries, detector: PriceEventDetector, index: int) -
     )
 
 
+def _prior_trend(series: PriceSeries, detector: PriceEventDetector, index: int) -> Decimal | None:
+    """Close change into the session before the pattern completes; None when disabled."""
+    sessions = detector.trend_sessions
+    if not sessions:
+        return None
+    return change_percent(series.closes[index - 1], series.closes[index - 1 - sessions])
+
+
+def _reverses(trend: Decimal | None, direction: str) -> bool:
+    """A bullish pattern needs a prior decline and a bearish one a prior advance."""
+    return trend is None or (trend < 0 if direction == "up" else trend > 0)
+
+
+def _engulfing(series: PriceSeries, detector: PriceEventDetector, index: int) -> Outcome:
+    if index <= detector.trend_sessions:
+        return INSUFFICIENT
+    prior_open, prior_close = series.opens[index - 1], series.closes[index - 1]
+    opening, close = series.opens[index], series.closes[index]
+    # The body covers the prior opposite body and is not just the same body reversed.
+    if (opening, close) == (prior_close, prior_open):
+        return []
+    if opening <= prior_close < prior_open <= close:
+        direction = "up"
+    elif opening >= prior_close > prior_open >= close:
+        direction = "down"
+    else:
+        return []
+    trend = _prior_trend(series, detector, index)
+    if not _reverses(trend, direction):
+        return []
+    return _event(
+        series,
+        detector,
+        index,
+        direction,
+        measures=[
+            _measure("bodyRatio", abs(close - opening) / abs(prior_close - prior_open), "ratio"),
+            _measure("trendChangePercent", trend, "percent") if trend is not None else None,
+        ],
+    )
+
+
+def _pin_bar(series: PriceSeries, detector: PriceEventDetector, index: int) -> Outcome:
+    if index <= detector.trend_sessions:
+        return INSUFFICIENT
+    high, low = series.highs[index], series.lows[index]
+    body = (series.opens[index], series.closes[index])
+    span = high - low
+    lower, upper = min(body) - low, high - max(body)
+    # The rejected shadow takes at least two thirds of the session range.
+    if span > 0 and 3 * lower >= 2 * span:
+        direction, shadow, level, label = "up", lower, low, "session_low"
+    elif span > 0 and 3 * upper >= 2 * span:
+        direction, shadow, level, label = "down", upper, high, "session_high"
+    else:
+        return []
+    trend = _prior_trend(series, detector, index)
+    if not _reverses(trend, direction):
+        return []
+    return _event(
+        series,
+        detector,
+        index,
+        direction,
+        level=level,
+        label=label,
+        measures=[
+            _measure("shadowRatio", shadow / span, "ratio"),
+            _measure("rangePercent", _range_percent(series, index), "percent"),
+            _measure("trendChangePercent", trend, "percent") if trend is not None else None,
+        ],
+    )
+
+
 def _volume_spike(series: PriceSeries, detector: PriceEventDetector, index: int) -> Outcome:
     lookback = detector.lookback
     if index < lookback:
@@ -513,8 +788,12 @@ def _relative_strength(series: PriceSeries, detector: PriceEventDetector, index:
         return BENCHMARK_GAP
     closes = series.closes[index - lookback : index + 1]
     ratios = [close / benchmark[day] for close, day in zip(closes, days, strict=True)]
-    direction = _beyond(ratios[-1], max(ratios[:-1]), min(ratios[:-1]))
+    prior = ratios[:-1]
+    direction = _beyond(ratios[-1], max(prior), min(prior))
     if direction is None:
+        return []
+    since = lookback - last_index(prior, max(prior) if direction == "up" else min(prior))
+    if since < detector.min_base_sessions:
         return []
     stock = change_percent(closes[-1], closes[0])
     reference = change_percent(benchmark[days[-1]], benchmark[days[0]])
@@ -527,15 +806,21 @@ def _relative_strength(series: PriceSeries, detector: PriceEventDetector, index:
             _measure("stockReturnPercent", stock, "percent"),
             _measure("benchmarkReturnPercent", reference, "percent"),
             _measure("excessReturnPercent", stock - reference, "percent"),
+            _measure("sessionsSinceLevel", since, "sessions"),
         ],
     )
 
 
 RULES: dict[str, Callable[[PriceSeries, PriceEventDetector, int], Outcome]] = {
     "new_high_low": _new_high_low,
+    "near_high_low": _near_high_low,
+    "drawdown": _drawdown,
     "breakout": _breakout,
+    "failed_breakout": _failed_breakout,
     "gap": _gap,
     "large_move": _large_move,
+    "window_move": _window_move,
+    "spike_reversal": _spike_reversal,
     "gap_fill": _gap_fill,
     "island_reversal": _island_reversal,
     "ma_cross": _ma_cross,
@@ -546,6 +831,8 @@ RULES: dict[str, Callable[[PriceSeries, PriceEventDetector, int], Outcome]] = {
     "bollinger_squeeze": _bollinger_squeeze,
     "range_contraction": _range_contraction,
     "inside_bar": _inside_bar,
+    "engulfing": _engulfing,
+    "pin_bar": _pin_bar,
     "volume_spike": _volume_spike,
     "streak": _streak,
     "relative_strength": _relative_strength,
