@@ -98,6 +98,10 @@ Finance 1.3.0 新增只读工具 `price_events_lookup`：对至多 5 个已授�
 
 经本轮用户明确授权，根 Dockerfile 改为正式应用镜像 `ghcr.io/coachpo/signaldeck`，前端静态资源、Nginx 和 Core API 合并发布；dispatcher、worker 共用该镜像并独立运行。正式部署入口为 `docker/compose.production.yml`，PostgreSQL、Temporal 和业务插件继续独立运行，保留数据库隔离、插件独立升级及历史制品约束。根 Compose 和 `start.sh` 仍是源码本地/演示入口，使用 local 模式与开发 Temporal。这项镜像边界调整不改变单用户、可信内网范围，也不授权发布或切换现有实例。
 
+2026-09-19 起按版本发布：`release.sh` 统一版本号并打 `vX.Y.Z` 标签，发布提交的 CI 全部通过后才发布 `linux/arm64` 镜像；实例经运维 skill 备份后部署并固定到镜像 digest，命令见[贡献指南](CONTRIBUTING.md#发布)。
+
+capy 实例（部署仓库 `coachpo/curse` 的 `signaldeck` Compose 项目，局域网 `192.168.1.222:8089`）于 2026-09-19 10:28 UTC 按该流程部署并核验：应用镜像为 `ghcr.io/coachpo/signaldeck:v0.2.0@sha256:ff80ebb3f036492d145ba3b22eda4315ef406864700bf66d1ac492bcd4ca35ce`（发布提交 `b10785f8`），由 `signaldeck/backend.env` 的 `SIGNALDECK_VERSION` 固定，此前该文件固定的 cc49642a 与实际运行的 84c3ec46 不一致的问题已消除。切换前完成静默备份（`backups/signaldeck/20260919T102154Z-managed`，一次性容器恢复演练通过）和 schema 兼容检查（20 张 Core 表全部兼容）；切换后 `/health` 报告 0.2.0，应用各角色运行该 digest，其余服务镜像不变，持久表行数未减少，7 个只读 API 和 6 个插件页面挂载返回 200，300 秒观察期内无重启。插件保持原固定版本：Finance 1.2.0（cc49642a）、Notes 1.3.0（84c3ec46）、Oracle（846bf3b4）；v0.2.0 中的 Finance 1.3.0 与 Oracle 新构建尚未升级到该实例，须按插件升级流程另行授权。观测时 Core 中 Run 与工作流包均为 0，资源 2 条。以上是观测时事实，不代表持续健康。
+
 仓库配置不能证明实际实例的部署、外部用户或数据状态；当前未核实“没有外部用户”或“没有不可丢弃数据”。MVP 档位不替代这些事实，也不授予数据重置权限。
 
 ## 数据与兼容性
