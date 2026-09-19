@@ -15,6 +15,25 @@ updates:
     groups:
       backend-minor-patch:
         update-types: [minor, patch]
+    ignore:
+      # FastAPI stays <0.137; see "FastAPI 版本上限" in CONTRIBUTING.md.
+      - dependency-name: fastapi
+        versions: [">=0.137"]
+
+  - package-ecosystem: uv
+    directories:
+      - /plugins/digital_oracle
+      - /plugins/finance
+      - /plugins/notes
+    schedule:
+      interval: weekly
+    groups:
+      plugins-minor-patch:
+        update-types: [minor, patch]
+    ignore:
+      # Plugin code is tested only in the backend environment; keep FastAPI in step.
+      - dependency-name: fastapi
+        versions: [">=0.137"]
 
   - package-ecosystem: npm
     directory: /frontend
@@ -27,7 +46,8 @@ updates:
   - package-ecosystem: docker
     directories:
       - /
-      - /backend
-      - /frontend
+      - /plugins/digital_oracle
+      - /plugins/finance
+      - /plugins/notes
     schedule:
       interval: weekly

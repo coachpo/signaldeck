@@ -25,9 +25,14 @@ def plugin_tag(value):
 
 
 def app_image(value):
-    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._:/@+-]*", value):
+    if not re.fullmatch(
+        r"[A-Za-z0-9][A-Za-z0-9._/-]*"
+        r"(?::v[0-9]+\.[0-9]+\.[0-9]+(?:@sha256:[0-9a-f]{64})?|@sha256:[0-9a-f]{64})",
+        value,
+    ):
         raise argparse.ArgumentTypeError(
-            "must be an image reference without whitespace or shell syntax"
+            "must pin a release as <image>:vX.Y.Z[@sha256:<digest>] "
+            "or <image>@sha256:<digest>"
         )
     return value
 
@@ -60,9 +65,7 @@ def ensure_directory(path):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--plugin-tag", required=True, type=plugin_tag)
-    parser.add_argument(
-        "--app-image", type=app_image, default="ghcr.io/coachpo/signaldeck:latest"
-    )
+    parser.add_argument("--app-image", required=True, type=app_image)
     parser.add_argument(
         "--output",
         type=Path,

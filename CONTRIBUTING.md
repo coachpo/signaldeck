@@ -31,7 +31,7 @@ for package in tomllib.loads(Path("uv.lock").read_text())["package"]:
 PY
 ```
 
-核对完整锁文件 diff，再在同一目录对候选依赖组合运行以下回归（数据库准备见 [Backend 测试数据库](#backend-测试数据库)），它们依次覆盖 Core 包编辑、Finance 业务 HTTP、Logfire instrumentation 注册，以及经过 instrumentation 的 `/api/runs` 的 GET-only/405 行为。这些回归和适用的后端门禁全部通过后，才移除上限及其注释。
+核对完整锁文件 diff，再在同一目录对候选依赖组合运行以下回归（数据库准备见 [Backend 测试数据库](#backend-测试数据库)），它们依次覆盖 Core 包编辑、Finance 业务 HTTP、Logfire instrumentation 注册，以及经过 instrumentation 的 `/api/runs` 的 GET-only/405 行为。这些回归和适用的后端门禁全部通过后，才移除上限及其注释，并删除 [`.github/dependabot.yml`](.github/dependabot.yml) 中的 `fastapi` ignore 规则。
 
 ```bash
 uv run pytest \

@@ -25,7 +25,7 @@ python3 docker/create_env.py \
   --plugin-tag "sha-$(git rev-parse HEAD)"
 ```
 
-`create_env.py` 按 [`production.env.example`](production.env.example) 写入权限 0600 的 `~/.config/signaldeck/production.env`，生成五个独立数据库密码和资源加密 key，不输出密钥；文件已存在时拒绝覆盖。`--plugin-tag` 只接受 `sha-` 加 40 位小写十六进制，同时固定三个插件镜像；省略 `--app-image` 会写入指向最近一次发布的 `latest`。以后更新沿用同一个 env 文件和项目名，不重新生成密码或 key。
+`create_env.py` 按 [`production.env.example`](production.env.example) 写入权限 0600 的 `~/.config/signaldeck/production.env`，生成五个独立数据库密码和资源加密 key，不输出密钥；文件已存在时拒绝覆盖。`--plugin-tag` 只接受 `sha-` 加 40 位小写十六进制，同时固定三个插件镜像；`--app-image` 必填，只接受 `<镜像>:vX.Y.Z`、`<镜像>:vX.Y.Z@sha256:<digest>` 或 `<镜像>@sha256:<digest>`，`latest` 等浮动标签会被拒绝。以后更新沿用同一个 env 文件和项目名，不重新生成密码或 key。
 
 ```bash
 sdcompose() {
@@ -68,7 +68,7 @@ SIGNALDECK_IMAGE="$new" sdcompose run --rm --no-deps -T --entrypoint python app 
 | `COMPOSE_PROFILES`、`SIGNALDECK_PLUGINS` | 启用的插件，模板为 `finance,notes,digital-oracle`；两者须一致，同时设为空只启动通用平台。 |
 | `AGENT_PLATFORM_ENCRYPTION_KEY` | 资源凭据加密 key；更换后已保存的凭据无法解密。 |
 | `APP_PORT` | 应用端口，默认 8089，只绑定 `127.0.0.1`。 |
-| `EDGAR_CONTACT_EMAIL`、`FRED_API_KEY` | 模板中没有这两行，需要时手工加入；Compose 把前者传给 Finance 和 Oracle，后者只传给 Oracle，用途见[插件说明](../plugins/README.md#build-and-run)。 |
+| `EDGAR_CONTACT_EMAIL`、`FRED_API_KEY` | 模板中以注释占位，需要时在私有 env 文件中取消注释并填写；Compose 把前者传给 Finance 和 Oracle，后者只传给 Oracle，用途见[插件说明](../plugins/README.md#build-and-run)。 |
 
 数据库密码、由其派生的数据库 URL 和 `TEMPORAL_ADDRESS` 保持生成值；env 文件只供 Compose 读取，不要作为 shell 脚本 `source`。浏览器经同源 `/api` 访问 API，Nginx 网关的请求体上限为 25 MiB。
 
