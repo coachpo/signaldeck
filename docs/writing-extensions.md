@@ -189,9 +189,9 @@ Finance 1.2.0 的 `research_report_compile` 输入可省略 `discussion`。省�
 
 ## Finance K 线事件合同
 
-Finance 1.3.0 新增只读工具 `signaldeck/finance/price_events_lookup`，按闭合规则识别美股日线 K 线事件；1.4.0 改为读取分红复权价格，增加 7 条规则和 `minBaseSessions` 参数。它需要 `finance-market-data`，`symbols` 和相对强弱的 `benchmark` 都必须在 `allowedSymbols` 内。结果只描述已完成交易日的价格事实，不预测走势，不做回测，也不构成交易建议。
+Finance 1.3.0 新增只读工具 `signaldeck/finance/price_events_lookup`，按闭合规则识别美股日线 K 线事件；1.4.0 改为读取分红复权价格，增加 7 条规则和 `minBaseSessions` 参数；1.5.0 增加自选股扫描和中文摘要。它需要 `finance-market-data`，`symbols` 和相对强弱的 `benchmark` 都必须在 `allowedSymbols` 内。结果只描述已完成交易日的价格事实，不预测走势，不做回测，也不构成交易建议。
 
-输入包含 1–5 个 `symbols`、1–20 条 `detectors`，可选 `asOfDate`（纽约日期；省略为当前时间，未来日期拒绝）和 `windowSessions`（1–120，默认 20，只报告最近这些交易日内的事件）。每条规则只接受下表所列参数，省略时取默认值；多余参数、越界取值或缺少 `benchmark` 直接拒绝，完全相同的规则去重。小数参数使用十进制字符串。三种中性规则以外都可设 `direction: up|down` 只保留一侧；多条相对强弱规则必须使用同一个基准。
+输入包含 1–20 条 `detectors`，可选 1–5 个 `symbols`、`asOfDate`（纽约日期；省略为当前时间，未来日期拒绝）、`windowSessions`（1–120，默认 20，只报告最近这些交易日内的事件）和 `includeDigest`（默认 false）。省略 `symbols` 时按自选股扫描：扫描 `allowedSymbols` 中的全部证券（代码去掉首尾空格并转大写后去重），至多 50 只，超过时以 `price_events_watchlist_too_large` 拒绝，没有授权证券时以 `price_events_no_granted_symbols` 拒绝；结果只列出有事件的证券。发布合同把本工具的 `timeoutSeconds` 设为 120 秒，覆盖逐只读取 50 只证券的耗时。每条规则只接受下表所列参数，省略时取默认值；多余参数、越界取值或缺少 `benchmark` 直接拒绝，完全相同的规则去重。小数参数使用十进制字符串。三种中性规则以外都可设 `direction: up|down` 只保留一侧；多条相对强弱规则必须使用同一个基准。
 
 | 规则 | 参数（默认值） | 事件条件 |
 | --- | --- | --- |
@@ -224,7 +224,7 @@ Finance 1.3.0 新增只读工具 `signaldeck/finance/price_events_lookup`，按�
 
 交易日按纽约日期划分，当日纽约时间 16:30 后才算完成，未完成的 K 线不参与计算。单次读取约两年、最多 500 个交易日。规则读取按拆股和分红复权的开高低收：复权因子取 provider 复权收盘价与收盘价之比，并以最后一个完成交易日为基准，所以最新价格等于 provider 价格，更早的价位按之后的分红相应下调。与所在段因子相差不足十万分之一的交易日沿用该段因子，避免浮点噪声把持平的价格拆成新高或新低。任一交易日缺少正的复权收盘价时，该证券退回只按拆股调整的价格，并给出 `price_events_dividend_unadjusted` warning；相对强弱的基准同样处理。事件 `direction` 表示事件本身的价格方向，例如向上缺口被回补是 down 事件。
 
-输出包含 `asOfDate`、实际截止时间 `cutoffAt`、`windowSessions`、截断前的命中总数 `matchedCount` 和 `warnings`。每只证券给出价格口径 `priceBasis`（`dividend_adjusted` 或 `split_adjusted`）、交易日范围、最新状态 `state`（20/60/250 日收盘区间位置、SMA20/50/200 与均线排列、RSI14、ATR14 百分比、20 日量比、连涨或连跌天数）和按日期从新到旧排列的 `events`（每只最多 50 条，`eventCount` 为截断前数量）。每个事件回显生效的规则参数，给出按 `priceBasis` 计算的 `close`、`changePercent`、参考价位 `level/levelLabel` 和带单位的 `measures`，并给出 provider 原始收盘价 `rawClose`（已按拆股调整、未按分红调整，与 `market_data_ohlcv_lookup` 的 `close` 一致），以及关联日期。价格与派生值保留 4 位小数，交易日数和股数为整数。行情不可用、历史或成交量不足、基准缺少交易日、缺少分红复权、异常 K 线和截断都通过 warning 披露，不生成替代数据；价格非正的 K 线被剔除，其余异常 K 线保留并告警。
+输出包含 `asOfDate`、实际截止时间 `cutoffAt`、`windowSessions`、实际扫描的证券 `scannedSymbols`、这些证券中最新的已完成交易日 `latestSession`（没有可用交易日时省略）、截断前的命中总数 `matchedCount` 和 `warnings`；`includeDigest` 为 true 时另给出中文 Markdown 摘要 `digest`，按证券列出事件、所用规则、价格口径和提示，`latestSession` 早于 `asOfDate` 时注明当天休市或尚未收盘。每只证券给出价格口径 `priceBasis`（`dividend_adjusted` 或 `split_adjusted`）、交易日范围、最新状态 `state`（20/60/250 日收盘区间位置、SMA20/50/200 与均线排列、RSI14、ATR14 百分比、20 日量比、连涨或连跌天数）和按日期从新到旧排列的 `events`（每只最多 50 条，`eventCount` 为截断前数量）。每个事件回显生效的规则参数，给出按 `priceBasis` 计算的 `close`、`changePercent`、参考价位 `level/levelLabel` 和带单位的 `measures`，并给出 provider 原始收盘价 `rawClose`（已按拆股调整、未按分红调整，与 `market_data_ohlcv_lookup` 的 `close` 一致），以及关联日期。价格与派生值保留 4 位小数，交易日数和股数为整数。行情不可用、历史或成交量不足、基准缺少交易日、缺少分红复权、异常 K 线和截断都通过 warning 披露，不生成替代数据；价格非正的 K 线被剔除，其余异常 K 线保留并告警。
 
 限制：只有日线；Yahoo 历史数据是当前版本，不是时点存档；分红复权依赖 provider 的复权收盘价，provider 未计入的公司行为仍可能表现为跳空；单根错误报价无法与真实波动自动区分。
 

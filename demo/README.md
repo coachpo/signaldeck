@@ -8,6 +8,7 @@ These standalone examples use `signaldeck.workflowPackage/v2`. They are not plat
 | [US equity research](us_equity_research.yaml) | `monitor` | Frozen observations and explicit evidence comparisons; deep research only on an initial baseline or material change | Digital Oracle and Finance plugins; `finance-market-data`; `equity-research-model` |
 | [Research notes](research_notes.yaml) | `research` | Collection search, optional editing of conclusions and evidence-backed revisions, and an immutable note with source links | Notes plugin; `notes-workspace`; `research-model` |
 | [Research notes](research_notes.yaml) | `capture` | Original text saved as an immutable note | Notes plugin; `notes-workspace` |
+| [Watchlist K-line scan](watchlist_price_events.yaml) | `scan` | Low-frequency daily K-line events for every granted symbol, shown as a digest and saved as a Finance report when the latest session has enough events | Finance plugin 1.5.0 or later; `finance-market-data` |
 
 Finance owns report storage and its report page. Notes owns the research collection. Oracle provider availability depends on its independent deployment configuration; unavailable evidence must be identified in the generated research. Research workflows do not place orders.
 
@@ -42,6 +43,16 @@ The same package offers **美股研究监测** (`monitor`). Its input has `monit
 Only the explicitly selected `scope.sources` govern freshness and comparisons; the collection may retain extra material. No baseline or material changes trigger deep research, unchanged evidence skips it, and invalid required evidence does not replace the last valid baseline. Observation validity and report success are separate. Rules or scope changes start a new comparable baseline; retrieved timestamps, ordering and duplicate collection do not trigger research. Prediction rule, status and expiry changes are separate from price changes, and probabilities are never compared across incompatible rules. Reports are bound to an exact observation, not an implicit “latest” report. This is separate from the other presets' manual `previousReport` behavior.
 
 Monitoring keeps an explicit 7-day market/news window and four financial records. These settings are fixed within this example because the public monitoring scope does not include configurable collection windows. Its research stages use the same bounded discussion and canonical report path as manual research, without changing the observation cutoff or baseline rules.
+
+## Watchlist K-line scan
+
+Choose **自选股 K 线扫描** in the task catalog. The watchlist is the `allowedSymbols` scope of the `finance-market-data` connection: the scan covers every symbol there, at most 50, so a separate connection can hold a dedicated watchlist. It needs Finance 1.5.0 or later and no model.
+
+The `scan` node calls `price_events_lookup` without symbols and with five low-frequency rules fixed in the package: single-session large moves, volatility-scaled five-session moves, large moves given back, drawdowns of 20% from the 60-session closing high, and new 60-session closing highs or lows whose prior extreme is at least 20 sessions old. On real data for 50 liquid US stocks these rules gave about 0.05 events per stock per trading day. Edit the package to change them.
+
+The `save` node stores the Chinese digest as a Finance report only when the newest completed session is the scan date and the event count reaches `minEvents` (default 1). On a market holiday, a weekend or before 16:30 New York time, the newest session is an earlier one, so the run shows the digest and saves nothing; this keeps a daily schedule from repeating the previous session. `windowSessions` (default 1) sets how many recent sessions to report; use 5 for a weekly run.
+
+Create a repeat schedule for the workflow in the New York time zone on weekdays after 16:30, for example 16:45. Every fire is an ordinary run: its digest appears in the run history and its report, if any, opens from the result. SignalDeck sends no push notifications. Events describe past daily prices only.
 
 ## Configure resources
 

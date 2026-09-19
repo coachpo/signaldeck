@@ -3,16 +3,19 @@
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 
+from plugin_runtime.formatting import normalize_symbol
 from plugin_runtime.serialization import model_wire_schema, project
 from plugin_runtime.server import tool
 
 from .contracts import RuntimeToolContext, RuntimeToolWarning
 from .price_event_contracts import (
+    WATCHLIST_LIMIT,
     PriceEventDetector,
     PriceEventSeries,
     PriceEventsLookupInput,
     PriceEventsLookupResult,
 )
+from .price_event_digest import render_digest
 from .price_event_rules import detect_events
 from .price_series import PriceSeries, complete_sessions, dividend_adjusted, summarize
 from .providers.market_data_snapshots import MarketDataOhlcvSeries
@@ -25,8 +28,12 @@ EVENT_LIMIT = 50
 # About two years of calendar days, trimmed to the OHLCV tool's 500-bar ceiling.
 HISTORY_DAYS = 740
 HISTORY_ROWS = 500
+# A watchlist scan reads up to 50 symbols one after another.
+TIMEOUT_SECONDS = 120.0
 DESCRIPTION = (
-    "Detect rule-based daily K-line events for up to 5 granted US symbols: new closing highs "
+    "Detect rule-based daily K-line events for up to 5 granted US symbols, or for every "
+    "granted symbol (at most 50) when symbols is omitted, in which case only the symbols with "
+    "events are returned. Rules cover new closing highs "
     "or lows and approaches to them, drawdowns and rebounds, breakouts and failed breakouts, "
     "opening gaps, large one-session and multi-session moves, reversed large moves, gap fills, "
     "island reversals, moving-average, MACD, RSI and Bollinger signals, range contraction, "
@@ -38,20 +45,24 @@ DESCRIPTION = (
     "can differ from. Events come from the latest windowSessions sessions (default 20), newest "
     "first, at most 50 per symbol, each with its effective detector parameters. direction is "
     "the price direction of the event itself (a filled up-gap is a down event); set a "
-    "detector's direction to keep one side. Results describe past prices only, not forecasts, "
-    "backtests or trading advice; disclose returned warnings."
+    "detector's direction to keep one side. latestSession is the newest completed session "
+    "among the scanned symbols; includeDigest adds a Chinese Markdown digest. Results describe "
+    "past prices only, not forecasts, backtests or trading advice; disclose returned warnings."
 )
 
 
 def definition() -> dict:
-    return tool(
-        "signaldeck/finance",
-        TOOL_NAME,
-        {**model_wire_schema(PriceEventsLookupInput), "title": "识别K线事件"},
-        model_wire_schema(PriceEventsLookupResult),
-        DESCRIPTION,
-        resources=("finance-market-data",),
-    )
+    return {
+        **tool(
+            "signaldeck/finance",
+            TOOL_NAME,
+            {**model_wire_schema(PriceEventsLookupInput), "title": "识别K线事件"},
+            model_wire_schema(PriceEventsLookupResult),
+            DESCRIPTION,
+            resources=("finance-market-data",),
+        ),
+        "timeoutSeconds": TIMEOUT_SECONDS,
+    }
 
 
 def execute(
@@ -62,9 +73,12 @@ def execute(
     now: datetime | None = None,
 ) -> dict:
     payload = PriceEventsLookupInput.model_validate(arguments)
+    granted = _granted_symbols(invocation)
+    symbols = payload.symbols or _watchlist(granted)
     benchmark = payload.benchmark
-    requested = list(dict.fromkeys([*payload.symbols, *([benchmark] if benchmark else [])]))
-    _require_symbols(requested, invocation)
+    requested = list(dict.fromkeys([*symbols, *([benchmark] if benchmark else [])]))
+    if any(symbol not in granted for symbol in requested):
+        raise ValueError("finance_symbol_not_granted")
     as_of_date, cutoff = _cutoff(payload.as_of_date, now or datetime.now(UTC))
     with context.session_factory() as session:
         snapshot = MarketDataService(session, context.quote_provider).get_ohlcv_snapshot(
@@ -80,23 +94,29 @@ def execute(
         sessions, _ = complete_sessions(provided[benchmark].rows, cutoff)
         adjusted = dividend_adjusted(sessions)
         # A scanned benchmark reports its own basis warning.
-        if adjusted is None and sessions and benchmark not in payload.symbols:
+        if adjusted is None and sessions and benchmark not in symbols:
             warnings.append(_unadjusted_warning(benchmark))
         benchmark_closes = {session.day: session.close for session in adjusted or sessions}
     results = []
-    for symbol in payload.symbols:
+    for symbol in symbols:
         if symbol in provided:
             scanned = _scan(provided[symbol], payload, cutoff, benchmark_closes, warnings)
             if scanned is not None:
                 results.append(scanned)
+    # A watchlist scan reports only the symbols with events.
+    reported = results if payload.symbols else [item for item in results if item.event_count]
     result = PriceEventsLookupResult(
         as_of_date=as_of_date,
         cutoff_at=cutoff,
         window_sessions=payload.window_sessions,
-        matched_count=sum(item.event_count for item in results),
-        series=results,
+        scanned_symbols=symbols,
+        latest_session=max((item.last_session for item in results), default=None),
+        matched_count=sum(item.event_count for item in reported),
+        series=reported,
         warnings=warnings,
     )
+    if payload.include_digest:
+        result.digest = render_digest(result, payload.detectors)
     return project(result.model_dump(mode="json", by_alias=True))
 
 
@@ -155,15 +175,22 @@ def _scan(
     )
 
 
-def _require_symbols(requested: list[str], invocation: dict) -> None:
+def _granted_symbols(invocation: dict) -> list[str]:
     binding = invocation.get("resourceBindings", {}).get("finance-market-data", {})
     allowed = binding.get("allowedSymbols")
     if "finance-market-data" not in invocation.get("resourceGrants", []) or not isinstance(
         allowed, list
     ):
         raise ValueError("finance_resource_not_granted")
-    if any(symbol not in allowed for symbol in requested):
-        raise ValueError("finance_symbol_not_granted")
+    return [symbol for symbol in dict.fromkeys(map(normalize_symbol, allowed)) if symbol]
+
+
+def _watchlist(granted: list[str]) -> list[str]:
+    if not granted:
+        raise ValueError("price_events_no_granted_symbols")
+    if len(granted) > WATCHLIST_LIMIT:
+        raise ValueError("price_events_watchlist_too_large")
+    return granted
 
 
 def _cutoff(as_of_date: date | None, now: datetime) -> tuple[date, datetime]:

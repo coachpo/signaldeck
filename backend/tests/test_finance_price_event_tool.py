@@ -6,6 +6,7 @@ from contextlib import nullcontext
 from datetime import UTC, date, datetime, time, timedelta
 from decimal import Decimal
 from pathlib import Path
+from typing import get_args
 
 import pytest
 from mcp import ClientSession
@@ -20,6 +21,8 @@ for directory in ("runtime", "finance"):
 from finance_plugin import price_event_tools  # noqa: E402
 from finance_plugin.contracts import RuntimeToolContext  # noqa: E402
 from finance_plugin.main import create_app  # noqa: E402
+from finance_plugin.price_event_contracts import DetectorType, MeasureName  # noqa: E402
+from finance_plugin.price_event_digest import MEASURE_NAMES, RULE_NAMES  # noqa: E402
 from finance_plugin.providers.quote_provider import (  # noqa: E402
     ProviderOhlcvRow,
     ProviderOhlcvSeries,
@@ -34,12 +37,13 @@ EX_DIVIDEND = date(2026, 9, 16)
 
 
 class ScriptedProvider:
-    """Flat weekday bars at 100 that gap up and close at 110 on JUMP."""
+    """Flat weekday bars at 100 that gap up and close at 110 on JUMP, except flat symbols."""
 
     provider_name = "scripted"
 
-    def __init__(self, failing: set[str] | None = None) -> None:
+    def __init__(self, failing: set[str] | None = None, flat: set[str] | None = None) -> None:
         self.failing = failing or set()
+        self.flat = flat or set()
         self.calls: list[tuple[str, datetime, datetime, str]] = []
 
     def fetch_ohlcv(self, symbol, *, start_date, end_date, interval):
@@ -49,8 +53,9 @@ class ScriptedProvider:
         rows, day = [], start_date.date()
         while day <= end_date.date():
             if day.weekday() < 5:
-                close = Decimal(110 if day >= JUMP else 100)
-                opening = Decimal(108) if day == JUMP else close
+                jumped = symbol not in self.flat
+                close = Decimal(110 if day >= JUMP and jumped else 100)
+                opening = Decimal(108) if day == JUMP and jumped else close
                 rows.append(
                     ProviderOhlcvRow(
                         at=datetime.combine(day, time(13, 30), UTC),
@@ -58,7 +63,7 @@ class ScriptedProvider:
                         high=close + 1,
                         low=opening - 1,
                         close=close,
-                        volume=5000 if day == JUMP else 1000,
+                        volume=5000 if day == JUMP and jumped else 1000,
                         adjusted_close=close,
                     )
                 )
@@ -128,6 +133,7 @@ def test_published_contract_validates_a_real_scan() -> None:
     published = contract(app)
     assert published["effect"] == "read"
     assert published["resourceRequirements"] == ["finance-market-data"]
+    assert published["timeoutSeconds"] == 120.0
     validate_schema(published["inputSchema"])
     validate_schema(published["outputSchema"])
     validate_value(published["inputSchema"], arguments())
@@ -139,6 +145,8 @@ def test_published_contract_validates_a_real_scan() -> None:
     assert provider.calls[0][2] - provider.calls[0][1] == timedelta(days=740)
     assert (result["asOfDate"], result["cutoffAt"]) == ("2026-09-18", "2026-09-19T04:00:00Z")
     assert result["matchedCount"] == 4 and result["warnings"] == []
+    assert (result["scannedSymbols"], result["latestSession"]) == (["MSFT"], "2026-09-18")
+    assert "digest" not in result
     series = result["series"][0]
     assert (series["lastSession"], series["windowStart"], series["sessionCount"]) == (
         "2026-09-18",
@@ -224,6 +232,101 @@ def test_rules_read_dividend_adjusted_prices_and_report_raw_closes() -> None:
     ]
 
 
+def test_watchlist_scan_covers_every_granted_symbol_and_reports_only_events() -> None:
+    app = create_app("postgresql+psycopg://localhost/unused", ScriptedProvider(flat={"KO"}))
+    scan = {
+        "asOfDate": "2026-09-18",
+        "windowSessions": 10,
+        "detectors": [{"type": "gap"}],
+        "includeDigest": True,
+    }
+    result = app.state.execute(TOOL, scan, grant("msft", "KO", "SPY", "MSFT"))
+    validate_value(contract(app)["outputSchema"], result)
+    assert (result["scannedSymbols"], result["latestSession"]) == (
+        ["MSFT", "KO", "SPY"],
+        "2026-09-18",
+    )
+    assert [item["symbol"] for item in result["series"]] == ["MSFT", "SPY"]
+    assert result["matchedCount"] == 2 and result["warnings"] == []
+    row = (
+        "| 2026-09-14 | 跳空缺口 | 向上 | 110.00 | +10.00% "
+        "| 参考价 101.00，缺口 6.93%，缺口折合 3.50 ATR |"
+    )
+    assert result["digest"] == "\n".join(
+        [
+            "# K 线事件 · 2026-09-18",
+            "",
+            "扫描 3 只证券，最新完成交易日 2026-09-18；2 只证券共 2 个事件。",
+            "",
+            "| 证券 | 交易日 | 事件 | 方向 | 收盘 | 涨跌幅 | 要点 |",
+            "| --- | --- | --- | --- | --- | --- | --- |",
+            "| MSFT " + row,
+            "| SPY " + row,
+            "",
+            "规则：gap(minPercent=1)",
+            "",
+            "按分红复权价格识别事件（缺少复权数据的证券见提示）；收盘列是 provider 原始收盘价，"
+            "涨跌幅按识别所用的价格计算。",
+            "",
+            "事件只描述历史价格，不构成预测或交易建议。",
+        ]
+    )
+    for scope, code in [
+        (grant(), "price_events_no_granted_symbols"),
+        (grant(*(f"S{index}" for index in range(51))), "price_events_watchlist_too_large"),
+        (
+            {"resourceGrants": [], "resourceBindings": {}},
+            "finance_resource_not_granted",
+        ),
+    ]:
+        with pytest.raises(ValueError, match=code):
+            app.state.execute(TOOL, scan, scope)
+
+
+def test_watchlist_scan_warns_once_for_an_unadjusted_benchmark() -> None:
+    app = create_app("postgresql+psycopg://localhost/unused", DividendProvider(adjusted=False))
+    scan = {
+        "asOfDate": "2026-09-18",
+        "windowSessions": 5,
+        "detectors": [{"type": "relative_strength", "benchmark": "SPY"}],
+    }
+    result = app.state.execute(TOOL, scan, grant("MSFT", "SPY"))
+    assert (result["scannedSymbols"], result["series"]) == (["MSFT", "SPY"], [])
+    assert [(item["code"], item["details"]) for item in result["warnings"]] == [
+        ("price_events_dividend_unadjusted", [{"key": "symbol", "value": symbol}])
+        for symbol in ("MSFT", "SPY")
+    ]
+
+
+def test_digest_notes_a_date_without_a_completed_session() -> None:
+    context = RuntimeToolContext(nullcontext, ScriptedProvider(flat={"KO"}))
+    result = price_event_tools.execute(
+        {
+            "asOfDate": "2026-09-19",
+            "windowSessions": 1,
+            "detectors": [{"type": "gap"}],
+            "includeDigest": True,
+        },
+        grant("KO"),
+        context,
+        now=datetime(2026, 9, 19, 21, tzinfo=UTC),
+    )
+    assert (result["latestSession"], result["series"], result["matchedCount"]) == (
+        "2026-09-18",
+        [],
+        0,
+    )
+    assert result["digest"].split("\n")[2:4] == [
+        "扫描 1 只证券，最新完成交易日 2026-09-18；未发现所选事件。",
+        "2026-09-19 没有已完成的交易日：当天休市或尚未收盘。",
+    ]
+
+
+def test_digest_names_every_rule_and_measure() -> None:
+    assert set(RULE_NAMES) == set(get_args(DetectorType))
+    assert set(MEASURE_NAMES) == set(get_args(MeasureName))
+
+
 def test_symbols_and_benchmark_must_be_granted() -> None:
     app = create_app("postgresql+psycopg://localhost/unused", ScriptedProvider())
     benchmark = arguments(detectors=[{"type": "relative_strength", "benchmark": "SPY"}])
@@ -269,6 +372,7 @@ def test_unavailable_symbols_and_truncated_events_are_reported() -> None:
             symbols=["MSFT", "AAPL"],
             windowSessions=120,
             detectors=[{"type": "volume_spike", "volumeRatio": "0.01"}],
+            includeDigest=True,
         ),
         grant("MSFT", "AAPL"),
     )
@@ -284,6 +388,12 @@ def test_unavailable_symbols_and_truncated_events_are_reported() -> None:
     assert [warning["code"] for warning in result["warnings"]] == [
         "ohlcv_unavailable",
         "price_events_truncated",
+    ]
+    digest = result["digest"].split("\n")
+    assert "MSFT 另有 70 个较早的事件未列出。" in digest
+    assert digest[digest.index("提示：") + 1 :][:2] == [
+        "- No OHLCV data available for AAPL",
+        "- 120 events found for MSFT; the latest 50 returned",
     ]
 
 

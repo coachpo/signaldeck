@@ -98,6 +98,16 @@ Finance 1.4.0 的 `price_events_lookup` 改为按分红复权价格识别事件�
 
 实现已通过提交 `792ac294` 合入 `main` 并推送，随 v0.2.1 发布；capy 实例的插件升级见[部署与使用](#部署与使用)。新规则和字段改变 Finance 合同与制品摘要，实际启用须登记新的不可变发布和 endpoint，并保留旧 Run 的原绑定。
 
+### 自选股定时扫描（2026-09-19）
+
+Finance 1.5.0 的 `price_events_lookup` 可以省略 `symbols`，扫描 `finance-market-data` 连接 `allowedSymbols` 中的全部证券（至多 50 只），只返回有事件的证券，并给出实际扫描的 `scannedSymbols` 和最新已完成交易日 `latestSession`；`includeDigest` 生成中文 Markdown 摘要。该工具发布的超时由默认 30 秒改为 120 秒。新增示例工作流包 `demo/watchlist_price_events.yaml`（任务名“自选股 K 线扫描”）：用确定性步骤调用扫描工具，固定 5 条低频规则；只有最新已完成交易日就是扫描当天、且事件数达到 `minEvents` 时，才用 `reports_create` 把摘要保存为 Finance 报告，不调用模型。定时由平台的重复安排配置，建议纽约时间工作日 16:45。未修改 Core 或前端；合同见[插件接入](docs/writing-extensions.md#finance-k-线事件合同)，用法见[示例工作流](demo/README.md#watchlist-k-line-scan)。
+
+新增 4 项、调整 2 项工具测试；Finance、研究与插件相关回归共 486 项通过，改动文件的 ruff/black/isort 通过。工作流包经 Core 解析器编译，并按新 Finance 发布描述通过确定性工具合同校验。另用不入库的临时端到端用例，在真实 Temporal 开发服务器、PlatformStore 和 MCP 插件调用下执行三次：周五收盘后有事件时保存报告；周六，以及 `minEvents=3` 时只扫描不保存；报告正文与摘要一致。真实 Yahoo 日线下，50 只证券的自选股扫描约 12 秒完成；按近 120 个交易日计算，这组规则约为每只每年 12.9 个事件，即每只每个交易日约 0.05 个。
+
+Core 编译条件时按精确类型识别字面量，而 YAML 导入的整数是 ruamel 的 `ScalarInt`，所以条件里直接写数字会被判为类型不兼容。工作流改用工作流输入 `minEvents` 作为阈值避开这个问题，Core 未修改。
+
+尚未发布或部署。新字段和超时改变 Finance 合同与制品摘要，实际启用须登记新的不可变发布和 endpoint，并保留旧 Run 的原绑定。
+
 ## 部署与使用
 
 当前部署边界是本地内网，使用对象是个人和单一操作者。项目优先保持本地启动、调试、观察和日常使用便利；这项偏好不取消现有的正确性、数据完整性、密钥保护和必要验证边界。

@@ -105,6 +105,8 @@ DETECTOR_GUIDE = (
     "accept direction."
 )
 
+# A watchlist scan covers every granted symbol, up to this many.
+WATCHLIST_LIMIT = 50
 DecimalText = Annotated[str, Field(min_length=1, max_length=20)]
 Symbol = Annotated[str, Field(min_length=1, max_length=30)]
 
@@ -228,18 +230,29 @@ class PriceEventDetector(CamelModel):
 
 
 class PriceEventsLookupInput(CamelModel):
-    symbols: list[Symbol] = Field(
-        min_length=1, max_length=5, description="Granted US symbols to scan."
+    symbols: list[Symbol] | None = Field(
+        default=None,
+        min_length=1,
+        max_length=5,
+        description=(
+            "Granted US symbols to scan. Omit to scan every granted symbol (at most 50) and "
+            "return only the symbols with events."
+        ),
     )
     as_of_date: date | None = None
     window_sessions: int = Field(default=20, ge=1, le=120)
     detectors: list[PriceEventDetector] = Field(
         min_length=1, max_length=20, description="Rules to evaluate; duplicates are ignored."
     )
+    include_digest: bool = Field(
+        default=False, description="Also return a Chinese Markdown digest of the scan."
+    )
 
     @field_validator("symbols")
     @classmethod
-    def unique_symbols(cls, values: list[str]) -> list[str]:
+    def unique_symbols(cls, values: list[str] | None) -> list[str] | None:
+        if values is None:
+            return None
         symbols: list[str] = []
         for value in values:
             symbol = normalize_symbol(value)
@@ -371,9 +384,12 @@ class PriceEventsLookupResult(CamelModel):
     as_of_date: date
     cutoff_at: datetime
     window_sessions: int
+    scanned_symbols: list[str] = Field(max_length=WATCHLIST_LIMIT)
+    latest_session: date | None = None
     matched_count: int
-    series: list[PriceEventSeries] = Field(max_length=5)
+    series: list[PriceEventSeries] = Field(max_length=WATCHLIST_LIMIT)
     warnings: list[RuntimeToolWarning] = Field(default_factory=list)
+    digest: str | None = Field(default=None, min_length=1)
 
     @field_validator("cutoff_at")
     @classmethod

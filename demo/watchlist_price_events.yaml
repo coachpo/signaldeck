@@ -1,0 +1,229 @@
+apiVersion: signaldeck.workflowPackage/v2
+metadata:
+  key: watchlist_price_events
+  name: 自选股 K 线扫描
+  description: 扫描行情连接中允许查询的全部美股，识别最新完成交易日的低频 K 线事件；当天有事件时保存为 Finance 报告，不调用模型。
+agents:
+  scan_watchlist:
+    name: 扫描自选股 K 线事件
+    inputSchema:
+      type: object
+      properties:
+        windowSessions:
+          type: integer
+          minimum: 1
+          maximum: 120
+      required:
+      - windowSessions
+      unevaluatedProperties: false
+    outputSchema:
+      type: object
+      properties:
+        asOfDate:
+          type: string
+        latestSession:
+          type: string
+        matchedCount:
+          type: integer
+        scannedSymbols:
+          type: array
+          items:
+            type: string
+        digest:
+          type: string
+          minLength: 1
+      required:
+      - asOfDate
+      - latestSession
+      - matchedCount
+      - scannedSymbols
+      - digest
+      unevaluatedProperties: false
+    strategy:
+      kind: deterministic
+      toolId: signaldeck/finance/price_events_lookup
+      inputMapping:
+        object:
+          windowSessions:
+            ref: agent.input.windowSessions
+          includeDigest:
+            value: true
+          detectors:
+            value:
+            - type: large_move
+            - type: window_move
+            - type: spike_reversal
+            - type: drawdown
+              direction: down
+              minPercent: '20'
+            - type: new_high_low
+              minBaseSessions: 20
+      outputMapping:
+        object:
+          asOfDate:
+            ref: tool.output.asOfDate
+          latestSession:
+            ref: tool.output.latestSession
+            onMissing:
+              value: ''
+          matchedCount:
+            ref: tool.output.matchedCount
+          scannedSymbols:
+            ref: tool.output.scannedSymbols
+          digest:
+            ref: tool.output.digest
+            onMissing:
+              value: 未生成扫描摘要。
+    tools:
+    - signaldeck/finance/price_events_lookup
+    resources:
+    - finance-market-data
+    budget:
+      maxModelRequests: 1
+      maxToolCalls: 1
+      maxTokens: 1
+      deadlineSeconds: 180
+      maxParallelTools: 1
+  save_report:
+    name: 保存扫描报告
+    inputSchema:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 160
+        content:
+          type: string
+          minLength: 1
+      required:
+      - name
+      - content
+      unevaluatedProperties: false
+    outputSchema:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+      required:
+      - id
+      - name
+      unevaluatedProperties: false
+    strategy:
+      kind: deterministic
+      toolId: signaldeck/finance/reports_create
+      outputMapping:
+        object:
+          id:
+            ref: tool.output.id
+          name:
+            ref: tool.output.name
+    tools:
+    - signaldeck/finance/reports_create
+    resources: []
+    budget:
+      maxModelRequests: 1
+      maxToolCalls: 1
+      maxTokens: 1
+      deadlineSeconds: 120
+      maxParallelTools: 1
+workflows:
+  scan:
+    name: 自选股 K 线扫描
+    inputSchema:
+      type: object
+      properties:
+        windowSessions:
+          type: integer
+          minimum: 1
+          maximum: 120
+          title: 报告最近几个交易日
+          description: 每个交易日收盘后运行时填 1；每周运行一次时可填 5。
+          x-signaldeck-schema: signaldeck.schema/2
+          default: 1
+        minEvents:
+          type: integer
+          minimum: 1
+          maximum: 1000
+          title: 至少几个事件才保存报告
+          description: 事件数达到这个数量才保存 Finance 报告；运行结果始终显示摘要。
+          x-signaldeck-schema: signaldeck.schema/2
+          default: 1
+      required: []
+      unevaluatedProperties: false
+    outputSchema:
+      type: object
+      properties:
+        asOfDate:
+          type: string
+        latestSession:
+          type: string
+        matchedCount:
+          type: integer
+        scannedSymbols:
+          type: array
+          items:
+            type: string
+        digest:
+          type: string
+          minLength: 1
+      required:
+      - asOfDate
+      - latestSession
+      - matchedCount
+      - scannedSymbols
+      - digest
+      unevaluatedProperties: false
+    nodes:
+      scan:
+        uses: scan_watchlist
+        inputMapping:
+          object:
+            windowSessions:
+              ref: workflow.input.windowSessions
+              onMissing:
+                value: 1
+      save:
+        uses: save_report
+        inputMapping:
+          object:
+            name:
+              value: 自选股 K 线事件
+            content:
+              ref: nodes.scan.output.digest
+        condition:
+          op: all
+          args:
+          - op: gte
+            args:
+            - ref: nodes.scan.output.matchedCount
+            - ref: workflow.input.minEvents
+              onMissing:
+                value: 1
+          - op: eq
+            args:
+            - ref: nodes.scan.output.latestSession
+            - ref: nodes.scan.output.asOfDate
+    outputMapping:
+      ref: nodes.scan.output
+    maxParallelNodes: 2
+    deadlineSeconds: 600
+    failurePolicy: continue_independent
+    presentation:
+      version: signaldeck.presentation/1
+      title:
+        kind: static
+        text: 自选股 K 线扫描
+      sections:
+      - kind: markdown
+        ref: nodes.scan.output.digest
+        label: 事件摘要
+        required: true
+      - kind: link
+        ref: nodes.save.output
+        label: 在 Finance 中查看报告
+        toolId: signaldeck/finance/reports_create
+        linkKey: report
+    description: 扫描 finance-market-data 连接中允许查询的全部证券（最多 50 只），固定使用单日大幅涨跌、多日急涨急跌、大幅涨跌被回吐、20% 回撤和前高至少 20 个交易日的新高新低五条低频规则。只有最新完成交易日就是当天、且事件数达到设定数量时才保存报告，休市日和收盘前运行只显示摘要。适合设为工作日纽约时间 16:45 之后的重复安排。

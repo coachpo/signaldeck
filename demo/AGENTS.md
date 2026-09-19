@@ -4,6 +4,7 @@ This directory contains standalone example v2 Workflow Packages, not platform co
 
 - `research_notes.yaml`: collection-scoped Notes research and a deterministic capture workflow without a model dependency.
 - `us_equity_research.yaml`: independently declared equity research and explicit monitoring with Finance and Oracle tools.
+- `watchlist_price_events.yaml`: a deterministic scheduled scan of every granted Finance symbol for daily K-line events, saving a report when the latest session has events.
 
 Use only the current `signaldeck.workflowPackage/v2` definition root. Keep executable topology in Workflow nodes and business operations in independently deployed plugins. Do not restore private MCP configurations, old SQL presets or compatibility schemas.
 

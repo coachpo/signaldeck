@@ -68,7 +68,7 @@ services:
         condition: service_completed_successfully
   finance:
     profiles: ["finance"]
-    image: ${SIGNALDECK_FINANCE_IMAGE:-signaldeck-finance:1.4.0}
+    image: ${SIGNALDECK_FINANCE_IMAGE:-signaldeck-finance:1.5.0}
     environment:
       PLUGIN_DATABASE_URL: ${FINANCE_DATABASE_URL:-}
       PLUGIN_ENDPOINT: http://finance:8000/mcp/

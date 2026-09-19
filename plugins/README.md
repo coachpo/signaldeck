@@ -15,7 +15,7 @@ Finance provider implementations and template/report compiler were extracted fro
 Run builds from the repository root. Finance and Notes use the root context to compile the shared UI from the locked frontend dependencies; Oracle keeps the `plugins` context:
 
 ```sh
-docker build -f plugins/finance/Dockerfile -t signaldeck-finance:1.4.0 .
+docker build -f plugins/finance/Dockerfile -t signaldeck-finance:1.5.0 .
 docker build -f plugins/digital_oracle/Dockerfile -t signaldeck-digital-oracle:1.0.0 plugins
 docker build -f plugins/notes/Dockerfile -t signaldeck-notes:1.3.0 .
 ```
@@ -66,6 +66,8 @@ Finance 1.3.0 adds the read-only `price_events_lookup` tool. It applies closed d
 
 Finance 1.4.0 makes `price_events_lookup` read split- and dividend-adjusted prices. The factor is the provider's adjusted close over its close, anchored to the last completed session so that the latest prices match the provider; within a segment between dividends, float noise below one part in 100,000 is ignored so that equal prices stay equal. Every event also reports the provider `rawClose`, and each series states its `priceBasis`. A symbol without positive adjusted closes falls back to split-adjusted prices with a `price_events_dividend_unadjusted` warning. The release adds `near_high_low`, `drawdown`, `failed_breakout`, `window_move` (volatility-scaled multi-session moves), `spike_reversal` (large moves given back), `engulfing` and `pin_bar` with a prior-trend filter, plus `minBaseSessions` for `new_high_low`, `breakout` and `relative_strength`, which keeps only breaks of an extreme set at least that many sessions earlier. With default parameters the existing rules detect as in 1.3.0 apart from the price basis; `relative_strength` also reports `sessionsSinceLevel`. See the [public contract](../docs/writing-extensions.md#finance-k-线事件合同).
 
+Finance 1.5.0 lets `price_events_lookup` omit `symbols` to scan every symbol in the granted `allowedSymbols` (normalized and deduplicated, at most 50; more are rejected), returning only the symbols with events together with `scannedSymbols` and `latestSession`, the newest completed session among them. `includeDigest` adds a Chinese Markdown digest of the events, rules, price basis and warnings, which a workflow can show or save as a report without a model. The tool publishes a 120-second `timeoutSeconds` because a full watchlist reads up to 50 symbols one after another; a real 50-symbol scan took about 12 seconds. The optional [watchlist package](../demo/watchlist_price_events.yaml) schedules such a scan. See the [public contract](../docs/writing-extensions.md#finance-k-线事件合同).
+
 The `monitor_begin`, `monitor_observe` and `monitor_report_attach` write tools use Finance's own transaction journal and new observation tables. Scope includes explicit source/event selections and rule versions; dynamic retrieval times do not change scope identity. New official facts, revised facts, selected numerical thresholds and prediction-contract changes have distinct meanings. Incomplete required coverage never replaces a valid baseline. See the [research implementation record](../docs/planning/research-upgrade-readiness.md) for validation and remaining source limitations.
 
 ## Frozen contracts and resource scopes
@@ -79,7 +81,7 @@ The descriptor's tool definitions are the sole source of `tools/list`, dispatch 
 | `example/notes/create` | `title`, `text`; optional `sourceKind`, `sourceNoteIds` | `notes-workspace`: `{"collection":"research"}` |
 | `example/notes/search` | Optional `query`, `limit`, `includeDerived` | `notes-workspace`: `{"collection":"research"}` |
 | `signaldeck/finance/market_data_quote_lookup` | `symbols` | `finance-market-data`: `{"allowedSymbols":["MSFT","AAPL"]}` |
-| `signaldeck/finance/price_events_lookup` | `symbols`, `detectors`; optional `asOfDate`, `windowSessions` | `finance-market-data`: `allowedSymbols` covers `symbols` and any `relative_strength` benchmark |
+| `signaldeck/finance/price_events_lookup` | `detectors`; optional `symbols`, `asOfDate`, `windowSessions`, `includeDigest` | `finance-market-data`: `allowedSymbols` covers `symbols` (or is scanned whole, at most 50, when `symbols` is omitted) and any `relative_strength` benchmark |
 | Other Finance market tools | See published contract | `finance-market-data`: `allowedSymbols` limits symbol arguments |
 | `signaldeck/finance/reports_create` | `name`, `content` | No resource required; persists immutable Agent provenance from the call identity |
 
