@@ -254,19 +254,7 @@ def _check_condition_types(condition: dict[str, Any], namespace: dict[str, Any],
                 check_mapping(arg["onMissing"], schema, namespace, path)
             kinds.append(schema["type"])
         elif "value" in arg:
-            value = arg["value"]
-            kinds.append(
-                "null"
-                if value is None
-                else {
-                    str: "string",
-                    int: "integer",
-                    float: "number",
-                    bool: "boolean",
-                    list: "array",
-                    dict: "object",
-                }.get(type(value))
-            )
+            kinds.append(_literal_kind(arg["value"]))
         else:
             kinds.append("object" if "object" in arg else "array")
     compatible = kinds[0] == kinds[1] or set(kinds) == {"integer", "number"}
@@ -274,3 +262,21 @@ def _check_condition_types(condition: dict[str, Any], namespace: dict[str, Any],
         op not in {"eq", "ne"} and kinds[0] not in {"string", "integer", "number"}
     ):
         reject("condition_type", path, "Condition operands have incompatible types")
+
+
+def _literal_kind(value: Any) -> str | None:
+    """JSON kind of a literal; YAML sources load scalars and containers as subclasses."""
+    if value is None:
+        return "null"
+    # bool is an int subclass, so it must be matched first.
+    for kind, types in (
+        ("boolean", bool),
+        ("integer", int),
+        ("number", float),
+        ("string", str),
+        ("array", list),
+        ("object", dict),
+    ):
+        if isinstance(value, types):
+            return kind
+    return None

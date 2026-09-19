@@ -193,6 +193,39 @@ def test_yaml_compiler_errors_have_source_locations() -> None:
     assert error.value.diagnostics[0].line is not None
 
 
+def test_yaml_condition_literals_keep_their_json_kinds() -> None:
+    # YAML loads numbers as subclasses such as ruamel's ScalarInt and ScalarFloat.
+    source = """
+apiVersion: signaldeck.workflowPackage/v2
+metadata: {key: literal-conditions, name: Literal conditions}
+agents:
+  count:
+    inputSchema: {type: object, properties: {n: {type: integer}}, required: [n]}
+    outputSchema: {type: object, properties: {n: {type: integer}}, required: [n]}
+    strategy: {kind: deterministic, toolId: example/echo/copy}
+    tools: [example/echo/copy]
+workflows:
+  main:
+    inputSchema: {type: object, properties: {n: {type: integer}}, required: [n]}
+    outputSchema: {type: object, properties: {n: {type: integer}}, required: [n]}
+    nodes:
+      first: {uses: count, inputMapping: {ref: workflow.input}}
+      second:
+        uses: count
+        inputMapping: {ref: nodes.first.output}
+        condition:
+          op: all
+          args:
+          - {op: gt, args: [{ref: nodes.first.output.n}, {value: 0}]}
+          - {op: eq, args: [{ref: nodes.first.output.n}, {value: 2.5}]}
+    outputMapping: {ref: nodes.first.output}
+"""
+    assert parse_package_source(source).plans["main"].dependencies["second"] == ["first"]
+    for literal in ("'0'", "true"):
+        with pytest.raises(DomainValidationError, match="incompatible types"):
+            parse_package_source(source.replace("{value: 0}", "{value: " + literal + "}"))
+
+
 def test_missing_branch_join_requires_fallback() -> None:
     value = package()
     node = value["workflows"]["main"]["nodes"]["second"]

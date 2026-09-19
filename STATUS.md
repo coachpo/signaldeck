@@ -104,7 +104,7 @@ Finance 1.5.0 的 `price_events_lookup` 可以省略 `symbols`，扫描 `finance
 
 新增 4 项、调整 2 项工具测试；Finance、研究与插件相关回归共 486 项通过，改动文件的 ruff/black/isort 通过。工作流包经 Core 解析器编译，并按新 Finance 发布描述通过确定性工具合同校验。另用不入库的临时端到端用例，在真实 Temporal 开发服务器、PlatformStore 和 MCP 插件调用下执行三次：周五收盘后有事件时保存报告；周六，以及 `minEvents=3` 时只扫描不保存；报告正文与摘要一致。真实 Yahoo 日线下，50 只证券的自选股扫描约 12 秒完成；按近 120 个交易日计算，这组规则约为每只每年 12.9 个事件，即每只每个交易日约 0.05 个。
 
-Core 编译条件时按精确类型识别字面量，而 YAML 导入的整数是 ruamel 的 `ScalarInt`，所以条件里直接写数字会被判为类型不兼容。工作流改用工作流输入 `minEvents` 作为阈值避开这个问题，Core 未修改。
+Core 编译条件时原先按精确类型识别字面量，而 YAML 导入的整数是 ruamel 的 `ScalarInt`，所以条件里直接写数字会被判为类型不兼容。随后的 Core 修复改为按 `isinstance` 识别字面量，并先判断布尔值；回归用例在 `backend/tests/test_dag_compiler.py`。部署含该修复的版本之前，旧 Core 仍会拒绝 YAML 条件里的数字字面量；工作流继续使用 `minEvents` 输入，新旧 Core 都能编译。
 
 尚未发布或部署。新字段和超时改变 Finance 合同与制品摘要，实际启用须登记新的不可变发布和 endpoint，并保留旧 Run 的原绑定。
 
