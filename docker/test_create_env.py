@@ -54,7 +54,7 @@ class CreateEnvironmentTests(unittest.TestCase):
             self.assertIsNotNone(re.fullmatch("[0-9a-f]{64}", value))
             self.assertNotIn(value, result.stdout + result.stderr)
         self.assertEqual(values["SIGNALDECK_PLUGIN_TAG"], TAG)
-        self.assertEqual(values["SIGNALDECK_IMAGE"], "ghcr.io/coachpo/signaldeck:main")
+        self.assertEqual(values["SIGNALDECK_IMAGE"], "ghcr.io/coachpo/signaldeck:latest")
         self.assertEqual(stat.S_IMODE(self.output.stat().st_mode), 0o600)
         for directory in (self.output.parent, self.output.parent.parent):
             self.assertEqual(stat.S_IMODE(directory.stat().st_mode), 0o700)

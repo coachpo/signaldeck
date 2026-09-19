@@ -3,6 +3,7 @@ from __future__ import annotations
 # pyright: reportUnusedFunction=false
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
@@ -25,6 +26,8 @@ from app.infrastructure.core_artifacts import CoreArtifactError
 from app.infrastructure.package_seeds import seed_packages
 
 READINESS_UNAVAILABLE_STATUS = status.HTTP_503_SERVICE_UNAVAILABLE
+# release.sh keeps this file aligned with every other version surface.
+APP_VERSION = (Path(__file__).resolve().parents[1] / "VERSION").read_text(encoding="utf-8").strip()
 
 
 @asynccontextmanager
@@ -52,7 +55,9 @@ def create_app(*, init_database: bool = True) -> FastAPI:
     settings = get_settings()
     configure_logfire()
     app = FastAPI(
-        title="SignalDeck Backend", version="0.1.0", lifespan=lifespan if init_database else None
+        title="SignalDeck Backend",
+        version=APP_VERSION,
+        lifespan=lifespan if init_database else None,
     )
     instrument_fastapi_app(app)
     app.add_middleware(
@@ -139,7 +144,7 @@ def create_app(*, init_database: bool = True) -> FastAPI:
 
     @app.get("/health", tags=["health"])
     def healthcheck() -> dict[str, str]:
-        return {"status": "ok"}
+        return {"status": "ok", "version": APP_VERSION}
 
     @app.get("/ready", tags=["health"])
     def readinesscheck() -> JSONResponse:

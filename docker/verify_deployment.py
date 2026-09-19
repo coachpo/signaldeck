@@ -122,6 +122,10 @@ def verify(args):
                 == 200
             )
         assert check.client.get(check.base + "/ready").json()["database"] == "ok"
+        assert check.client.get(check.base + "/health").json() == {
+            "status": "ok",
+            "version": (ROOT / "backend/VERSION").read_text(encoding="utf-8").strip(),
+        }
         assert check.client.get(check.base + "/").status_code == 200
         assert (
             check.client.get(

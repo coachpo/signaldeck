@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -100,7 +101,9 @@ def test_health_endpoint_is_liveness_only(monkeypatch: pytest.MonkeyPatch) -> No
         response = client.get("/health")
 
     assert response.status_code == 200
-    assert response.json() == {"status": "ok"}
+    version = (Path(__file__).resolve().parents[1] / "VERSION").read_text(encoding="utf-8")
+    assert response.json() == {"status": "ok", "version": version.strip()}
+    assert app.version == version.strip()
 
 
 def test_create_app_instruments_fastapi_with_logfire(monkeypatch: pytest.MonkeyPatch) -> None:

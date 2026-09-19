@@ -1,22 +1,10 @@
 name: Docker Images
 
+# Images are published only from release tags created by release.sh, after CI is
+# green on the tagged commit. Manual runs publish manual-<sha> tags only.
 on:
   push:
-    branches: [main]
     tags: ['v*']
-  pull_request:
-    branches: [main]
-    paths:
-      - 'Dockerfile'
-      - 'docker/**'
-      - 'docker-compose*.yml'
-      - 'backend'
-      - 'backend/**'
-      - 'frontend'
-      - 'frontend/**'
-      - 'plugins/**'
-      - '.dockerignore'
-      - '.github/workflows/docker-images.yml'
   workflow_dispatch:
     inputs:
       service:
@@ -33,20 +21,58 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 env:
   REGISTRY: ghcr.io
-  BUILD_PLATFORM: linux/amd64,linux/arm64
+  BUILD_PLATFORM: linux/arm64
 
 jobs:
-  build-and-push:
+  verify-ci:
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - name: Require green CI on the tagged commit
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for attempt in $(seq 1 80); do
+            conclusion=$(gh run list \
+              --repo "$GITHUB_REPOSITORY" \
+              --workflow ci.yml \
+              --commit "$GITHUB_SHA" \
+              --json status,conclusion \
+              --jq 'first | if .status == "completed" then .conclusion else "pending" end' 2>/dev/null || echo "none")
+            case "$conclusion" in
+              success)
+                echo "CI is green for $GITHUB_SHA"
+                exit 0
+                ;;
+              pending|none|null)
+                echo "CI for $GITHUB_SHA not finished yet (state: $conclusion), attempt $attempt/80"
+                sleep 30
+                ;;
+              *)
+                echo "CI concluded '$conclusion' for $GITHUB_SHA — refusing to publish images"
+                exit 1
+                ;;
+            esac
+          done
+          echo "Timed out waiting for CI on $GITHUB_SHA"
+          exit 1
+
+  build-and-push:
+    needs: verify-ci
+    if: ${{ !cancelled() && (github.event_name == 'workflow_dispatch' || needs.verify-ci.result == 'success') }}
+    runs-on: ubuntu-24.04-arm
     timeout-minutes: 60
     permissions:
       contents: read
       packages: write
-      id-token: write
     strategy:
       fail-fast: false
       matrix:
@@ -85,9 +111,6 @@ jobs:
               ;;
           esac
 
-      - name: Set up QEMU (for arm64 emulation)
-        uses: docker/setup-qemu-action@v4
-
       - name: Set up Docker Buildx
         id: buildx
         uses: docker/setup-buildx-action@v4
@@ -95,7 +118,6 @@ jobs:
           driver: docker-container
 
       - name: Log in to GHCR
-        if: github.event_name != 'pull_request'
         uses: docker/login-action@v4
         with:
           registry: ${{ env.REGISTRY }}
@@ -108,37 +130,38 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ steps.target.outputs.image }}
           tags: |
-            type=ref,event=branch
-            type=ref,event=pr
-            type=ref,event=tag
-            type=sha,format=long
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=ref,event=tag,enable=${{ github.event_name == 'push' }}
+            type=semver,pattern={{version}},enable=${{ github.event_name == 'push' }}
+            type=semver,pattern={{major}}.{{minor}},enable=${{ github.event_name == 'push' }}
+            type=sha,format=long,enable=${{ github.event_name == 'push' }}
+            type=sha,format=long,prefix=manual-,enable=${{ github.event_name == 'workflow_dispatch' }}
+            type=raw,value=latest,enable=${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
 
       - name: Resolve frontend build metadata
         id: frontend_build_metadata
         if: matrix.service == 'app'
         run: |
-          echo "git_revision=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+          echo "git_revision=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
           echo "git_run_number=${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
 
-      - name: Build and push Docker image (linux/amd64,linux/arm64)
+      # Single-platform images without attestations keep one plain manifest per tag,
+      # so the release manifest can pin and verify one digest per image.
+      - name: Build and push Docker image (linux/arm64)
         uses: docker/build-push-action@v7
         with:
           builder: ${{ steps.buildx.outputs.name }}
           context: ${{ steps.target.outputs.context }}
           file: ${{ steps.target.outputs.file }}
-          push: ${{ github.event_name != 'pull_request' }}
+          push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
-            VITE_GIT_RUN_NUMBER=${{ github.run_number }}
+            VITE_GIT_RUN_NUMBER=${{ steps.frontend_build_metadata.outputs.git_run_number }}
             VITE_GIT_REVISION=${{ steps.frontend_build_metadata.outputs.git_revision }}
           cache-from: |
             type=gha,scope=${{ matrix.service }}
           cache-to: |
             type=gha,scope=${{ matrix.service }},mode=max
           platforms: ${{ env.BUILD_PLATFORM }}
-          provenance: ${{ github.event_name != 'pull_request' && 'mode=max' || 'false' }}
-          sbom: ${{ github.event_name != 'pull_request' }}
+          provenance: false
+          sbom: false

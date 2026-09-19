@@ -8,35 +8,21 @@ on:
 permissions:
   contents: read
   actions: write
-  packages: write
 
+# Container package versions are never pruned here. Earlier multi-platform images
+# with attestations keep their per-platform manifests untagged; deleting untagged
+# versions would break the pinned plugin and rollback images that deployments pull.
 jobs:
   cleanup-workflow-runs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
+      # Keep a week of runs so a release's CI and image evidence stays available
+      # while its release manifest is written or recovered.
       - name: Delete workflow runs
         uses: Mattraks/delete-workflow-runs@v2.1.0
         with:
-          retain_days: 0
+          retain_days: 7
           keep_minimum_runs: 3
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  cleanup-untagged:
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    strategy:
-      fail-fast: false
-      matrix:
-        service: [backend, frontend]
-    steps:
-      - name: Delete untagged package versions for ${{ matrix.service }}
-        uses: actions/delete-package-versions@v5
-        with:
-          owner: ${{ github.repository_owner }}
-          package-type: container
-          package-name: ${{ format('signaldeck-{0}', matrix.service) }}
-          delete-only-untagged-versions: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

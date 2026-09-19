@@ -53,7 +53,7 @@ class ProductionComposeTests(unittest.TestCase):
         self.assertNotIn("backend", self.services)
         self.assertNotIn("frontend", self.services)
         self.assertEqual(
-            self.services["app"]["image"], "ghcr.io/coachpo/signaldeck:main"
+            self.services["app"]["image"], "ghcr.io/coachpo/signaldeck:latest"
         )
         for name in ("finance", "notes", "digital-oracle"):
             self.assertEqual(

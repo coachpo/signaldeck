@@ -22,7 +22,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
 
-      - name: Verify backend and frontend version sync
+      - name: Verify release version surfaces
         run: |
           python3 - <<'PY'
           import json
@@ -31,21 +31,25 @@ jobs:
           import tomllib
 
           root = pathlib.Path('.')
-          backend_version = (root / 'backend' / 'VERSION').read_text(encoding='utf-8').strip()
-          frontend_version = (root / 'frontend' / 'VERSION').read_text(encoding='utf-8').strip()
-          pyproject_version = tomllib.loads((root / 'backend' / 'pyproject.toml').read_text(encoding='utf-8'))['project']['version']
-          package_version = json.loads((root / 'frontend' / 'package.json').read_text(encoding='utf-8'))['version']
+          project = tomllib.loads((root / 'backend' / 'pyproject.toml').read_text(encoding='utf-8'))['project']
+          lock = tomllib.loads((root / 'backend' / 'uv.lock').read_text(encoding='utf-8'))
+          locked = [item['version'] for item in lock['package'] if item['name'] == project['name']]
+          surfaces = {
+              'VERSION': (root / 'VERSION').read_text(encoding='utf-8').strip(),
+              'backend/VERSION': (root / 'backend' / 'VERSION').read_text(encoding='utf-8').strip(),
+              'backend/pyproject.toml': project['version'],
+              'backend/uv.lock': locked[0] if len(locked) == 1 else None,
+              'frontend/VERSION': (root / 'frontend' / 'VERSION').read_text(encoding='utf-8').strip(),
+              'frontend/package.json': json.loads((root / 'frontend' / 'package.json').read_text(encoding='utf-8'))['version'],
+          }
 
-          if backend_version != pyproject_version:
-              print(f'backend version mismatch: VERSION={backend_version} pyproject={pyproject_version}', file=sys.stderr)
+          if len(set(surfaces.values())) != 1:
+              for name, version in surfaces.items():
+                  print(f'{name}: {version}', file=sys.stderr)
+              print('release version surfaces are not aligned; use release.sh', file=sys.stderr)
               raise SystemExit(1)
 
-          if frontend_version != package_version:
-              print(f'frontend version mismatch: VERSION={frontend_version} package.json={package_version}', file=sys.stderr)
-              raise SystemExit(1)
-
-          print(f'backend version OK: {backend_version}')
-          print(f'frontend version OK: {frontend_version}')
+          print(f'release version surfaces OK: {surfaces["VERSION"]}')
           PY
 
       - name: Validate deployment configuration
@@ -150,6 +154,117 @@ jobs:
           pnpm typecheck
           pnpm build
           pnpm test:run
+
+  container-images:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+        with:
+          driver: docker-container
+
+      - name: Resolve short git revision
+        id: rev
+        run: echo "short=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+      - name: Build application image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ./Dockerfile
+          tags: signaldeck:ci
+          load: true
+          build-args: |
+            VITE_GIT_RUN_NUMBER=${{ github.run_number }}
+            VITE_GIT_REVISION=${{ steps.rev.outputs.short }}
+          cache-from: type=gha,scope=ci-app
+          cache-to: type=gha,scope=ci-app,mode=max
+
+      - name: Build Finance plugin image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ./plugins/finance/Dockerfile
+          tags: signaldeck-finance:ci
+          load: true
+          cache-from: type=gha,scope=ci-finance
+          cache-to: type=gha,scope=ci-finance,mode=max
+
+      - name: Build Notes plugin image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ./plugins/notes/Dockerfile
+          tags: signaldeck-notes:ci
+          load: true
+          cache-from: type=gha,scope=ci-notes
+          cache-to: type=gha,scope=ci-notes,mode=max
+
+      - name: Build Digital Oracle plugin image
+        uses: docker/build-push-action@v7
+        with:
+          context: ./plugins
+          file: ./plugins/digital_oracle/Dockerfile
+          tags: signaldeck-digital-oracle:ci
+          load: true
+          cache-from: type=gha,scope=ci-digital-oracle
+          cache-to: type=gha,scope=ci-digital-oracle,mode=max
+
+      - name: Install uv and set Python version
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          version: "0.11.7"
+          python-version: "3.13.13"
+
+      - name: Install verifier dependencies
+        working-directory: backend
+        run: uv sync --frozen
+
+      - name: Verify the single-host deployment bundle
+        run: |
+          backend/.venv/bin/python docker/verify_deployment.py \
+            --app-image signaldeck:ci \
+            --notes-image signaldeck-notes:ci \
+            --finance-image signaldeck-finance:ci \
+            --oracle-image signaldeck-digital-oracle:ci
+
+      - name: Install pinned Trivy
+        uses: aquasecurity/setup-trivy@e07451d2e059ed86c2870430ea286b3a9e0bf241
+        with:
+          version: v0.71.0
+          cache: true
+
+      - name: Scan built images with Trivy (non-blocking evidence)
+        shell: bash
+        run: |
+          mkdir -p trivy-reports
+          {
+            echo "### Container vulnerability scan evidence"
+            echo ""
+            echo "Trivy scans are non-blocking. Reports are uploaded as artifacts; HIGH/CRITICAL, fixed-only."
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
+          for image in signaldeck signaldeck-finance signaldeck-notes signaldeck-digital-oracle; do
+            status=0
+            trivy image --severity HIGH,CRITICAL --ignore-unfixed --exit-code 0 --format sarif --output "trivy-reports/$image.sarif" "$image:ci" || status=$?
+            trivy image --severity HIGH,CRITICAL --ignore-unfixed --exit-code 0 --format table --output "trivy-reports/$image.txt" "$image:ci" || status=$?
+            echo "- \`$image:ci\`: Trivy status \`$status\`" >> "$GITHUB_STEP_SUMMARY"
+          done
+          exit 0
+
+      - name: Upload Trivy scan artifacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: trivy-local-image-reports
+          path: trivy-reports/
+          if-no-files-found: warn
+          retention-days: 14
 
   frontend-e2e:
     runs-on: ubuntu-latest

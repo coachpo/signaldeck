@@ -61,7 +61,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--plugin-tag", required=True, type=plugin_tag)
     parser.add_argument(
-        "--app-image", type=app_image, default="ghcr.io/coachpo/signaldeck:main"
+        "--app-image", type=app_image, default="ghcr.io/coachpo/signaldeck:latest"
     )
     parser.add_argument(
         "--output",
