@@ -1619,7 +1619,7 @@ wheels = [
 
 [[package]]
 name = "signaldeck-backend"
-version = "0.2.4"
+version = "0.2.5"
 source = { virtual = "." }
 dependencies = [
     { name = "cryptography" },
