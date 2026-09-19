@@ -54,11 +54,11 @@ class TemporalScheduleService:
         create_only: bool = False,
     ) -> ScheduleRecord:
         record = self.store.save(definition, schedule_id, create_only=create_only)
-        return await self.store.synchronize(record.id, self._apply)
+        return await self.store.synchronize(record.id, self._apply, self.task_queue)
 
     async def delete(self, schedule_id: str) -> None:
         self.store.mark_deleted(schedule_id)
-        await self.store.synchronize(schedule_id, self._apply)
+        await self.store.synchronize(schedule_id, self._apply, self.task_queue)
 
     def _schedule(self, record: ScheduleRecord) -> Schedule:
         definition = ScheduleDefinition.model_validate(
@@ -118,7 +118,7 @@ class TemporalScheduleService:
         receipt = self.store.request_trigger(schedule_id, trigger_id)
         if receipt.status == "accepted":
             return receipt
-        await self.store.synchronize(schedule_id, self._apply)
+        await self.store.synchronize(schedule_id, self._apply, self.task_queue)
         return await self._deliver_trigger(schedule_id, trigger_id)
 
     async def _deliver_trigger(self, schedule_id: str, trigger_id: str) -> ScheduleTriggerReceipt:
@@ -151,9 +151,9 @@ class TemporalScheduleService:
 
     async def reconcile(self) -> dict[str, int]:
         synchronized, failed = 0, 0
-        for record in self.store.pending():
+        for record in self.store.pending(self.task_queue):
             try:
-                await self.store.synchronize(record.id, self._apply)
+                await self.store.synchronize(record.id, self._apply, self.task_queue)
                 synchronized += 1
             except ApplicationError:
                 failed += 1

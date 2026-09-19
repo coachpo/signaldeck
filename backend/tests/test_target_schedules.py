@@ -10,7 +10,7 @@ from zoneinfo import ZoneInfo
 import pytest
 from pydantic import ValidationError
 from pydantic_ai.durable_exec.temporal import PydanticAIPlugin
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine, delete, event
 from sqlalchemy.orm import sessionmaker
 from temporalio import workflow
 from temporalio.client import ScheduleBackfill, ScheduleOverlapPolicy, WorkflowExecutionStatus
@@ -27,7 +27,7 @@ from app.domain.tool_contracts import PluginRelease, ToolDefinition, tool_contra
 from app.infrastructure.artifact_store import ArtifactStore
 from app.infrastructure.core_artifacts import CoreArtifactError, CoreArtifactStore, task_queue
 from app.infrastructure.platform_store import PlatformStore
-from app.infrastructure.schedule_store import ScheduleStore, ScheduleTriggerRow
+from app.infrastructure.schedule_store import ScheduleStore, ScheduleTargetRow, ScheduleTriggerRow
 from app.infrastructure.temporal_dispatch import TemporalRunEngine
 from app.infrastructure.temporal_payloads import create_data_converter
 from app.infrastructure.temporal_schedules import TemporalScheduleService, engine_schedule_id
@@ -37,12 +37,15 @@ CORE = "sha256:" + "c" * 64
 
 
 class StaticCore:
+    def __init__(self, digest=CORE):
+        self.digest = digest
+
     def current_digest(self):
-        return CORE
+        return self.digest
 
     def verify(self, digest):
         # Lifecycle fixtures deliberately substitute only the executable loader.
-        assert digest == CORE
+        assert digest == self.digest
 
 
 @workflow.defn(name="SignalDeckWorkflow")
@@ -161,18 +164,18 @@ async def server(artifacts, **kwargs):
     )
 
 
-def worker(client, store):
+def worker(client, store, core=CORE):
     activities = TemporalScheduleActivities(
-        LaunchService(store, StaticCore()),
+        LaunchService(store, StaticCore(core)),
         store,
-        TemporalRunEngine(client, StaticCore()),
+        TemporalRunEngine(client, StaticCore(core)),
         ScheduleStore(store.session_factory),
     )
     # ControlledRun is a test-only engine lifecycle endpoint. Production runs use the
     # separately tested sandboxed DAG runtime; no application work is stubbed in the client.
     return Worker(
         client,
-        task_queue=task_queue(CORE),
+        task_queue=task_queue(core),
         workflows=[ControlledRun, ScheduleFireWorkflow],
         activities=[activities.launch_fire, activities.wait_run],
         workflow_runner=UnsandboxedWorkflowRunner(),
@@ -722,6 +725,81 @@ def test_creation_identity_survives_failed_sync_without_duplicate_schedule(store
                     create_only=True,
                 )
             await service.delete(saved.id)
+
+    asyncio.run(scenario())
+
+
+def test_schedule_follows_core_upgrade_while_started_fires_keep_their_core(stores, monkeypatch):
+    async def scenario():
+        store, schedule_store, artifacts = stores
+        upgraded = "sha256:" + "e" * 64
+        async with await server(artifacts) as environment:
+            client = environment.client
+            previous = TemporalScheduleService(client, schedule_store, task_queue(CORE))
+            current = TemporalScheduleService(client, schedule_store, task_queue(upgraded))
+            async with worker(client, store), worker(client, store, upgraded):
+                record = await previous.save(definition(overlap_policy="allow"))
+                removed = await previous.save(definition())
+                await previous.delete(removed.id)
+                assert await previous.reconcile() == {"synchronized": 0, "failed": 0}
+                await previous.trigger(record.id, "before-upgrade")
+
+                async def first_started():
+                    return len(store.list_runs()) == 1
+
+                await until(first_started)
+                started = store.list_runs()[0].id
+                actual_apply = current._apply
+
+                async def unavailable(_):
+                    raise ApplicationError("schedule_sync_failed", "Unavailable", status=503)
+
+                # Moving to the upgraded Core is not a user-visible configuration failure;
+                # the dispatcher retries it while fires continue on the previous Core.
+                monkeypatch.setattr(current, "_apply", unavailable)
+                assert await current.reconcile() == {"synchronized": 0, "failed": 1}
+                assert schedule_store.get(record.id).sync_status == "synced"
+                monkeypatch.setattr(current, "_apply", actual_apply)
+                assert await current.reconcile() == {"synchronized": 1, "failed": 0}
+                assert await current.reconcile() == {"synchronized": 0, "failed": 0}
+                handle = client.get_schedule_handle(engine_schedule_id(record.id))
+                description = await handle.describe()
+                assert description.schedule.action.task_queue == task_queue(upgraded)
+                assert description.schedule.state.note == "SignalDeck revision 1"
+                moved = schedule_store.get(record.id)
+                assert (moved.revision, moved.synced_revision) == (1, 1)
+                assert moved.sync_status == "synced"
+                assert schedule_store.get(removed.id).sync_status == "deleted"
+
+                await current.trigger(record.id, "after-upgrade")
+
+                async def second_started():
+                    return len(store.list_runs()) == 2
+
+                await until(second_started)
+                later = next(run.id for run in store.list_runs() if run.id != started)
+                fires = {fire.trigger_id: fire for fire in schedule_store.list_fires(record.id)}
+                results = []
+                for run_id, core in ((started, CORE), (later, upgraded)):
+                    run = store.get_run(run_id)
+                    assert run.spec.core_artifact == core
+                    fire = fires[run.origin.trigger_id]
+                    execution = client.get_workflow_handle(
+                        fire.engine_workflow_id, run_id=fire.engine_run_id
+                    )
+                    assert (await execution.describe()).task_queue == task_queue(core)
+                    await release(client, run_id)
+                    results.append(execution.result())
+                # The fire that started before the move still completes on the previous Core.
+                finished = await asyncio.gather(*results)
+                assert [result["runId"] for result in finished] == [started, later]
+
+                # Schedules synchronized before targets were recorded move once as well.
+                with schedule_store.session_factory() as session, session.begin():
+                    session.execute(delete(ScheduleTargetRow))
+                assert await current.reconcile() == {"synchronized": 1, "failed": 0}
+                assert await current.reconcile() == {"synchronized": 0, "failed": 0}
+                await current.delete(record.id)
 
     asyncio.run(scenario())
 

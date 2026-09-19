@@ -48,13 +48,14 @@ API 使用 `hasParameters` 区分命名业务输入与无输入收藏：为 `tru
 | 表 | 用途 |
 | --- | --- |
 | `platform_schedules` | JSON schedule definition、期望修订、已同步修订、删除意图、同步错误和更新时间。定义包含 cron、timezone、overlap、catchup window、参数和独立预算覆盖。 |
+| `platform_schedule_targets` | 以 schedule ID 关联的附属表；记录最近一次写入引擎的修订和 Core task queue，用于在 Core 升级后把安排重新指向当前 Core。由 `create_all` 新建，不给 `platform_schedules` 加列。 |
 | `platform_schedule_triggers` | `(schedule_id, trigger_id)` 主键；手动触发的稳定时间身份、请求时间、投递时间和错误。同 schedule 的 identity time 唯一。 |
 | `platform_schedule_fires` | 每次实际 fire 的 trigger、schedule、Temporal workflow/run 身份、scheduled time、Core Run ID、状态和错误。 |
 | `platform_io_resource_permits` | 跨 Worker 的外部 I/O 并发许可与过期时间。 |
 | `platform_io_resource_rates` | 资源请求间隔协调。 |
 | `platform_read_tool_cache` | cache key 指向已确认只读工具 operation，保存 fetched/expiry 时间；不另存可变结果副本。 |
 
-计划表是期望配置和查询来源，Temporal Schedule 负责日历、时区、重叠和补触发。fire action 等待完整 Run 结束；投影修复关联与终态不启动新执行。删除计划记录删除意图并同步引擎，保留其本地记录、triggers、fires 和历史 Run。相关实现为 [`schedule_store.py`](../backend/app/infrastructure/schedule_store.py)、[`schedule_fires.py`](../backend/app/infrastructure/schedule_fires.py)。
+计划表是期望配置和查询来源，Temporal Schedule 负责日历、时区、重叠和补触发。fire action 等待完整 Run 结束；投影修复关联与终态不启动新执行。删除计划记录删除意图并同步引擎，保留其本地记录、triggers、fires 和历史 Run。按当前 Core 重新写入引擎不改变期望修订、已同步修订或同步状态。相关实现为 [`schedule_store.py`](../backend/app/infrastructure/schedule_store.py)、[`schedule_fires.py`](../backend/app/infrastructure/schedule_fires.py)。
 
 创建请求提供 `requestId` 时，该值作为持久 schedule ID；同身份、同定义重试复用原记录并继续同步，不增加 revision，不同定义返回 409 `schedule_identity_conflict`。HTTP 创建恢复先检查已提交的身份，再决定是否校验当前包，因此包暂不可用或 schema 已改变不会阻断原创建请求的重试。
 

@@ -13,7 +13,9 @@ from sqlalchemy import (
     String,
     Table,
     UniqueConstraint,
+    and_,
     func,
+    or_,
     select,
     text,
 )
@@ -41,6 +43,13 @@ class ScheduleRow(PlatformBase):
     desired_deleted: Mapped[bool] = mapped_column(Boolean, default=False)
     sync_error_code: Mapped[str | None] = mapped_column(String)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class ScheduleTargetRow(PlatformBase):
+    __tablename__ = "platform_schedule_targets"
+    schedule_id: Mapped[str] = mapped_column(ForeignKey(ScheduleRow.id), primary_key=True)
+    revision: Mapped[int] = mapped_column(Integer)
+    task_queue: Mapped[str] = mapped_column(String)
 
 
 class ScheduleTriggerRow(PlatformBase):
@@ -76,6 +85,7 @@ class ScheduleStore:
                 session.connection(),
                 tables=[
                     cast(Table, ScheduleRow.__table__),
+                    cast(Table, ScheduleTargetRow.__table__),
                     cast(Table, ScheduleTriggerRow.__table__),
                     cast(Table, ScheduleFireRow.__table__),
                 ],
@@ -163,12 +173,28 @@ class ScheduleStore:
                 if not (row.desired_deleted and row.revision == row.synced_revision)
             ]
 
-    def pending(self) -> Sequence[ScheduleRecord]:
+    def pending(self, task_queue: str) -> Sequence[ScheduleRecord]:
+        """Unapplied revisions and live schedules last applied for another Core's queue."""
         with self.session_factory() as session:
             return [
                 self._record(row)
                 for row in session.scalars(
-                    select(ScheduleRow).where(ScheduleRow.revision != ScheduleRow.synced_revision)
+                    select(ScheduleRow)
+                    .outerjoin(ScheduleTargetRow)
+                    .where(
+                        or_(
+                            ScheduleRow.revision != ScheduleRow.synced_revision,
+                            and_(
+                                ScheduleRow.desired_deleted.is_(False),
+                                or_(
+                                    ScheduleTargetRow.revision.is_distinct_from(
+                                        ScheduleRow.synced_revision
+                                    ),
+                                    ScheduleTargetRow.task_queue.is_distinct_from(task_queue),
+                                ),
+                            ),
+                        )
+                    )
                 )
             ]
 
@@ -184,7 +210,10 @@ class ScheduleStore:
                 row.updated_at = datetime.now(UTC)
 
     async def synchronize(
-        self, schedule_id: str, apply: Callable[[ScheduleRecord], Awaitable[None]]
+        self,
+        schedule_id: str,
+        apply: Callable[[ScheduleRecord], Awaitable[None]],
+        task_queue: str,
     ) -> ScheduleRecord:
         error: ApplicationError | None = None
         with self.session_factory() as session, session.begin():
@@ -192,13 +221,26 @@ class ScheduleStore:
             row = session.get(ScheduleRow, schedule_id)
             if row is None:
                 raise ApplicationError("schedule_not_found", "Schedule is unavailable", status=404)
-            if row.revision != row.synced_revision:
+            target = session.get(ScheduleTargetRow, schedule_id) or ScheduleTargetRow(
+                schedule_id=schedule_id
+            )
+            pending = row.revision != row.synced_revision
+            # Fires start on the task queue of the Core that applied the schedule. After a
+            # Core upgrade the same revision is applied again, so later fires use the
+            # current Core; executions the engine already started keep their own queue.
+            applied = (target.revision, target.task_queue)
+            retarget = not row.desired_deleted and applied != (row.synced_revision, task_queue)
+            if pending or retarget:
                 try:
                     await apply(self._record(row))
                 except ApplicationError as exc:
-                    error, row.sync_error_code = exc, exc.code
+                    error = exc
+                    if pending:
+                        row.sync_error_code = exc.code
                 else:
                     row.synced_revision, row.sync_error_code = row.revision, None
+                    target.revision, target.task_queue = row.revision, task_queue
+                    session.add(target)
             result = self._record(row)
         if error is not None:
             raise error
