@@ -20,6 +20,7 @@ SignalDeck is a trusted single-user Agent workflow platform: YAML Workflow Packa
 | Documentation | [docs/AGENTS.md](docs/AGENTS.md) and the canonical navigation below. |
 | Product behavior and architecture | [Product specification](docs/产品说明.md), [architecture](docs/架构说明.md) and [development rules](docs/开发规范.md); completed iteration history is in [STATUS.md](STATUS.md#已完成迭代). |
 | Local launch and container images | `start.sh` and root Compose for local/demo; root `Dockerfile`, `docker/compose.production.yml`, and `.github/workflows/docker-images.yml` for the application image and independent plugin images. |
+| Releases and deployed instances | `release.sh` and the [release commands](CONTRIBUTING.md#发布); the operator skills under `.agents/skills/` (linked into `.claude/skills/`): `signaldeck-ops-inspect` read-only, `signaldeck-backup-restore` and `signaldeck-release-deploy` only with explicit authorization. |
 
 ## Cross-Cutting Boundaries
 
@@ -39,6 +40,8 @@ SignalDeck is a trusted single-user Agent workflow platform: YAML Workflow Packa
 Use the verified setup, checks, and completion rules in [CONTRIBUTING.md](CONTRIBUTING.md), then run `git diff --check`. Follow the nearest subtree guide for focused checks.
 
 `./start.sh` is the local/demo launcher; the default application URL is `http://localhost:${APP_PORT:-8080}`. The root Dockerfile builds the supported `ghcr.io/coachpo/signaldeck` application image: frontend assets, Nginx, and Core API run as the app role; dispatcher and worker use the same image in separate containers. PostgreSQL, Temporal, and business plugins remain independent. Production wiring is owned by `docker/compose.production.yml`; root Compose explicitly selects local mode and the development Temporal service. A root Dockerfile change requires local `docker build .` validation. The app, Core API and public plugin business APIs require no access token; keep app access within the trusted-network boundary.
+
+`release.sh` owns the six version surfaces; plugin versions stay independent. `docker-images.yml` publishes the four `linux/arm64` images only from `v*` tags whose commit passed CI; do not publish from `main`, create separate frontend/backend releases, or prune untagged image versions. Keep release manifests, rollout evidence and snapshots in ignored `artifacts/evidence/`.
 
 For dependency changes, inspect the manifests, lockfiles, and [dependency follow-up](docs/handover-deps-follow-up.md). Do not lift FastAPI `<0.137` until Logfire allows `opentelemetry-sdk>=1.43` and FastAPI instrumentation resolves to `>=0.64b0`. Node 26 Dockerfiles use pinned global pnpm installation; do not reintroduce `corepack enable`.
 

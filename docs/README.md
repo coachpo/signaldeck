@@ -21,7 +21,12 @@
 ## 专项文档
 
 - [投研升级实施合同与验证](planning/research-upgrade-readiness.md)：三批的来源修复、实现边界、实际回归、定时闭环和真实模型对照；明确外部数据与模型限制。
-- [应用镜像部署](../docker/deployment.md)：正式单应用镜像与独立基础设施/插件的 Compose 配置、拉取、启动、持久化与健康验证；部署边界仍以 `STATUS.md` 为准。
+- [应用镜像部署](../docker/deployment.md)：正式单应用镜像与独立基础设施/插件的 Compose 配置、发布版本、拉取、启动、持久化与健康验证；部署边界仍以 `STATUS.md` 为准。
+- [SignalDeck 运维巡检](../.agents/skills/signaldeck-ops-inspect/SKILL.md)：只读的仓库与部署快照、部署适配说明和证据合同，检测固定版本漂移。
+- [SignalDeck 备份与恢复](../.agents/skills/signaldeck-backup-restore/SKILL.md)：静默备份、校验、保留三份、一次性恢复演练及实例切换步骤。
+- [SignalDeck 发布与部署](../.agents/skills/signaldeck-release-deploy/SKILL.md)：经明确授权的发布、不可变镜像清单和带门禁的应用部署，以及插件升级步骤。
+
+  以上运维 skill 自带参考文档和脚本，是可执行流程，不与产品或架构文档竞争；执行证据保存在忽略目录 `artifacts/evidence/`。
 - [自动化测试消融与精简实测](test-ablation-2026-09-16.md)：全测试入口盘点、同故障对照、保留与精简依据、耗时及未验证范围。
 - [三项实测优化交付与验证](planning/observed-gaps-verification.md)：输出上限、读写不确定性与Notes来源过滤的C1–C8映射、同版本真实流程和数据/部署边界。
 

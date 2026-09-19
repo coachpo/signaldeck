@@ -9,7 +9,7 @@ SignalDeck 的 FastAPI backend，提供 Workflow Package 定义、资源与插�
 - API 入口为 `app.main:app`；启动时初始化核心表并发布当前 Core 制品。仅设置 `SIGNALDECK_WORKFLOW_DATA_DIR` 时才从该外部目录导入缺失工作流；未设置、空目录或缺失目录都可正常启动，已有 key 不被覆盖。
 - `app.workers.command_dispatcher` 投递持久启动/取消命令、同步定时配置，并更新执行事实的读取投影。`app.workers.artifact_worker --serve` 为保留的 Core 制品启动固定依赖环境的 worker；Temporal 负责执行与定时调度。仅启动 API 不会执行已入队的 Run。
 - API、dispatcher 和 worker 共享 Core PostgreSQL、`AGENT_PLATFORM_ENCRYPTION_KEY`、产物目录和 Core 制品目录。dispatcher、worker，以及处理定时配置写入和时间预览的 API 使用同一 `TEMPORAL_ADDRESS`；运行与计划的普通历史读取不连接 Temporal。插件使用独立进程，Finance 和 Notes 数据保存在各自数据库，核心不挂载 Finance 业务路由。
-- `/health` 仅检查 API 进程存活；`/ready` 检查数据库连接，不验证 Temporal、worker、模型或插件。
+- `/health` 仅检查 API 进程存活并返回发布版本；`/ready` 检查数据库连接，不验证 Temporal、worker、模型或插件。
 - 本地组合栈由根 `start.sh` 启动；目标数据使用独立目录，不接管旧实例。拆分配置中的 dispatcher 和 worker 复用 backend 镜像，不发布 HTTP 端口。
 
 ## API 与模块导航

@@ -132,6 +132,18 @@ git diff --check
 4. 修改 secret、错误详情、包导出、运行读取或日志路径时，检查现有加密、脱敏和安全投影约束。
 5. 检查精确 diff、未纳入无关文件，并按下方共享完成定义交付。交付时报告受影响的验收编号、变更、验证结果和实际限制；只把已验证完成的行为写入产品和架构说明。
 
+## 发布
+
+`./release.sh patch --dry-run` 预览一次发布。正式运行 `./release.sh patch`（或 `minor`、`major`、明确的 `X.Y.Z`）需要发布授权：它要求干净且包含 `origin/main` 的 `main` 和递增的版本，同步 `VERSION`、`backend/VERSION`、`backend/pyproject.toml`、`backend/uv.lock` 中的项目版本、`frontend/VERSION` 与 `frontend/package.json`，校验锁文件、`/health` 版本测试和前端构建，然后提交 `chore: bump version to X.Y.Z`、打 `vX.Y.Z` 标签并推送 main 与标签。插件版本各自独立。脚本不部署实例；CI 的 `version-sync` 要求六处版本一致。
+
+标签触发 [`Docker Images`](.github/workflows/docker-images.yml)：发布提交的 CI 全部通过后才发布四个 `linux/arm64` 镜像，推送 main 和 PR 不发布镜像。发布进行中不要再推送 main，否则会取消发布提交的 CI。[`cleanup.yml`](.github/workflows/cleanup.yml) 只清理 7 天前的工作流记录，从不删除镜像版本：历史多架构镜像的各平台 manifest 没有标签，删除会破坏仍在使用的固定插件和回滚镜像。
+
+实例巡检、备份与恢复演练、发布和带门禁的部署由 `.agents/skills/` 下的三个运维 skill 执行，Claude Code 通过 `.claude/skills/` 链接加载；入口见[文档索引](docs/README.md#专项文档)，执行证据写入忽略目录 `artifacts/evidence/`。修改这些脚本后运行：
+
+```bash
+for tests in .agents/skills/*/scripts/tests; do python3 -m unittest discover -s "$tests" -p 'test_*.py'; done
+```
+
 ## 项目文档
 
 规范文档的索引和权威边界见 [`docs/README.md`](docs/README.md)。数据表见 [`docs/data-model.md`](docs/data-model.md)，扩展编写见 [`docs/writing-extensions.md`](docs/writing-extensions.md)，依赖遗留事项见 [`docs/handover-deps-follow-up.md`](docs/handover-deps-follow-up.md)。
