@@ -105,7 +105,7 @@ Finance 的普通 report API 与 Agent report 写入有不同生命周期：Agen
 
 ## 初始化与数据影响
 
-`create_all` 在初始化锁下只创建当前 metadata，不升级已有表。独立数据导入与普通保存锁定同一 package 身份；missing-only 在事务内保留已存在的操作者指针，显式 update 才推进指针。启动数据目录可选，不属于 create_all 或 Core 可执行 closure。数据库初始化不再将过期 lease 的 Run 直接标记失败；恢复由 Temporal 的历史和固定 Worker 执行。
+`create_all` 在初始化锁下只创建当前 metadata，不升级已有表。[`schema_compatibility.py`](../backend/app/infrastructure/schema_compatibility.py) 在发布镜像中运行 `python -m app.infrastructure.schema_compatibility`，只读比对全部 Core metadata 与现有数据库：已有表缺少模型列，或存在模型不再写入的必填列时判为不兼容；部署在切换前据此停止。独立数据导入与普通保存锁定同一 package 身份；missing-only 在事务内保留已存在的操作者指针，显式 update 才推进指针。启动数据目录可选，不属于 create_all 或 Core 可执行 closure。数据库初始化不再将过期 lease 的 Run 直接标记失败；恢复由 Temporal 的历史和固定 Worker 执行。
 
 根 Compose 使用独立 `.signaldeck-target` 数据目录和独立 Core/Finance/Notes 数据库，不读取、重置或迁移旧模型连接、工作流、运行、模板及报告表。切换到该数据布局需要按 STATUS 数据政策处理；初始化路径不提供旧数据迁移。
 
