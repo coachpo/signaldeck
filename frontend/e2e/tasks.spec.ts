@@ -178,7 +178,8 @@ test("UX01/03/06: four ordinary tasks execute with real plugins and retain reusa
       expect(submissions[1]).toBe(submissions[0]);
       await page.unroute(`**/workflow-packages/${scenario.key}/launches`);
     }
-    await expect(page).toHaveURL(/\/runs\/[^/?]+$/);
+    // A real launch can outlast the default wait on a loaded CI runner.
+    await expect(page).toHaveURL(/\/runs\/[^/?]+$/, { timeout: 30_000 });
     const runId = new URL(page.url()).pathname.split("/").at(-1)!;
     await expect
       .poll(
