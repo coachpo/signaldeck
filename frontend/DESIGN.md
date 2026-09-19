@@ -27,11 +27,8 @@
 | 场景 | 使用 |
 | --- | --- |
 | 按钮 | `Button`；图标按钮必须有可访问名称，按钮内的图标尽量加 `data-icon` |
-| 创建或编辑对话框 | `EntityDialogShell` |
 | 破坏性确认 | `ConfirmDeleteDialog`，只用于确认动作 |
 | 列表搜索与筛选 | `ResourceToolbar` 的 `search`；已生效的筛选用 `ResourceFilterBar` |
-| 可选择的管理表格 | `ResourceSelectionCheckbox` 与 `useResourceSelectionState`；已选数量的删除/清除栏用 `ResourceBulkActionsBar` |
-| 行溢出菜单 | `ResourceActionsMenu`；菜单项、回调、导航和破坏性样式由调用方提供 |
 | 空、错误和加载状态 | 路由级用 `InventoryStatePanel`，行内提示用 `InlineStatePanel`，卡片式空状态用 `EmptyStatePanel`；三者都是实色卡片，不用虚线框 |
 | 表格 | `ResourceTableFrame` 包裹路由自己的表格；列、排序和分页由路由负责 |
 | 状态 | `ResourceStatusBadge` 和 `ResourceStatusStrip`，不在路由里直接拼彩色 span |
