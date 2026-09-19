@@ -59,8 +59,12 @@ async def create_worker(
         arguments: dict[str, Any],
         context: ToolInvocationContext,
     ) -> ToolResult:
-        catalog = ToolCatalog(
-            tuple(PluginRelease.model_validate(item) for item in bindings["pluginReleases"])
+        # Validating large frozen releases can take seconds on a slow host; building the
+        # catalog in a thread keeps the event loop free for Activity heartbeats.
+        catalog = await asyncio.to_thread(
+            lambda: ToolCatalog(
+                tuple(PluginRelease.model_validate(item) for item in bindings["pluginReleases"])
+            )
         )
         gateway = ToolGateway(
             catalog, transport_factory(bindings), tool_evidence, limiter, cache=cache

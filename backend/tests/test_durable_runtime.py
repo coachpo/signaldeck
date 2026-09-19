@@ -3,6 +3,7 @@
 import asyncio
 import os
 import shutil
+import time
 from pathlib import Path
 
 from pydantic_ai.durable_exec.temporal import PydanticAIPlugin
@@ -15,6 +16,7 @@ from app.infrastructure.core_artifacts import CoreArtifactStore, task_queue
 from app.infrastructure.platform_store import PlatformStore
 from app.infrastructure.temporal_payloads import create_data_converter
 from app.infrastructure.temporal_services import TemporalServices
+from app.workers import durable_worker
 from app.workers.durable_worker import create_worker
 from tests.test_core_artifacts import publish_legacy_readme_bundle
 from tests.test_durable_runtime_support import (
@@ -106,6 +108,52 @@ def test_real_durable_dag_and_agent(database_url, tmp_path):
                     "attempt",
                 }
                 assert "sentinel-model-credential" not in detail.model_dump_json()
+        engine.dispose()
+
+    asyncio.run(scenario())
+
+
+def test_slow_tool_catalog_keeps_the_deterministic_agent_heartbeating(
+    database_url, tmp_path, monkeypatch
+):
+    # A large frozen release took about 3 s to parse on an ARM host, the heartbeat timeout.
+    class SlowCatalog(durable_worker.ToolCatalog):
+        def __init__(self, releases):
+            time.sleep(3.5)
+            super().__init__(releases)
+
+    monkeypatch.setattr(durable_worker, "ToolCatalog", SlowCatalog)
+
+    async def scenario():
+        engine = create_engine(database_url)
+        artifacts = ArtifactStore(tmp_path / "artifacts")
+        store = PlatformStore(sessionmaker(engine, expire_on_commit=False), artifacts=artifacts)
+        store.initialize()
+        events: list = []
+        async with (
+            await WorkflowEnvironment.start_local(
+                dev_server_existing_path=os.environ.get(
+                    "TEMPORAL_CLI", "/tmp/sd-temporal-bin/temporal"
+                ),
+                data_converter=create_data_converter(artifacts),
+                plugins=[PydanticAIPlugin()],
+            ) as environment,
+            tool_server(events) as transport,
+        ):
+            services = TemporalServices(
+                store, artifacts, lambda spec: transport, CORE, lambda: None
+            )
+            worker = await create_worker(environment.client, services, "slow-catalog")
+            async with worker:
+                spec = make_spec()
+                store.create_run(spec, spec.run_id)
+                result = await environment.client.execute_workflow(
+                    "SignalDeckWorkflow",
+                    spec.model_dump(mode="json", by_alias=True),
+                    id=spec.run_id,
+                    task_queue="slow-catalog",
+                )
+                assert result["status"] == "succeeded", store.get_run(spec.run_id)
         engine.dispose()
 
     asyncio.run(scenario())
