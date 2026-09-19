@@ -4,7 +4,7 @@ import json
 
 import pytest
 from sqlalchemy import text
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 
 from app.db.engine import get_engine, get_session_factory
 from app.infrastructure.platform_store import PlatformStore
@@ -32,6 +32,22 @@ def test_every_table_the_stores_create_is_checked(database_url: str) -> None:
     assert {item["status"] for item in report["tables"].values()} == {"ok"}
     assert "platform_runs" in report["tables"]
     assert "platform_read_tool_cache" in report["tables"]
+
+
+def test_bases_declared_outside_core_infrastructure_are_ignored(database_url: str) -> None:
+    class ForeignBase(DeclarativeBase):
+        pass
+
+    class ForeignRow(ForeignBase):
+        __tablename__ = "foreign_plugin_rows"
+        id: Mapped[int] = mapped_column(primary_key=True)
+
+    initialize_core_schema(database_url)
+
+    report = schema_report(get_engine(database_url))
+
+    assert ForeignRow.__table__.name not in report["tables"]
+    assert {item["status"] for item in report["tables"].values()} == {"ok"}
 
 
 def test_empty_database_only_needs_new_tables(database_url: str) -> None:

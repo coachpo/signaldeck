@@ -35,9 +35,15 @@ def _declarative_bases(root: type[DeclarativeBase]) -> Iterator[type[Declarative
 
 def core_metadata() -> list[MetaData]:
     """Every table the Core stores create, including side tables registered on import."""
+    package = app.infrastructure.__name__
     for module in pkgutil.iter_modules(app.infrastructure.__path__):
-        importlib.import_module(f"{app.infrastructure.__name__}.{module.name}")
-    unique = {id(base.metadata): base.metadata for base in _declarative_bases(DeclarativeBase)}
+        importlib.import_module(f"{package}.{module.name}")
+    # Plugins or tests loaded into the same process may declare their own bases.
+    unique = {
+        id(base.metadata): base.metadata
+        for base in _declarative_bases(DeclarativeBase)
+        if base.__module__.startswith(package + ".")
+    }
     return list(unique.values())
 
 
