@@ -17,6 +17,13 @@ test("UX01/03/06: four ordinary tasks execute with real plugins and retain reusa
   test.setTimeout(360_000);
   const observationId = testInfo.testId.slice(-6);
   await connectTaskServices(request, false);
+  // Only this test connects research-model, through the launcher's preset, and resources
+  // cannot be removed from the shared stack. A retry can therefore find the connection an
+  // earlier attempt saved; it then reuses it instead of repeating the missing-connection step.
+  const modelConnected = (await (await request.get(`${apiBase}/resources`)).json()).items
+    .some((item: { resourceId: string }) => item.resourceId === "research-model");
+  if (testInfo.retry === 0) expect(modelConnected, "research-model starts without a connection").toBe(false);
+  else if (modelConnected) testInfo.annotations.push({ type: "reused-connection", description: "research-model was saved by an earlier attempt" });
   const cases = await seedTaskScenarios(request);
   const originalText = [
     "# Original evidence",
@@ -114,7 +121,7 @@ test("UX01/03/06: four ordinary tasks execute with real plugins and retain reusa
       ).toBeVisible();
     }
     await expect(page.getByRole("region", { name: "本次有效设置" })).toBeVisible();
-    if (scenario.kind === "summary") {
+    if (scenario.kind === "summary" && !modelConnected) {
       const connection = page
         .locator("details")
         .filter({
