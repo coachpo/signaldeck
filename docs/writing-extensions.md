@@ -187,6 +187,38 @@ Finance 1.2.0 的 `research_report_compile` 输入可省略 `discussion`。省�
 
 各阶段由调用方分别提交原始输出，不能由裁决模型重新编造完整过程。编译器保证记录完整性与引用资格，不判断论证是否有说服力，也不验证预测方向。所有定性内容标为未核实，含数字或阈值的定性文字继续触发现有缺口检测，必须走 `claims/thresholds` 的数值校验路径。争议章节进入原有 `content`；保存、读取、下载和监测报告绑定均沿用同一正文。升级遵循下方冻结发布规则，已有运行仍使用其原发布。
 
+## Finance K 线事件合同
+
+Finance 1.3.0 新增只读工具 `signaldeck/finance/price_events_lookup`，按闭合规则识别美股日线 K 线事件。它需要 `finance-market-data`，`symbols` 和相对强弱的 `benchmark` 都必须在 `allowedSymbols` 内。结果只描述已完成交易日的价格事实，不预测走势，不做回测，也不构成交易建议。
+
+输入包含 1–5 个 `symbols`、1–20 条 `detectors`，可选 `asOfDate`（纽约日期；省略为当前时间，未来日期拒绝）和 `windowSessions`（1–120，默认 20，只报告最近这些交易日内的事件）。每条规则只接受下表所列参数，省略时取默认值；多余参数、越界取值或缺少 `benchmark` 直接拒绝，完全相同的规则去重。小数参数使用十进制字符串。三种中性规则以外都可设 `direction: up|down` 只保留一侧；多条相对强弱规则必须使用同一个基准。
+
+| 规则 | 参数（默认值） | 事件条件 |
+| --- | --- | --- |
+| `new_high_low` | `lookback`(60) | 收盘价高于前 N 个交易日的最高收盘价（up）或低于最低收盘价（down），持平不算 |
+| `breakout` | `lookback`(20)、`volumeRatio`("1.5") | 收盘价突破前 N 日最高价或跌破最低价，且成交量不低于前 N 日均量的倍数；`"0"` 取消量能条件 |
+| `gap` | `minPercent`("1") | 开盘价高于前一日最高价或低于最低价，缺口幅度不小于阈值 |
+| `large_move` | `minPercent`("4")、`atrMultiple`("2")、`window`(14) | 收盘涨跌幅不小于 max(`minPercent`, `atrMultiple` × 前一日 ATR 占收盘价的百分比) |
+| `gap_fill` | `minPercent`("1")、`maxSessions`(10) | 缺口在 `maxSessions` 个交易日内首次回到缺口前价位，含缺口当日 |
+| `island_reversal` | `maxSessions`(10) | 至多 `maxSessions` 个交易日的价格区间被前后两个缺口完全隔开 |
+| `ma_cross` | `fastWindow`(50)、`slowWindow`(200)、`average`(`sma`/`ema`) | 快线上穿（up）或下穿（down）慢线 |
+| `price_ma_cross` | `window`(50)、`average`(`sma`/`ema`) | 收盘价上穿或下穿均线 |
+| `macd_cross` | `fastWindow`(12)、`slowWindow`(26)、`signalWindow`(9)、`reference`(`signal`/`zero`) | MACD 线穿越信号线或零轴 |
+| `rsi_threshold` | `window`(14)、`upper`("70")、`lower`("30") | RSI 进入超买区（up）或超卖区（down） |
+| `bollinger_break` | `window`(20)、`standardDeviations`("2") | 收盘价首次收在上轨之上或下轨之下 |
+| `bollinger_squeeze` | `window`(20)、`standardDeviations`("2")、`lookback`(120) | 带宽低于前 N 日最小值（中性） |
+| `range_contraction` | `lookback`(7) | 当日高低价幅是 N 个交易日内最窄的（中性） |
+| `inside_bar` | 无 | 最高价低于前一日、最低价高于前一日（中性） |
+| `volume_spike` | `lookback`(20)、`volumeRatio`("2") | 成交量不低于前 N 日均量的倍数，方向取当日收盘涨跌 |
+| `streak` | `minLength`(5) | 连续上涨或下跌收盘达到 N 日的当天 |
+| `relative_strength` | `benchmark`（必填）、`lookback`(60) | 收盘价与基准收盘价之比高于前 N 日最高值或低于最低值 |
+
+交易日按纽约日期划分，当日纽约时间 16:30 后才算完成，未完成的 K 线不参与计算。单次读取约两年、最多 500 个交易日。事件 `direction` 表示事件本身的价格方向，例如向上缺口被回补是 down 事件。
+
+输出包含 `asOfDate`、实际截止时间 `cutoffAt`、`windowSessions`、截断前的命中总数 `matchedCount` 和 `warnings`。每只证券给出交易日范围、最新状态 `state`（20/60/250 日收盘区间位置、SMA20/50/200 与均线排列、RSI14、ATR14 百分比、20 日量比、连涨或连跌天数）和按日期从新到旧排列的 `events`（每只最多 50 条，`eventCount` 为截断前数量）。每个事件回显生效的规则参数，并给出参考价位 `level/levelLabel`、关联日期和带单位的 `measures`。价格与派生值保留 4 位小数，交易日数和股数为整数。行情不可用、历史或成交量不足、基准缺少交易日、异常 K 线和截断都通过 warning 披露，不生成替代数据；价格非正的 K 线被剔除，其余异常 K 线保留并告警。
+
+限制：只有日线；Yahoo 历史数据是当前版本，不是时点存档；开高低收已按拆股调整、未按分红调整，除息日的低开可能被识别为向下缺口；单根错误报价无法与真实波动自动区分。
+
 ## 独立接入与升级
 
 1. 构建独立服务，发布上述身份与工具合同，在插件端完成 schema、scope 和 effect 校验。

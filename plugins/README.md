@@ -4,7 +4,7 @@ These services are separately built Python artifacts. No service imports the Cor
 
 | Artifact | Business ownership | MCP endpoint | Additional surface |
 | --- | --- | --- | --- |
-| `finance` | Templates, Reports, market quotes/history/OHLCV/indicators/fundamentals/news/social sentiment/insider data | `/mcp/` | [Report workspace](finance/README.md) at `/`; own `/api/templates` and `/api/reports` |
+| `finance` | Templates, Reports, market quotes/history/OHLCV/indicators/K-line events/fundamentals/news/social sentiment/insider data | `/mcp/` | [Report workspace](finance/README.md) at `/`; own `/api/templates` and `/api/reports` |
 | `digital_oracle` | Prediction markets, SEC filings, market sentiment, macro rates, crypto derivatives, CFTC positioning and options providers | `/mcp/` | Stateless provider service |
 | `notes` | Non-financial immutable notes and collection search | `/mcp/` | Own PostgreSQL business records |
 
@@ -15,7 +15,7 @@ Finance provider implementations and template/report compiler were extracted fro
 Run builds from the repository root. Finance and Notes use the root context to compile the shared UI from the locked frontend dependencies; Oracle keeps the `plugins` context:
 
 ```sh
-docker build -f plugins/finance/Dockerfile -t signaldeck-finance:1.2.0 .
+docker build -f plugins/finance/Dockerfile -t signaldeck-finance:1.3.0 .
 docker build -f plugins/digital_oracle/Dockerfile -t signaldeck-digital-oracle:1.0.0 plugins
 docker build -f plugins/notes/Dockerfile -t signaldeck-notes:1.3.0 .
 ```
@@ -62,6 +62,8 @@ Finance exposes `research_scope_freeze`, `research_market_evidence`, `research_e
 
 Finance 1.2.0 accepts optional bounded discussion records in the report compiler. Original opposing arguments, responses, risk assessments and adjudications remain separate. The compiler checks identities, opposing response targets, coverage and eligible evidence references, adding readable gaps without discarding the original records. Explicitly unresolved outcomes are valid; all qualitative statements remain unverified, and numerical assertions still require the existing numerical contract. Omitting discussion preserves the previous report output. See the [public discussion contract](../docs/writing-extensions.md#finance-研究争议合同); no Core, UI or database changes are required.
 
+Finance 1.3.0 adds the read-only `price_events_lookup` tool. It applies closed daily K-line rules (new closing highs/lows, breakouts, gaps, large moves, gap fills, island reversals, moving-average/MACD/RSI/Bollinger signals, range contraction, inside bars, volume spikes, streaks and relative strength) to at most five granted symbols over completed New York sessions, and returns each symbol's latest price state with bounded events that echo their effective parameters. A session counts only after 16:30 New York time; an unfinished bar never produces an event. The existing indicator series computation is shared with `indicators_lookup` without changing its output. Results describe past prices only; they are not forecasts, backtests or trading signals. The tool reads daily bars only. Yahoo history is the current version rather than a point-in-time archive and its prices are split-adjusted but not dividend-adjusted, so an ex-dividend open can register as a down gap. See the [public contract](../docs/writing-extensions.md#finance-k-线事件合同).
+
 The `monitor_begin`, `monitor_observe` and `monitor_report_attach` write tools use Finance's own transaction journal and new observation tables. Scope includes explicit source/event selections and rule versions; dynamic retrieval times do not change scope identity. New official facts, revised facts, selected numerical thresholds and prediction-contract changes have distinct meanings. Incomplete required coverage never replaces a valid baseline. See the [research implementation record](../docs/planning/research-upgrade-readiness.md) for validation and remaining source limitations.
 
 ## Frozen contracts and resource scopes
@@ -75,6 +77,7 @@ The descriptor's tool definitions are the sole source of `tools/list`, dispatch 
 | `example/notes/create` | `title`, `text`; optional `sourceKind`, `sourceNoteIds` | `notes-workspace`: `{"collection":"research"}` |
 | `example/notes/search` | Optional `query`, `limit`, `includeDerived` | `notes-workspace`: `{"collection":"research"}` |
 | `signaldeck/finance/market_data_quote_lookup` | `symbols` | `finance-market-data`: `{"allowedSymbols":["MSFT","AAPL"]}` |
+| `signaldeck/finance/price_events_lookup` | `symbols`, `detectors`; optional `asOfDate`, `windowSessions` | `finance-market-data`: `allowedSymbols` covers `symbols` and any `relative_strength` benchmark |
 | Other Finance market tools | See published contract | `finance-market-data`: `allowedSymbols` limits symbol arguments |
 | `signaldeck/finance/reports_create` | `name`, `content` | No resource required; persists immutable Agent provenance from the call identity |
 
