@@ -12,6 +12,7 @@ from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api.platform_dependencies import get_core_artifacts, get_platform_store
 from app.api.platform_router import platform_router
@@ -26,6 +27,8 @@ from app.infrastructure.core_artifacts import CoreArtifactError
 from app.infrastructure.package_seeds import seed_packages
 
 READINESS_UNAVAILABLE_STATUS = status.HTTP_503_SERVICE_UNAVAILABLE
+# Router-level failures; missing resources keep their own codes such as run_not_found.
+HTTP_ERROR_CODES = {404: "route_not_found", 405: "method_not_allowed"}
 # release.sh keeps this file aligned with every other version surface.
 APP_VERSION = (Path(__file__).resolve().parents[1] / "VERSION").read_text(encoding="utf-8").strip()
 
@@ -77,6 +80,18 @@ def create_app(*, init_database: bool = True) -> FastAPI:
                 "message": exc.message,
                 "details": browser_safe_error_details(exc.details),
             },
+        )
+
+    @app.exception_handler(StarletteHTTPException)
+    async def http_error_handler(_: Request, exc: StarletteHTTPException) -> JSONResponse:
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={
+                "code": HTTP_ERROR_CODES.get(exc.status_code, "http_error"),
+                "message": exc.detail,
+                "details": [],
+            },
+            headers=exc.headers,
         )
 
     @app.exception_handler(RequestValidationError)

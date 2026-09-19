@@ -1,7 +1,7 @@
 from collections.abc import Mapping, Sequence
 from typing import cast
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
 
 from app.core.errors import ApiError
@@ -82,6 +82,7 @@ def test_removed_workflow_memory_api_is_not_registered() -> None:
         response = client.get("/api/memory/proposals")
 
     assert response.status_code == 404
+    assert response.json() == {"code": "route_not_found", "message": "Not Found", "details": []}
 
 
 def test_run_catalog_is_get_only_with_logfire_instrumentation(
@@ -95,6 +96,27 @@ def test_run_catalog_is_get_only_with_logfire_instrumentation(
 
     assert response.status_code == 405
     assert response.headers["allow"] == "GET"
+    assert response.json() == {
+        "code": "method_not_allowed",
+        "message": "Method Not Allowed",
+        "details": [],
+    }
+
+
+def test_other_framework_http_errors_use_the_api_error_envelope() -> None:
+    app = create_app(init_database=False)
+
+    def http_error_probe() -> None:
+        raise HTTPException(status_code=409, detail="Probe conflict", headers={"Retry-After": "1"})
+
+    app.add_api_route("/__test/http-error", http_error_probe, methods=["GET"])
+
+    with TestClient(app) as test_client:
+        response = test_client.get("/__test/http-error")
+
+    assert response.status_code == 409
+    assert response.headers["retry-after"] == "1"
+    assert response.json() == {"code": "http_error", "message": "Probe conflict", "details": []}
 
 
 def test_api_error_envelope_details_are_browser_safe() -> None:
