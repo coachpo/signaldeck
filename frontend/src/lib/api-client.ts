@@ -34,7 +34,6 @@ const DEFAULT_API_BASE_URL = import.meta.env.DEV
 const CONFIGURED_API_BASE_URL = normalizeApiBaseUrl(
   import.meta.env.VITE_API_BASE_URL,
 );
-const API_BASE_URL = toVersionedApiBaseUrl(CONFIGURED_API_BASE_URL, "v1");
 const PLATFORM_API_BASE_URL = toPlatformApiBaseUrl(CONFIGURED_API_BASE_URL);
 const DETAIL_KEY_PATTERN = /^[A-Za-z][A-Za-z0-9_]*$/;
 const UNSAFE_DETAIL_KEY_PARTS = [
@@ -93,24 +92,8 @@ function toPlatformApiBaseUrl(baseUrl: string): string {
   return `${baseUrl}/api`;
 }
 
-function toVersionedApiBaseUrl(baseUrl: string, version: `v${number}`): string {
-  return `${toPlatformApiBaseUrl(baseUrl)}/${version}`;
-}
-
 function normalizePath(path: string): string {
   return path.startsWith("/") ? path : `/${path}`;
-}
-
-function buildApiUrlForBaseUrl(baseUrl: string, path: string): string {
-  return `${baseUrl}${normalizePath(path)}`;
-}
-
-export function buildApiUrl(path: string): string {
-  return buildApiUrlForBaseUrl(API_BASE_URL, path);
-}
-
-export function buildPlatformApiUrl(path: string): string {
-  return buildApiUrlForBaseUrl(PLATFORM_API_BASE_URL, path);
 }
 
 export function toQueryRecord<T extends object>(
@@ -365,13 +348,6 @@ async function downloadFileWithBaseUrl(
   triggerBrowserDownload(blob, filename);
 }
 
-export async function request<T>(
-  path: string,
-  options: RequestOptions = {},
-): Promise<T> {
-  return requestWithBaseUrl<T>(API_BASE_URL, path, options);
-}
-
 export async function requestPlatform<T>(
   path: string,
   options: RequestOptions = {},
@@ -384,13 +360,6 @@ export function requestPlatformText(
   options: RequestOptions = {},
 ): Promise<string> {
   return requestTextWithBaseUrl(PLATFORM_API_BASE_URL, path, options);
-}
-
-export function downloadFile(
-  path: string,
-  options: DownloadFileOptions = {},
-): Promise<void> {
-  return downloadFileWithBaseUrl(API_BASE_URL, path, options);
 }
 
 export function downloadPlatformFile(
