@@ -1,54 +1,22 @@
 # Workflow Packages
 
-These standalone examples use `signaldeck.workflowPackage/v2`. They are not platform components, bundled defaults or test fixtures. Import a selected YAML file through Workflow Packages, configure its resources, then choose a workflow and fill in its inputs. Each run records the selected package revision and plugin release. The same public definition contract is used by the editor and YAML import.
+These standalone `signaldeck.workflowPackage/v2` examples are not platform components, bundled defaults or test fixtures ([decoupling principle](../docs/产品说明.md#工作流与平台解耦原则)). Import a selected file through Workflow Packages or the [public import API](../docs/工作流解耦方案.md#独立数据导入与分发), configure its resources, then choose a workflow in the task catalog and fill in its inputs.
 
-| Package | Workflow | Result | Resources |
+| Package | Workflow (catalog name) | Result | Resources |
 | --- | --- | --- | --- |
-| [US equity research](us_equity_research.yaml) | `research` | Four analyst reports, a bounded bull/bear debate, independent risk review, a directional assessment and optional comparison with a supplied prior report | Digital Oracle and Finance plugins; `finance-market-data`; `equity-research-model` |
-| [US equity research](us_equity_research.yaml) | `monitor` | Frozen observations and explicit evidence comparisons; deep research only on an initial baseline or material change | Digital Oracle and Finance plugins; `finance-market-data`; `equity-research-model` |
-| [Research notes](research_notes.yaml) | `research` | Collection search, optional editing of conclusions and evidence-backed revisions, and an immutable note with source links | Notes plugin; `notes-workspace`; `research-model` |
-| [Research notes](research_notes.yaml) | `capture` | Original text saved as an immutable note | Notes plugin; `notes-workspace` |
-| [Watchlist K-line scan](watchlist_price_events.yaml) | `scan` | Low-frequency daily K-line events for every granted symbol, shown as a digest and saved as a Finance report when the latest session has enough events | Finance plugin 1.5.0 or later; `finance-market-data` |
+| [US equity research](us_equity_research.yaml) | `research` (美股多空研究) | Four analyst reports, a bounded bull/bear debate, independent risk review, a directional assessment and optional comparison with a supplied prior report, saved as a Finance report | Finance and Digital Oracle plugins; `finance-market-data`; `equity-research-model` |
+| [US equity research](us_equity_research.yaml) | `monitor` (美股证据变化监测) | Frozen observations and explicit evidence comparisons; deep research only on an initial baseline or material change | Finance and Digital Oracle plugins; `finance-market-data`; `equity-research-model` |
+| [Research notes](research_notes.yaml) | `research` (整理笔记) | Collection search, optional editing of conclusions and evidence-backed revisions, and an immutable note with source links | Notes plugin; `notes-workspace`; `research-model` |
+| [Research notes](research_notes.yaml) | `capture` (保存原文) | Original text saved verbatim as an immutable note, without a model | Notes plugin; `notes-workspace` |
+| [Watchlist K-line scan](watchlist_price_events.yaml) | `scan` (自选股 K 线扫描) | Low-frequency daily K-line events for every granted symbol, shown as a digest and saved as a Finance report when the newest completed session is the scan date and the window's event count reaches `minEvents` | Finance plugin 1.5.0 or later; `finance-market-data` |
 
-Finance owns report storage and its report page. Notes owns the research collection. Oracle provider availability depends on its independent deployment configuration; unavailable evidence must be identified in the generated research. Research workflows do not place orders.
-
-## Independent, repeatable methods
-
-Each preset is an independent use case. Its business inputs, research roles, prompts, dependencies and result presentation live in YAML and use the existing public package, tool and presentation contracts. Adding or updating these packages requires no Core or frontend business code. SignalDeck remains a general workflow execution platform.
-
-The model-based research presets request Chinese reports that distinguish facts from inference, retain source dates and attribution, explain counterevidence, and identify missing or incomparable data. Repeated citations of the same source do not count as independent corroboration. Explicit corrections are distinguished from unresolved conflicts. Successful execution and schema validation confirm the data path; they do not establish the accuracy of a model's judgment.
-
-The equity `research` workflow accepts an optional `previousReport`. Paste the earlier report, including its subject, date, scope or horizon, conclusion and sources. Independent research stages receive only this run's inputs and evidence; the final editor compares the supplied report afterward. It must distinguish new facts, corrected facts and changed assumptions, and explain when the reports cannot be compared. No prior report means no historical comparison baseline. This workflow does not fetch previous runs or maintain implicit memory; repeated launches keep the supplied input until it is explicitly changed. The separate `monitor` workflow uses explicitly scoped observations as described below.
-
-## US equity research
-
-This independent use case borrows the analyst, bull/bear discussion and final judgment structure from [TradingAgents](https://github.com/TauricResearch/TradingAgents). Its finite DAG runs four independent analysts (market, company, macro and news/policy), with at most two nodes executing concurrently, builds both cases, lets each side respond once, performs an independent risk review, then records the final assessment in Finance. All business prompts, topology, input fields and result presentation belong to this package; it adds no Core or frontend business logic.
-
-Choose **美股多空研究** in the task catalog. Configure `equity-research-model` as a model resource and include the chosen ticker in `finance-market-data.config.scope.allowedSymbols`. This separate connection can use provider-native JSON output and its own reasoning settings without changing other workflows. Provider settings belong to the model service connection; the package contains no vendor-specific request options. Oracle reads `FRED_API_KEY` and `EDGAR_CONTACT_EMAIL` from its own deployment environment; the latter is the operator's contact email used in SEC request identification. Neither belongs in workflow input or YAML.
-
-The research flow freezes its information cutoff, then collects structured SEC financial facts, completed daily market bars, dated news and located original-document passages. Finance and Oracle each read `EDGAR_CONTACT_EMAIL` from their deployment environment; Finance requires it for the live financial chain. `sourceUrls` can select up to five source documents instead of automatic SEC discovery. `includeSocial`, `includeInsider` and `includePrediction` are explicit opt-ins; prediction research additionally needs up to three `events` with venue, exact event/contract identity, hypothesis and reason. Missing optional evidence is disclosed without replacing the base research.
-
-All analysts, both cases and replies, risk review and adjudication receive the same immutable collection through explicit mappings. They cannot replace collected source facts. The final model proposes structured claims and thresholds plus a qualitative narrative; a deterministic Finance tool validates periods, units, references, arithmetic and threshold origin. The canonical body, stored report and download are identical. It has a readable source appendix and an explicit evidence status. The model narrative remains unverified inference; numeric assertions outside the structured path lower the report's evidence status. Supporting materials remain user-supplied evidence, and `previousReport` enters only the final qualitative comparison.
-
-Each side proposes at most three numbered qualitative arguments, then responds once to every opposing argument. Risk review and adjudication address each original argument by the same identifier. The compiler receives each stage directly, preserving the original positions, responses and final dispositions in the canonical report. Missing stages and incomplete or invalid references remain visible gaps; an explicitly unresolved judgment is valid. These checks establish record completeness and reference eligibility, not the truth or persuasiveness of a judgment. Numerical claims still use the separate structured calculation contract. This requires the Finance 1.2.0 public [discussion contract](../docs/writing-extensions.md#finance-研究争议合同).
-
-For `research`, `lookbackDays` selects 1–31 days of market/news history (default 7), and `statementLimit` selects 1–12 financial records (default 4). Choose these within the providers' actual coverage; a longer judgment horizon does not turn a short collection window into long-term evidence. These inputs do not extend provider history or add model calls.
-
-SEC XBRL dates identify actual periods and filing versions, not merely fiscal-focus labels. Cumulative and quarterly cash flows are distinct. Different capital-expenditure concepts retain their scope; missing debt is not zero. Market-cap/enterprise-value calculations based on reported shares are labelled estimates because intervening splits, issuance and repurchases may not have been reconciled. News summaries are not full policy text; incomplete document sections, unavailable pages and unknown publication times remain visible limitations. The workflow does not execute trades, manage holdings, backtest or assign calibrated win probabilities.
-
-### Explicit monitoring
-
-The same package offers **美股研究监测** (`monitor`). Its input has `monitorKey` and a closed `scope`: symbol/CIK, research question and horizon, rule version, source selections/freshness, optional events and explicit numerical change rules. It has no fixed date input. Each scheduled fire uses `monitor_begin` to freeze a new cutoff; replay of a confirmed operation keeps its original cutoff.
-
-Only the explicitly selected `scope.sources` govern freshness and comparisons; the collection may retain extra material. No baseline or material changes trigger deep research, unchanged evidence skips it, and invalid required evidence does not replace the last valid baseline. Observation validity and report success are separate. Rules or scope changes start a new comparable baseline; retrieved timestamps, ordering and duplicate collection do not trigger research. Prediction rule, status and expiry changes are separate from price changes, and probabilities are never compared across incompatible rules. Reports are bound to an exact observation, not an implicit “latest” report. This is separate from the other presets' manual `previousReport` behavior.
-
-Monitoring keeps an explicit 7-day market/news window and four financial records. These settings are fixed within this example because the public monitoring scope does not include configurable collection windows. Its research stages use the same bounded discussion and canonical report path as manual research, without changing the observation cutoff or baseline rules.
+The model-based workflows write in Chinese; a successful run confirms the data path, not the accuracy of the model's judgment ([verification boundary](../docs/产品说明.md#验证边界)).
 
 ## Watchlist K-line scan
 
-Choose **自选股 K 线扫描** in the task catalog. The watchlist is the `allowedSymbols` scope of the `finance-market-data` connection: the scan covers every symbol there, at most 50, so a separate connection can hold a dedicated watchlist. It needs Finance 1.5.0 or later and no model.
+Choose **自选股 K 线扫描** in the task catalog. The watchlist is the `allowedSymbols` scope of the `finance-market-data` connection: the scan covers every symbol there and fails with `price_events_watchlist_too_large` above 50 ([K-line contract](../docs/writing-extensions.md#finance-k-线事件合同)). The equity research workflows use the same connection, so every ticker added for research is scanned too. It needs Finance 1.5.0 or later and no model.
 
-The `scan` node calls `price_events_lookup` without symbols and with five low-frequency rules fixed in the package: single-session large moves, volatility-scaled five-session moves, large moves given back, drawdowns of 20% from the 60-session closing high, and new 60-session closing highs or lows whose prior extreme is at least 20 sessions old. On real data for 50 liquid US stocks these rules gave about 0.05 events per stock per trading day. Edit the package to change them.
+The `scan` node calls `price_events_lookup` without symbols and with five low-frequency rules fixed in the package: single-session large moves, volatility-scaled five-session moves, large moves given back, drawdowns of 20% from the 60-session closing high, and new 60-session closing highs or lows whose prior extreme is at least 20 sessions old. Edit the package to change them.
 
 The `save` node stores the Chinese digest as a Finance report only when the newest completed session is the scan date and the event count reaches `minEvents` (default 1). On a market holiday, a weekend or before 16:30 New York time, the newest session is an earlier one, so the run shows the digest and saves nothing; this keeps a daily schedule from repeating the previous session. `windowSessions` (default 1) sets how many recent sessions to report; use 5 for a weekly run.
 
@@ -56,65 +24,17 @@ Create a repeat schedule for the workflow in the New York time zone on weekdays 
 
 ## Configure resources
 
-Install the relevant release descriptors from each plugin's `/release` endpoint. Plugin deployment and resource scopes are described in [the plugin guide](../plugins/README.md).
+Both provided Compose stacks (`./start.sh` and `docker/compose.production.yml`) run a bootstrap step that registers the enabled plugins not yet installed and creates any missing default tool resource from [`docker/plugin-defaults.json`](../docker/plugin-defaults.json): `finance-market-data` (Finance, allowed symbols `MSFT` and `AAPL`) and `notes-workspace` (Notes, collection `research`). Independently deployed plugins need the same release descriptors and resources; see the [plugin guide](../plugins/README.md). Then:
 
-Create `research-model` for Notes or `equity-research-model` for US equity research, with the provider's base URL and model ID. Enter its credential in the separate credential field; do not put credentials in a package, prompt or resource scope. Notes passes its title and search query into the summarizer so it can stay on topic even when the current text is empty; no relevant material produces an explicit gap rather than an unrelated summary. The `capture` workflow does not use a model resource.
+- Create the model resource the package names, `equity-research-model` or `research-model`, with the provider's base URL and model ID, and enter its credential in the separate credential field, never in a package, prompt or resource scope. The dedicated equity connection lets its model service apply provider-native JSON output and its own reasoning settings without affecting other workflows; the packages carry no vendor-specific request options.
+- Add every researched ticker to `finance-market-data.config.scope.allowedSymbols`; the default scope does not include the example's default `NVDA`.
+- Live SEC data needs `EDGAR_CONTACT_EMAIL` in both the Finance and Oracle deployment environments, and FRED series need `FRED_API_KEY` in Oracle's; neither belongs in workflow input or YAML ([plugin guide](../plugins/README.md)).
 
-Create these tool resources when using the corresponding package:
+## US equity research
 
-```json
-{
-  "resourceId": "finance-market-data",
-  "kind": "tool",
-  "config": {
-    "name": "Research market data",
-    "pluginId": "signaldeck/finance",
-    "scope": {"allowedSymbols": ["MSFT", "AAPL"]},
-    "maxConcurrentCalls": 4,
-    "requestsPerSecond": 5
-  }
-}
-```
+`research` borrows the analyst, bull/bear discussion and final judgment structure from [TradingAgents](https://github.com/TauricResearch/TradingAgents) without reproducing it. It freezes its information cutoff, then collects structured SEC financial facts, completed daily market bars, dated news, FRED macro series and located original-document passages into one collection. Four analysts (market, company, macro and news/policy) read that collection, with at most two nodes running at once. Each side proposes at most three numbered arguments and answers every opposing argument once; the risk review and the adjudication address each argument by its identifier.
 
-```json
-{
-  "resourceId": "notes-workspace",
-  "kind": "tool",
-  "config": {
-    "name": "Research collection",
-    "pluginId": "example/notes",
-    "scope": {"collection": "research"},
-    "maxConcurrentCalls": 4,
-    "requestsPerSecond": 5
-  }
-}
-```
-
-## Launch inputs
-
-Market advisory `research`:
-
-```json
-{
-  "symbols": ["MSFT", "AAPL"],
-  "question": "Compare the current observations and identify the evidence still needed for a research decision.",
-  "includeRisk": true
-}
-```
-
-Setting `includeRisk` to `false` skips the independent risk branch; the report still states visible evidence limitations. Both branches reuse the same analyst definition and shared evidence, avoiding duplicate collection. The report identifies per-symbol findings, opposing evidence and observable conditions that would change the assessment. History and news coverage does not establish company financial health or policy text. Add `previousReport` only when an earlier report should be compared. Core does not infer business incompleteness from these inputs.
-
-Digital Oracle `research`:
-
-```json
-{
-  "question": "What do current macro conditions and available company evidence imply for Microsoft? Distinguish facts, inference and unavailable sources."
-}
-```
-
-Optional `asOfDate` specifies a `YYYY-MM-DD` cutoff; without it, the report labels the dates of the data actually obtained. Optional `supportingMaterials` is a text field for excerpts with source, publication date and units. A URL alone is not evidence that its contents were read. Optional `previousReport` is used only by the final editor. SEC discovery results remain filing references rather than financial-statement text; FRED observation periods remain distinct from publication dates. Unknown units, unavailable sources and incompatible periods must remain visible in the report.
-
-US equity `research` (the date is an explicit example, not a moving default):
+Finance validates the proposed claims and thresholds deterministically and saves one canonical body, which is also the stored and downloaded report; the model's narrative and stance stay marked as unverified inference. Contracts: [research evidence](../docs/writing-extensions.md#financeoracle-研究合同) and [discussion](../docs/writing-extensions.md#finance-研究争议合同).
 
 ```json
 {
@@ -126,9 +46,25 @@ US equity `research` (the date is an explicit example, not a moving default):
 }
 ```
 
-Each optional material has `category` (`宏观数据`, `公司财报`, `新闻`, `美国政策` or `其他`), `title`, `publishedDate`, `source` and `content`. Use a source URL or clear attribution, retain the reporting period and units in `content`, and never put credentials in these fields. A fresh task draft defaults to NVDA and three months; the analysis date must be supplied explicitly using the US market date. A local date that is already tomorrow in the US must not request an unavailable future FRED vintage.
+The date above is an example, not a moving default. `asOfDate` has no default: pass the US market (New York) date. A later date, such as a local date already a day ahead, is rejected when the scope is frozen (`research_date_is_in_the_future`). A new draft defaults to `NVDA` and three months (`horizonMonths` 1–24).
 
-Research notes `research`:
+- `supportingMaterials` holds up to eight items with `category` (`宏观数据`, `公司财报`, `新闻`, `美国政策` or `其他`), `title`, `publishedDate`, `source` and `content`. Give a source URL or clear attribution, keep the reporting period and units in `content`, and never put credentials there; the report treats these items as unverified user-supplied evidence.
+- `sourceUrls` selects up to five official documents instead of automatic SEC discovery, and `macroSeriesIds` up to five FRED series.
+- `lookbackDays` (1–31, default 7) and `statementLimit` (1–12, default 4) bound the market/news history and the number of financial records. A longer judgment horizon does not turn a short collection window into long-term evidence, and neither input extends provider history or adds model calls.
+- `includeSocial`, `includeInsider` and `includePrediction` are explicit opt-ins that default to off. Prediction research also needs up to three `events`, each with `venue` (`polymarket` or `kalshi`), the exact event or contract, a hypothesis and a reason. Missing optional evidence is disclosed without replacing the base research.
+- `previousReport` takes a pasted earlier report with its subject, date, horizon, conclusion and sources. Only the final adjudication compares it, after the independent stages, separating new facts, corrected facts and changed assumptions or explaining why the reports are not comparable. The workflow never fetches earlier runs or keeps implicit memory.
+
+The report keeps SEC facts with their actual periods and filing versions, keeps cumulative and quarterly cash flows apart, treats news summaries as summaries rather than full policy text, and labels valuations based on reported shares as unverified estimates. The workflow does not trade, manage holdings, backtest or assign calibrated win probabilities; other source limits are listed under [research source boundaries](../plugins/README.md#research-source-boundaries).
+
+### Explicit monitoring
+
+`monitor` (美股证据变化监测) takes a `monitorKey` and a closed `scope`: symbol and CIK, research question and horizon, rule version, selected sources with freshness limits, optional events and explicit numerical change `rules`. It has no date input and reads no earlier report. Each fire freezes a new cutoff with `monitor_begin` and compares the sources selected in `scope.sources` with the last valid baseline of the same scope; other collected material never decides freshness or change.
+
+Only an initial baseline or a material change runs the deep research, through the same bounded discussion and canonical report path as `research`, and the report is bound to that exact observation. Unchanged evidence skips it; invalid required evidence neither triggers research nor replaces the baseline. Market and prediction quotes trigger research only through configured `rules`; prediction rule, status and expiry changes are reported apart from price changes, and probabilities are never compared across incompatible rules. Changing the scope or rules (with a new `ruleVersion`) starts a new baseline, while retrieval times, ordering and duplicate collection never trigger research. The window is fixed at seven days of market/news history and the latest four financial records because the public monitoring scope has no window field. Storage and baseline rules are in the [data model](../docs/data-model.md#插件业务数据).
+
+## Research notes
+
+`research` (整理笔记) searches the collection for at most 20 matching notes; `includeDerived` defaults to false so earlier summaries are not recycled as new evidence. The editor receives the title, the query, the current text and the retrieved notes, and writes four sections: current conclusions, changes and reasons, questions requiring verification, and sources and coverage. It stays on the title's topic even when the text is empty and reports an explicit gap when nothing relevant is found. An explicit later correction of an earlier estimate is recorded as a revision with evidence; incompatible claims without a supported correction remain unresolved. Notes has no event-date field, so the note uses only dates or chronology stated in the text, never ID or search order.
 
 ```json
 {
@@ -139,22 +75,9 @@ Research notes `research`:
 }
 ```
 
-The editor uses four sections: current conclusions, changes and reasons, questions requiring verification, and sources and coverage. An explicit later correction of an earlier estimate is recorded as a revision with evidence; incompatible claims without a supported correction remain unresolved. Notes has no independent event-date field, so the report uses only dates or chronology stated in the text, never ID or search order. Search is limited to 20 matching notes; `includeDerived` defaults to false to avoid recycling summaries as new evidence.
-
-New drafts default `summarize` to true. Setting it to false preserves the original text through an explicit missing-output fallback, while saving a derived note linked to the retrieved sources. Runtime inputs are not silently filled from draft defaults. To archive original material without configuring a model, select `capture`:
-
-```json
-{
-  "title": "Experiment observations",
-  "text": "The second run completed with the same inputs. The timing difference remains unexplained."
-}
-```
-
 ## Optional read caching
 
-All packages leave `toolCache` empty. New runs, reruns and scheduled runs therefore request fresh results by default. A restored run can reuse its own confirmed results independently of this setting.
-
-To opt a selected read tool into cross-run caching, add a policy under that Agent, for example on the Notes `find_notes` Agent:
+All packages leave `toolCache` empty, so new runs, reruns and scheduled runs request fresh results; a restored run reuses its own confirmed results regardless. To opt a read tool into cross-run caching, add a policy under its Agent, for example on the Notes `find_notes` Agent:
 
 ```yaml
 toolCache:
@@ -164,10 +87,4 @@ toolCache:
     key: release_input_resources
 ```
 
-The [cache policy contract](../backend/app/domain/tool_contracts.py) permits a TTL from 1 to 86400 seconds, resource scope and a key derived from the frozen release, input and resource bindings. The tool must also be selected in the Agent's `tools`. Write operations cannot enable result caching. Cache evidence records the source run and operation, acquisition time, expiration and hit status. Choose a TTL that is acceptable for the data's freshness; the example above may reuse an older collection search for up to 60 seconds.
-
-## Maintaining the examples
-
-The platform's code, tests, verification scripts, builds and startup configuration do not reference this directory or its contents. Examples are not included in the application image or installed by the local Compose stack. Changing or removing an example does not require platform changes or synchronized fixtures, hashes or test expectations.
-
-Users may import a chosen example through the public package interface, just like any independently supplied workflow. `missing_only` imports preserve existing package keys; explicit `update` imports may advance the current revision. Imported records use the same parsing, normalization and immutable revision contract as editor saves. Reading saved definitions does not require this source directory or a running business plugin. The public batch API is specified in the [independent import contract](../docs/工作流解耦方案.md#独立数据导入与分发).
+The [cache policy contract](../backend/app/domain/tool_contracts.py) permits a TTL from 1 to 86400 seconds, resource scope and a key derived from the frozen release, input and resource bindings. The tool must also be listed in the Agent's `tools`, and write tools cannot be cached. Choose a TTL the data's freshness allows; the example may reuse a collection search up to 60 seconds old.

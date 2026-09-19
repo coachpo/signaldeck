@@ -1,46 +1,41 @@
 # SignalDeck Backend
 
-SignalDeck 的 FastAPI backend，提供 Workflow Package 定义、资源与插件配置、启动命令、定时配置及运行证据 API。声明式 DAG 由 Temporal 执行；Finance 的 Templates/Reports 属于独立插件。
+SignalDeck 的 FastAPI Core：保存 Workflow Package、资源与插件发布，准备和启动 Run，管理计划，并提供历史、结果与调用证据的读取接口。Run 由 Temporal 执行；Finance、Notes 等业务插件是独立进程，其业务 API 不属于 Core 路由。本地启动见根 [`README.md`](../README.md#快速开始)，开发环境、进程命令和测试见 [`CONTRIBUTING.md`](../CONTRIBUTING.md)，模块职责见[架构说明](../docs/架构说明.md)，持久化见[数据模型](../docs/data-model.md)。
 
-安装与普通启动见根 [`README.md`](../README.md)；开发环境、各进程启动和全部验证命令集中在 [`CONTRIBUTING.md`](../CONTRIBUTING.md)。项目开发档位与部署事实以 [`STATUS.md`](../STATUS.md) 为准。
+## 进程与运行模式
 
-## 入口与运行前提
+- API：`app.main:app`。启动时初始化 Core 表，导入 `SIGNALDECK_WORKFLOW_DATA_DIR` 中缺失的工作流（未设置时跳过），并发布当前 Core 制品。
+- dispatcher：`python -m app.workers.command_dispatcher`。把启动与取消命令投递到 Temporal，重试未完成的计划同步与手动触发，投影执行终态和 fire 结果。
+- worker：`python -m app.workers.artifact_worker --serve`。为 Core 制品目录中每个保留且核验通过的制品建立独立执行环境，并在该制品的任务队列 `sd-core-<hex>` 上运行一个 Temporal worker；Run 在其绑定制品的队列上执行。
 
-- API 入口为 `app.main:app`；启动时初始化核心表并发布当前 Core 制品。仅设置 `SIGNALDECK_WORKFLOW_DATA_DIR` 时才从该外部目录导入缺失工作流；未设置、空目录或缺失目录都可正常启动，已有 key 不被覆盖。
-- `app.workers.command_dispatcher` 投递持久启动/取消命令、同步定时配置，并更新执行事实的读取投影。`app.workers.artifact_worker --serve` 为保留的 Core 制品启动固定依赖环境的 worker；Temporal 负责执行与定时调度。仅启动 API 不会执行已入队的 Run。
-- API、dispatcher 和 worker 共享 Core PostgreSQL、`AGENT_PLATFORM_ENCRYPTION_KEY`、产物目录和 Core 制品目录。dispatcher、worker，以及处理定时配置写入和时间预览的 API 使用同一 `TEMPORAL_ADDRESS`；运行与计划的普通历史读取不连接 Temporal。插件使用独立进程，Finance 和 Notes 数据保存在各自数据库，核心不挂载 Finance 业务路由。
-- `/health` 仅检查 API 进程存活并返回发布版本；`/ready` 检查数据库连接，不验证 Temporal、worker、模型或插件。
-- 本地组合栈由根 `start.sh` 启动；目标数据使用独立目录，不接管旧实例。拆分配置中的 dispatcher 和 worker 复用 backend 镜像，不发布 HTTP 端口。
+API 保存配置、Run 和启动/取消命令，但不投递命令，只启动 API 不会执行已入队的 Run；计划的保存、删除、预览和手动触发则由 API 直接调用 Temporal 完成，见[计划接口](#计划接口)。三者的共享配置与启动命令见[开发启动](../CONTRIBUTING.md#开发启动)；应用镜像以 `app`、`dispatcher`、`worker` 角色运行同一镜像，见[部署说明](../docker/deployment.md)。
 
-## API 与模块导航
+Run 在 worker 执行第一个 activity `prepare_run` 时才投影为 `running`；停在 `queued` 时按投递链路排查。本地栈先运行 `./start.sh status`，再运行 `./start.sh logs dispatcher worker`（服务器部署见[部署说明](../docker/deployment.md#健康检查与本地验证)）；这两个服务没有健康检查，容器在运行不代表能投递或执行。dispatcher 反复输出 `Delivery remains pending; the original commands will be retried` 表示投递到 Temporal 失败，命令保留并重试。worker 为每个制品输出 `{"coreArtifact": …, "workerState": …}`，正常为 `started`；`bootstrap_failed`（执行环境无法安装或核验，首次安装需访问锁文件中的公共包源）、`artifact_invalid`（制品核验失败）或反复的 `exited`（worker 进程退出后退避重启）时该制品的队列无人消费。之后在 Temporal UI 按 Run ID（即 Workflow ID）查看执行历史。`/ready` 不检查 Temporal、dispatcher 或 worker；读取 Run 详情和证据不会重新投递或调度。
 
-| 入口 | 实现责任 |
-| --- | --- |
-| `/api/workflow-packages` | 定义创建/修改、YAML 验证与编译；`/import` 批量导入并逐项报告结果；`/{packageKey}/prepare` 返回只读准备与绑定核对，`/{packageKey}/launches` 保存不可变快照和启动命令。 |
-| `/api/resources` | 模型及工具资源配置、加密凭据写入和安全读取。 |
-| `/api/plugins` | 插件 release 契约注册、启停配置及描述读取。 |
-| `/api/runs` | 全历史查询/计数/分页、详情、cancel、rerun、调用证据和来源；`GET /{runId}/result` 返回业务结果投影；`GET /{runId}/reuse` 读取原修订输入，`POST` 同一路径创建修改输入后的新运行。 |
-| `/api/task-presets` | 命名输入配置和收藏/置顶 CRUD，按包版本与闭合 schema 验证，不创建运行或计划。 |
-| `/api/connection-presets` | 读取部署声明的非敏感连接选择；不探测外部服务、不返回凭据。 |
-| `/api/artifacts/{digest}` | 按内容摘要读取运行产物。 |
-| `/api/schedules` | cron/时区/重叠/错过策略配置、同步状态、`/preview` 和 `/{scheduleId}/preview` 的 Temporal 时间预览、`/{scheduleId}/trigger` 与 fire history。 |
+`SIGNALDECK_RUNTIME_MODE`（[`app/core/config.py`](app/core/config.py)）取 `local`（默认）、`development`、`test`、`staging`、`production` 或 `prod`。`production`、`prod` 和 `staging` 必须显式设置 `DATABASE_URL`（不能等于本地默认值）和 `AGENT_PLATFORM_ENCRYPTION_KEY`（不能为空、开发默认值、`change-me` 或 `changeme`），否则配置校验失败，进程不启动；其他模式缺省时使用代码中的本地开发默认值。应用镜像默认 `production`，入口脚本在启动 `app`、`dispatcher` 或 `worker` 前先执行这项校验；根 Compose 的本地栈使用 `local`。
 
-[`app/main.py`](app/main.py) 挂载 [`app/api/platform_router.py`](app/api/platform_router.py) 组合的 HTTP 路由，启动依赖由 [`app/api/platform_dependencies.py`](app/api/platform_dependencies.py) 注入；请求与响应使用 `app/schemas/`、领域层及相应路由文件的显式模型。定义和 DAG 契约位于 `app/domain/`；`app/application/` 拥有启动、准备、结果投影和 Tool Gateway；`app/infrastructure/` 实现存储、模型/MCP I/O 和 Temporal 适配。详见 [`架构说明`](../docs/架构说明.md)、[`数据模型`](../docs/data-model.md) 和 [`插件说明`](../plugins/README.md)。
+## HTTP 接口
 
-批量导入默认 `missing_only`，显式 `update` 才推进同名包指针；两种模式均保留不可变修订。客户端须检查每个 item 的状态，不能把 HTTP 200 视为所有来源均成功。请求与诊断格式见[独立数据导入](../docs/工作流解耦方案.md#独立数据导入与分发)。
+`app/main.py` 提供 `/health`（存活状态和发布版本）与 `/ready`（只检查数据库），其余接口由 [`app/api/platform_router.py`](app/api/platform_router.py) 挂载在 `/api` 下。完整方法、路径和请求模型以 OpenAPI 为准：`app.openapi()`，或直接访问 API 进程端口上的 `/docs`、`/openapi.json`（应用镜像的 Nginx 只把 `/api/`、`/health` 和 `/ready` 转发给 API）。写入身份与冲突代码见[数据模型](../docs/data-model.md#写入身份与冲突)。
 
-部署可通过 `SIGNALDECK_CONNECTION_PRESETS_FILE` 指定连接选择 JSON 文件；数据遵循 [`ConnectionPresetList`](app/schemas/connection_presets.py)，包含资源标识、非敏感配置和需要用户填写的凭据字段描述。文件中不提供凭据值；未提供选择时，普通页面不猜测 provider、模型或业务范围。实际服务部署仍是独立前提。
+| 前缀 | 路由文件（`app/api/`） | 职责 |
+| --- | --- | --- |
+| `/api/workflow-packages` | `platform_packages.py` | 包的列表、创建、读取和修改；`/validate-manifest` 校验源码；`/import` 批量导入，见[独立数据导入与分发](../docs/工作流解耦方案.md#独立数据导入与分发)；`/{packageKey}/prepare` 只读准备并返回 `bindingToken`；`/{packageKey}/launches` 启动 Run。 |
+| `/api/runs` | `platform_runs.py` | 历史查询与分页、详情（冻结 spec 和调用证据）、`/cancel`、`/rerun`、`/result`；`/reuse` 的 GET 读取原输入，POST 以修改后的输入启动新 Run。 |
+| `/api/runs/{runId}/metadata` | `result_metadata.py` | 结果的收藏、已读和备注。 |
+| `/api/runs/{runId}/usage`、`/api/model-usage` | `model_usage.py` | 按 Run，或按指定日期与 IANA 时区汇总已记录的模型用量。 |
+| `/api/attention` | `attention.py` | 执行更新列表和按更新身份标记已读。 |
+| `/api/task-drafts` | `task_drafts.py` | 服务器任务草稿。 |
+| `/api/task-presets` | `task_presets.py` | 常用配置与任务收藏。 |
+| `/api/schedules` | `platform_schedules.py` | 计划的增删改查与同步状态、`/preview`（待保存的日历）和 `/{scheduleId}/preview`、`/{scheduleId}/trigger` 手动触发、`/{scheduleId}/fires`。 |
+| `/api/resources`、`/api/plugins` | `platform_resources.py` | 模型与工具资源（凭据只写）；插件发布登记、启停和列表。 |
+| `/api/connection-presets` | `connection_presets.py` | 部署提供的非敏感连接选择，格式见[普通模式的连接选择](../docs/writing-extensions.md#普通模式的连接选择)。 |
+| `/api/plugin-pages` | `plugin_pages.py` | 已登记的插件页面目录，见[统一插件页面](../docs/writing-extensions.md#统一插件页面)。 |
+| `/api/artifacts/{digest}` | `platform_artifacts.py` | 按内容摘要下载经核验的产物。 |
 
-准备返回 `bindingToken`，启动、rerun 和 reuse 可以携带它核对已检查的包修订、Workflow key、输入、模型/资源配置、凭据修订和插件发布；不一致返回 409 `binding_changed`。Core 制品在启动时另行冻结。客户端必须在不确定响应下复用同一个 `launchId`；已接受的重试先恢复原命令，不重新解析绑定，也不因后续配置变化创建新运行。
+## 计划接口
 
-历史支持标题/标识/已存 Run 输出搜索，以及任务、来源、状态、时间与 `active`/`attention` 分组过滤；不展开文件产物。`attention` 包含失败运行或逻辑调用尚未确认的运行，已恢复操作的旧网络 attempt 不构成未知效果。分页携带返回的 `snapshotAt` 可排除翻页期间新创建的运行；它不是冻结所有运行状态的数据库事务快照。
-
-## Scheduled Task 请求契约
-
-创建可提供稳定 `requestId`；响应不确定或初次同步失败时以同一身份和定义重试，返回同一安排，不同定义返回 `schedule_identity_conflict`。创建和修改使用 `name`、`packageKey`、`workflowKey`、`parameters`、`cron`、`timeZone`、`overlapPolicy`、`catchupWindowSeconds` 和 `paused`；新建或更换任务/输入时，参数必须符合所选 workflow 的输入 schema。已有计划只修改时间或暂停状态时保留原输入，即使原任务已不可用也可修复安排。`overlapPolicy` 接受 `skip`、`buffer_one` 或 `allow`；时区单独指定，不嵌入 cron 字符串。
-
-`POST /api/schedules/{scheduleId}/trigger` 接收 `triggerId` 并返回投递回执；实际 fire 和 Run 通过 `GET /api/schedules/{scheduleId}/fires` 检查。配置同步状态与执行状态分开，删除定时配置保留既有 fire/Run 来源。完整契约见 [`app/domain/schedules.py`](app/domain/schedules.py) 和 [`app/api/platform_schedules.py`](app/api/platform_schedules.py)。
-
-## 测试环境
-
-[`tests/conftest.py`](tests/conftest.py) 使用真实 PostgreSQL 和 UUID 隔离的临时数据库；模型路径使用 mock 或本地 fake server。Playwright 还启动独立 Temporal dev server、dispatcher 和固定制品 worker。环境变量优先级、Temporal 版本、数据库权限和命令统一见 [`CONTRIBUTING.md`](../CONTRIBUTING.md)。
+- 创建与 PATCH 都提交完整定义（[`ScheduleDefinition`](app/domain/schedules.py)，含 `executionOptions`）；PATCH 不是部分更新，省略的可选字段恢复默认值。
+- `cron` 不能包含 `TZ=` 或换行，时区只用独立的 IANA `timeZone` 字段。
+- 只有任务、输入或 `executionOptions` 变化时才按当前包校验：只改名称、日历、重叠策略、补触发窗口或暂停状态的 PATCH，以及已提交 `requestId` 的创建重试，都不读取当前包，因此原任务删除后仍能修复、暂停或确认原安排。
+- 创建、修改、删除、触发和预览要求 API 进程能连接 `TEMPORAL_ADDRESS`，连接失败或超过 10 秒返回 503 `engine_unavailable`；读取不连接 Temporal。

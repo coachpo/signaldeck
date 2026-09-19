@@ -1,79 +1,45 @@
 # SignalDeck 设计系统
 
-## 目的
-
-SignalDeck 帮助用户完成任务、阅读结果、复用常用配置、安排自动执行和制作工作流。Finance 的格式和报告由独立插件页面拥有。设计系统保持这些页面的操作与视觉一致。当前视觉语言是紧凑企业后台：灰白画布、细分隔线、约 14px 正文、统一 4–6px 圆角、表格优先和清晰键盘 focus。普通模式默认使用任务、结果与设置；专家模式增加制作、服务和执行控制，切换只改变展示，不改写业务配置或卸载当前草稿。
-
-## 产品语言与控制
-
-遵循[产品界面合同](../docs/产品说明.md#产品范围)。所有模式、插件页面、提示、弹窗、错误、空状态、加载状态、结果和折叠区均不得展示平台内部身份、原始 API 响应、堆栈、存储路径、schema、调度引擎或资源绑定。复杂能力使用字段、列表、选项、步骤、条件、资料来源、服务和预算控件，不能要求 JSON/YAML/cron 输入，也不能仅改名、补长篇说明或删除能力。
-
-每一步说明当前状态、需要用户做什么、操作后的结果。结果未确认时指出不确定内容及可执行的核对方式；请求取消与已经停止分别表达。服务配置与最近成功记录不等于实时在线。错误说明应基于已知类别，无法确认原因时如实表达并保留重试、返回或修复入口。
-
-业务草稿在当前应用内导航和模式切换后保留；刷新或关闭前提醒先保存。任务显式服务器草稿可刷新恢复，浏览器持久存储不保存业务输入或凭据。用户正文、代码及原始业务附件保持原文，不通过术语过滤改写。
+界面风格是简约紧凑的企业管理后台和工程师工具：灰白画布、细分隔线、约 14px 正文、统一 4–6px 圆角、表格优先和清晰的键盘 focus。所有模式和插件页面的界面内容遵守[产品界面合同](../docs/产品说明.md#产品范围)；本文件只规定视觉系统和组件用法。
 
 ## 系统层次
 
-- `src/styles/theme.css` 是 token source of truth。自定义 surface、间距、布局、shadow、motion、z-index、control sizing 和状态值使用 semantic Tailwind class 与 `--ui-*` token。
-- `src/components/ui` 包含 shadcn/Radix primitive，保持 presentational，不放 route 或 API logic。
-- `src/components/shared` 包含可复用 SignalDeck UI：page shell、toolbar、state panel、status chrome、table frame、dialog 和 management-list helper。
-- feature folder 与 page 拥有 domain copy、route params、hooks、mutation、toast、navigation 和 validation behavior。
-- 独立插件通过 `src/plugin-ui` 构建入口复用上述主题、侧栏、Markdown、确认框和外观控件；静态产物随插件交付，业务页面仍由插件拥有。插件原生业务表单使用同一组 semantic token，不另建主题。独立模式保留完整布局；同源嵌入模式只渲染业务内容，外层导航和外观由主站提供。跨页面消息只传递位置、外观、显示模式和未保存/操作状态，平台返回地址作为当前标签页的导航上下文保留；不传递业务输入或凭据。
+- `src/styles/theme.css` 是唯一的 token 来源，不创建第二个 token 文件。
+- `src/components/ui` 是项目自有的 shadcn/Radix primitive，保持纯展示，不放路由或 API 逻辑。仓库没有 `components.json`，shadcn CLI 的 registry 命令不能直接使用。
+- `src/components/shared` 放可复用的 SignalDeck UI（页面外壳、工具栏、状态面板、状态标记、表格框和对话框），同样只做展示：值、回调、标签、说明和校验信息由调用方传入。页面和 feature 目录拥有业务文案、路由参数、hooks、提交处理、mutation、toast、导航和校验。
+- 插件页面通过 `src/plugin-ui` 构建入口复用主题、侧栏、Markdown、确认框和外观控件；插件自己的业务表单也只使用同一组语义 token，不另建主题。独立打开时显示完整布局，嵌入主站时只渲染业务内容，导航和外观由主站提供；嵌入协议见[统一插件页面](../docs/writing-extensions.md#统一插件页面)。
 
 ## Token
 
-产品颜色使用现有 semantic token：`background`、`foreground`、`card`、`muted`、`accent`、`primary`、`destructive`、`border`、`positive`、`negative`、chart 和 sidebar colors。`text-positive` 与 `text-negative` 只用于清晰的金融变动。
+- 颜色使用语义 token：`background`、`foreground`、`card`、`muted`、`accent`、`primary`、`destructive`、`border`、`positive`、`negative`、chart 和 sidebar。`text-positive` 与 `text-negative` 只表达清晰的金融涨跌。
+- Surface 使用 `bg-ui-canvas`、`bg-ui-surface`（及 `-elevated`、`-grouped`、`-inset`、`-chrome` 变体）、`border-ui-separator`、`bg-ui-accent-soft` 和 `shadow-ui-xs|sm|md|lg`，它们映射到 `--ui-*` 变量并保持 light/dark 一致。`--ui-text-secondary` 和 `--ui-text-tertiary` 没有对应的 utility class，只能通过 `var()` 引用。
+- 语义 utility 表达不了的值使用 `--ui-*` 变量，例如 `--ui-space-*`、`--ui-radius-*`、`--ui-shadow-*`、`--ui-z-*`、`--ui-motion-*`、`--ui-layout-*` 和 `--ui-size-*`。
 
-翻新的 surface model 使用 `bg-ui-canvas`、`bg-ui-surface`、`bg-ui-surface-elevated`、`bg-ui-surface-grouped`、`bg-ui-surface-inset`、`bg-ui-surface-chrome`、`border-ui-separator`、`text-ui-text-secondary`、`text-ui-text-tertiary`、`bg-ui-accent-soft` 和 `shadow-ui-*`。它们映射到 `--ui-*` token，保持 light/dark 行为一致。
+## 布局
 
-组件需要 Tailwind semantic utility 没有的值时使用 `--ui-space-*`、`--ui-shadow-*`、`--ui-z-*`、`--ui-motion-*`、`--ui-breakpoint-*`、`--ui-layout-*` 和 `--ui-size-*`。不要创建第二个 token 文件。
+- `Layout` 按路由 handle 负责 app shell、侧栏、面包屑、滚动模式和宽度。
+- 管理列表路由使用 `InventoryPageShell`：它渲染 `PageContextBar`，可选组合 `ResourceToolbar` 和 `ResourceFilterBar`，自身不提供滚动，只能用于由 `Layout` 提供滚动区域的滚动模式路由。
+- `fullHeight` 路由（`routes.ts` 中的 `fullHeight: true`，如工作流编辑、开始任务、重复安排和结果详情）没有 `Layout` 滚动区域，页面必须使用正文自带滚动的 `WorkspacePageShell`，否则首屏以外的内容无法到达。
+- 不嵌套页面外壳，不在路由里另包顶层布局。
 
-## 布局规则
+## 组件
 
-- `Layout` 负责 app shell、sidebar、breadcrumb、scroll mode、full-height mode 和 route width。
-- inventory route 使用 `InventoryPageShell`、`PageContextBar`、`ResourceToolbar`、可选 `ResourceFilterBar` 和 route-owned content。
-- full-height editor 与 console 使用 `WorkspacePageShell`。
-- 制作和执行详情工作区使用 `WorkspacePageShell`，由 feature 组合业务控件与详情布局。结构化业务值按字段与列表阅读；只有用户原始业务附件需要字面内容预览时才使用原文预览，不把平台快照或原始响应作为产品详情。
-- 避免嵌套 page shell 和 route-local top-level layout wrapper。
+| 场景 | 使用 |
+| --- | --- |
+| 按钮 | `Button`；图标按钮必须有可访问名称，按钮内的图标尽量加 `data-icon` |
+| 创建或编辑对话框 | `EntityDialogShell` |
+| 破坏性确认 | `ConfirmDeleteDialog`，只用于确认动作 |
+| 列表搜索与筛选 | `ResourceToolbar` 的 `search`；已生效的筛选用 `ResourceFilterBar` |
+| 可选择的管理表格 | `ResourceSelectionCheckbox` 与 `useResourceSelectionState`；已选数量的删除/清除栏用 `ResourceBulkActionsBar` |
+| 行溢出菜单 | `ResourceActionsMenu`；菜单项、回调、导航和破坏性样式由调用方提供 |
+| 空、错误和加载状态 | 路由级用 `InventoryStatePanel`，行内提示用 `InlineStatePanel`，卡片式空状态用 `EmptyStatePanel`；三者都是实色卡片，不用虚线框 |
+| 表格 | `ResourceTableFrame` 包裹路由自己的表格；列、排序和分页由路由负责 |
+| 状态 | `ResourceStatusBadge` 和 `ResourceStatusStrip`，不在路由里直接拼彩色 span |
+| Markdown 正文 | `MarkdownContent`（样式为 `theme.css` 的 `.markdown-preview`）：保留标题和列表层次，表格和代码块在自身区域滚动并可键盘聚焦，链接始终带下划线；链接和图片策略由各入口通过 `components` 决定。JSON 附件和结构化值按原值显示，不当作 Markdown |
 
-## 组件规则
+## 样式
 
-- Button 使用 `Button`；icon button 必须有 accessible label。
-- button 内的 icon 尽量使用 `data-icon`。
-- destructive confirmation 使用 `ConfirmDeleteDialog`。
-- selected-count delete/clear bar 使用 `ResourceBulkActionsBar`。
-- row overflow menu 使用 `ResourceActionsMenu`；调用方仍拥有 menu item、callback、navigation 和 destructive variant。
-- selectable management table 使用 `ResourceSelectionCheckbox`。
-- 普通 resource list 使用 `useResourceSelectionState` 管理 selected ids、selected items、selected count、全选/部分选择和 clear selection。
-- inventory search 使用 `ResourceToolbar.search`，active filter 使用 `ResourceFilterBar`。
-- route-level empty/error/loading 使用 `InventoryStatePanel`；inline notice 使用 `InlineStatePanel`；card-like empty state 使用 `EmptyStatePanel`。这些是 solid grouped/elevated surface，不使用 dashed container。
-- table 使用 `ResourceTableFrame` 包裹 route-owned table markup；route 自己负责 columns、sorting 和 pagination。
-- status 使用 `ResourceStatusBadge` 和 `ResourceStatusStrip`，不要在 route 中直接拼 colored span。
-
-## Markdown 正文
-
-声明的 Markdown 分节、历史正文、文本附件及显式 Markdown 预览统一使用 `MarkdownContent` 与 `theme.css` 中的 `.markdown-preview`。标题、段落和嵌套有序/无序列表保留层次与可见标记；表格和代码块在自身区域滚动，并可通过键盘聚焦。链接始终显示下划线。JSON 附件和普通结构化值继续按原值阅读，不自动提升为 Markdown；预览入口保留各自的链接和图片策略。
-
-## 表单与对话框
-
-submit handler、mutation、navigation 和 toast 留在 page 或 owning feature component。shared form shell 接收 values、callback、label、description 和 validation message。
-
-创建/编辑 dialog 使用 `EntityDialogShell`；只有确认动作的 destructive flow 使用 `ConfirmDeleteDialog`。
-
-## 样式规则
-
-- 优先使用 semantic class 和翻新的 surface token：`bg-ui-canvas`、`bg-card/95`、`bg-ui-surface-grouped`、`bg-ui-surface-inset`、`text-foreground`、`text-muted-foreground`、`border-border/70`、`shadow-ui-xs`、`shadow-ui-md` 和 `text-destructive`。
-- 优先使用 `flex` 或 `grid` 配合 `gap-*`；不要新增 `space-x-*` 或 `space-y-*`。
-- 方形 control 优先使用 `size-*`。
-- 不引入新的 UI library、styling framework、route-local theme 或装饰性 variant。
-- 管理页面在 375px、768px、1024px 和 1440px 宽度保持紧凑、可读和稳定。
-- 不新增 route-local `rounded-md border bg-muted/20`、`bg-muted/30`、dashed empty container 或一次性 `shadow-sm`/`shadow-md` page chrome；使用 shared component 或 `shadow-ui-*` token。dashed stroke 只用于 chart marker 等数据可视化 affordance。
-
-## 迁移检查清单
-
-- 保持 route behavior 和 data flow 不变。
-- 先替换复制的 page chrome，再替换 shared shell。
-- 随后替换复制的 search/filter/bulk/state/table/dialog pattern。
-- 只把 presentational behavior 移入 shared component。
-- 所有 import 迁移后删除 obsolete local helper。
-- 先运行 focused test，再运行 lint、typecheck、unit test 和 build。
+- 优先使用语义 class；布局用 `flex` 或 `grid` 配合 `gap-*`，不新增 `space-x-*` 或 `space-y-*`；方形控件用 `size-*`。
+- 不引入新的 UI 库、样式框架、路由级主题或装饰性变体。
+- 不在路由里自造 `rounded-md border bg-muted/20`、`bg-muted/30`、虚线空容器或一次性的 `shadow-sm`/`shadow-md` 页面外框，改用 shared 组件或 `shadow-ui-*`。虚线只用于图表标记等数据可视化。
+- 管理页面在 375px、768px、1024px 和 1440px 宽度下保持紧凑、可读和稳定。

@@ -10,7 +10,7 @@ PostgreSQL 证据存储，以及 DAG 组的真实 Temporal/Worker；业务响应
 | --- | --- | --- | --- |
 | 跨 Run 读缓存 | 显式 TTL 60s → 不声明缓存策略 | 8 次相同输入；8 次唯一输入负对照。记录执行、发布核验、命中、输出和耗时 | A11 |
 | 读工具重试 | `max_attempts=2` → `1` | 正常、首次可重试失败、持续失败；每次 1 个逻辑请求。记录恢复成功与尝试成本 | A03、A09 |
-| 资源限制 | PostgreSQL limiter → 不注入 limiter | 容量为 2 的受控服务；1 请求与 8 请求突发，两套 Gateway/存储适配器。记录峰值、成功、拒绝与许可清理 | A05、资源并发合同 |
+| 资源限制 | PostgreSQL limiter → 不注入 limiter | 容量为 2 的受控服务；1 请求与 8 请求突发，两套 Gateway/存储适配器。记录峰值、成功、拒绝与许可清理 | 工具资源并发与速率，见[架构说明](../../../docs/架构说明.md#modeltool-gateway) |
 | 操作独占 | 原 `operation_guard` → 实验子类直接授予所有权 | 单次写入与同 operation 重叠投递；保留查询、重试、预留与成功不可变。记录实际模拟效果数与确认重放 | A08 |
 | DAG 并行 | `maxParallelNodes=4` → `1` | 四独立分支加汇合；四节点链负对照。记录完整输出、依赖顺序、并发峰值与耗时 | A05 |
 
@@ -38,13 +38,10 @@ MCP 通过本进程 ASGI transport 调用，Temporal 使用独立本地服务与
 
 ## 复现
 
-遵循[贡献指南](../../../CONTRIBUTING.md#测试数据库与-e2e-环境)准备锁定依赖和
-Temporal CLI 1.8.3。数据库 fixture 为每个样本创建并删除独立 UUID 测试库，
-优先读取 `TEST_DATABASE_URL`，其次 `DATABASE_URL`，否则复用项目专用测试容器。
-需要建库权限；不会清空应用数据库。Temporal 每个样本创建独立本地服务并在结束时停止。
-若要避免复用容器的磁盘或其他测试负载影响，可先创建专属 PostgreSQL 16 测试容器，
-将临时数据放在 tmpfs，并用 `TEST_DATABASE_URL` 指向其仅绑定本机的端口；实验结束后
-只停止自己创建的容器。本轮完整结果采用了这种隔离配置。
+Temporal CLI 与测试 PostgreSQL 的准备见[贡献指南](../../../CONTRIBUTING.md#测试数据库与-e2e-环境)。
+后端测试 fixture 为每个样本的每个变体创建并删除独立测试库。
+若要避免共用测试容器的磁盘或其他测试负载影响，可另建仅绑定本机端口、数据放在 tmpfs 的
+PostgreSQL 16 容器，用 `TEST_DATABASE_URL` 指向它，结束后只停止自己创建的容器。
 
 从仓库根目录：
 
@@ -54,31 +51,25 @@ uv run --frozen python -m pytest experiments/ablation --run-ablation \
   --ablation-samples=5 --ablation-output=results/ablation/metrics.json -q
 uv run --frozen python experiments/ablation/summarize.py \
   results/ablation/metrics.json results/ablation/report.md
-uv run --frozen ruff check experiments/ablation
-uv run --frozen black --check experiments/ablation
-uv run --frozen isort --check-only experiments/ablation
-git diff --check
 ```
 
-`TEMPORAL_CLI` 可指向已安装的 1.8.3，默认复用 `/tmp/sd-temporal-bin/temporal`。
-需要至少一次重复；默认五次。11 个场景 × 2 个变体 × 5 次重复，共 110 项。
+`TEMPORAL_CLI` 须指向 Temporal CLI 1.8.3（DAG 组会校验版本）。`--ablation-samples` 至少为 1，缺省 5。
 不传 `--run-ablation` 时，普通 pytest 不收集这些实验。pytest 成功表示所有对照断言符合
 预期，**不表示消融后仍满足产品合同**。例如无独占组应观察到两次模拟效果。
 
 输出保存在 Git 忽略的 `backend/results/ablation/`：`metrics.json` 包含原始样本、
 测试结果、源码版本、文件 SHA-256、实际 Python/PostgreSQL/依赖版本及 DAG 事件；
-`report.md` 给出中位数、范围和配对耗时变化。失败或缺失配对样本时汇总器拒绝生成完整报告。
-源码指纹在运行前捕获，结束时再次比对；被测文件发生变化则实验返回失败。
+`report.md` 给出中位数、范围和配对耗时变化。源码指纹在运行前捕获、结束时再次比对，
+被测文件发生变化则实验返回失败；存在源码漂移、失败或跳过的检查、缺失配对样本时，
+汇总器拒绝生成报告。
 
 ## 解释限制
 
-- 按样本交替基线/消融先后，每个变体使用独立库；无额外预热，耗时不含数据库、Temporal、
-  Worker 初始化。各组计时范围见测试源码，不跨组比较绝对耗时。
+- 按样本交替基线/消融先后；无额外预热，耗时不含数据库、Temporal、Worker 初始化。
+  各组计时范围见测试源码，不跨组比较绝对耗时。
 - 五次是本机重复观测，不提供显著性检验或置信区间；宿主机负载、数据库和初始化后的缓存
   会影响耗时。功能计数优先于小幅时间差，串行链和唯一输入用于显示收益的适用条件。
 - 没有模型质量评价、真实市场数据、收费供应商或生产负载，不能推断质量、费用或生产吞吐。
 - 不证明整个 Temporal、不可变制品、取消、定时运行、前端或其他全库模块可被删除。
-- 实验使用当前锁文件和本机现有环境，具体版本以原始结果为准；若 Python 与 CI 固定的
-  3.13.13 不同，不能将本机性能数据视作 CI 环境数据。
-
-实验源文件均低于 300 行；集成探针按工作负载边界组织，未改动产品执行代码。
+- 实验使用当前锁文件和本机环境，具体版本以原始结果为准；本机 Python 与 CI 固定版本
+  不同时，性能数据不代表 CI 环境。

@@ -15,14 +15,14 @@ Produce a timestamped, secret-safe snapshot and a concise report of current fact
 
 1. Resolve the repository root and read the root `AGENTS.md`, `STATUS.md`, `release.sh` and `docker/deployment.md`.
 2. Read [references/evidence-contract.md](references/evidence-contract.md). Read [references/capy.md](references/capy.md) for work on `capy` or the `signaldeck` Compose project there.
-3. Run `python3 scripts/signaldeck_ops_snapshot.py --check` with the requested `--host` and `--project`. Use stdout by default; use `--output` only when retained evidence was requested, under ignored `artifacts/evidence/signaldeck-ops/`.
+3. From the repository root, run `python3 .agents/skills/signaldeck-ops-inspect/scripts/signaldeck_ops_snapshot.py --check` with the requested `--host` and `--project` (defaults `capy` and `signaldeck`). `--repo-root` defaults to the current directory; from anywhere else the version surfaces read as missing and `--check` fails. Use stdout by default; use `--output` only when retained evidence was requested, under ignored `artifacts/evidence/signaldeck-ops/`.
 4. Treat discovered Compose labels, mounts, image identity, health, databases and counts as observation-time truth. Treat adapter values as assertions to verify.
 
 ## Autonomy
 
 - Read-only files, Git, GitHub runs, SSH inventory, Docker/Compose inspection, health requests and read-only SQL are in scope without further confirmation.
 - Do not release, deploy, pull, back up, restore, prune, restart or edit deployment files. Route authorized changes to `$signaldeck-release-deploy` or `$signaldeck-backup-restore`.
-- Report configuration and credentials only as presence, path, mode, size or hash. Never expose `backend.env` lines other than the version, profile and plugin selections, database URLs, keys or provider payloads.
+- Secret rule for every SignalDeck operator skill: report configuration, credentials and backup artifacts only as presence, path, mode, size, timestamp or hash. Never expose container environment values, `backend.env` lines other than the version, profile and plugin selections, database URLs, keys, credentials or provider payloads, and select named fields instead of dumping `docker inspect` or `docker compose config` output.
 
 ## Completion
 

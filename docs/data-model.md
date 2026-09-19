@@ -1,137 +1,109 @@
 # 数据模型
 
-当前 Core PostgreSQL 表由 [`platform_models.py`](../backend/app/infrastructure/platform_models.py) 及相应 infrastructure store 定义。Finance、Notes 使用独立数据库和角色，Temporal 保存自己的执行历史，文件内容寻址存储保存大产物与 Core closure。产品生命周期见 [`产品说明.md`](产品说明.md)，数据和兼容政策以 [`STATUS.md`](../STATUS.md) 为准。
+Core 表由 [`platform_models.py`](../backend/app/infrastructure/platform_models.py) 和各 infrastructure store 定义，保存在 Core PostgreSQL 数据库。Finance 与 Notes 各用独立的数据库和角色，Temporal 保存执行历史，内容寻址目录保存大值、引擎 payload 和 Core 制品。恢复执行需要同时保留 Core 与插件数据库、Temporal 历史、产物目录和 Core 制品目录，只备份查询表不足以恢复；执行环境缺失时 worker 按制品的锁文件重新安装，保留执行环境和 uv 缓存可免去重新下载。需保留的卷见[部署说明](../docker/deployment.md)。
 
-v2 数据模型替换旧 workflow/step/extension 表合同；本文不描述旧表的兼容读取或无损迁移。交付与验收记录由 [`STATUS.md`](../STATUS.md) 索引。
+## Core 表
 
-## Core 配置与运行表
+| 表 | 主键与约束 | 内容 |
+| --- | --- | --- |
+| `platform_package_revisions` | (`package_key`, `package_hash`) | 规范化源码、定义、全部 Workflow 的编译计划和创建时间。 |
+| `platform_packages` | `package_key` | 当前修订指针；推进指针不改写历史修订。 |
+| `platform_resources` | `id` | `model` 或 `tool`、非敏感 config、以 `EncryptedJSONB` 加密且默认延迟加载的 credentials、是否已配置凭据和 `credential_revision`。 |
+| `platform_plugin_releases` | (`plugin_id`, `artifact_digest`) | 不可变的发布描述与工具合同。 |
+| `platform_plugins` | `plugin_id` | 当前发布指针和 enabled；不保存插件业务数据。 |
+| `platform_runs` | `id`；`launch_id` 唯一 | 启动意图摘要 `launch_digest`、冻结的 `spec`、状态、输出、错误代码，以及创建、开始、结束和请求取消时间。 |
+| `platform_commands` | `start:<runId>` 或 `cancel:<runId>`；外键 Run | start/cancel outbox：投递尝试次数、创建与投递时间、admission 拒绝代码；与创建 Run 或请求取消在同一事务写入。 |
+| `platform_evidence` | `id`；外键 Run | 调用证据：`parent_id` 和 payload（kind、status、attempt、operation 与 tool 身份、输入输出、时间、错误代码和安全 metadata）。 |
+| `platform_tool_operations` | 工具证据的 `id`（外键） | operation 状态（`pending`、`succeeded`、`failed`、`unknown`）、effect、输入摘要、参数、调用上下文、尝试次数和已确认结果。 |
+| `platform_task_drafts` | 客户端给出的 `id` | `revision`、更新时间和闭合的草稿 payload，见[任务草稿](#任务草稿)。 |
+| `platform_task_presets` | `id` | 名称、package/workflow key、保存时的 package hash、`parameters`、收藏、置顶和时间戳；与包、Run、计划没有级联。 |
+| `platform_task_preset_execution` | `preset_id`（外键，随配置级联删除） | 该配置的 `executionOptions` 预算覆盖。 |
+| `platform_result_metadata` | `run_id`（外键） | `revision`、收藏、已读、备注（不超过 20000 字符）和更新时间；不改 Run 或输出。 |
+| `platform_attention_receipts` | 执行更新身份 | `revision`、已读和更新时间；不保存另一份执行状态。 |
+| `platform_schedules` | `id` | JSON 定义（名称、任务、参数、`executionOptions`、cron、时区、重叠策略、补触发窗口、暂停）、期望修订 `revision`、`synced_revision`、删除意图 `desired_deleted`、同步错误代码和更新时间。 |
+| `platform_schedule_targets` | `schedule_id`（外键） | 最近一次写入引擎的修订和 Core task queue；与当前 Core 不一致的未删除安排按原修订重新写入引擎，期望修订、已同步修订和同步状态都不变。 |
+| `platform_schedule_triggers` | (`schedule_id`, `trigger_id`)；(`schedule_id`, `identity_time`) 唯一 | 手动触发：各自占用一个早于所有日历 action 的整秒作为时间身份，另存请求、投递时间和错误。 |
+| `platform_schedule_fires` | `trigger_id`；`run_id` 唯一 | 每次实际 fire 的计划、计划时间、Temporal workflow/run 身份、状态、Core Run ID 和错误；同一 fire 重复投递时保留首次关联的 Run。 |
+| `platform_io_resource_permits` | (`reservation_id`, `resource_id`) | 跨 Worker 外部 I/O 的并发许可：所属 operation、过期时间及冻结的并发与请求间隔。 |
+| `platform_io_resource_rates` | `resource_id` | 该资源下一次请求的最早开始时间。 |
+| `platform_read_tool_cache` | cache key；外键指向 operation | 已确认只读 operation 的 ID 及获取、过期时间；不另存结果副本。 |
 
-| 表 | 所有权、用途与约束 |
-| --- | --- |
-| `platform_package_revisions` | `(package_key, package_hash)` 主键；保存规范化 YAML、定义、所有 Workflow compiled plans 和创建时间。同身份的内容必须一致。 |
-| `platform_packages` | 当前包指针：每个 `package_key` 指向一个已有内容 hash。历史修订不随指针更新而改写。 |
-| `platform_task_drafts` | 显式任务草稿：ID、乐观 revision、闭合草稿 payload 和更新时间。与 Run、输出和计划独立；保留原包修订和来源 Run、已应用 JSON、hasParameters、未应用 jsonText、稳定 launchId、pending 与绑定 token。 |
-| `platform_task_presets` | 可选命名输入组合及任务收藏：稳定 ID、名称、package/workflow key、校验时 package hash、JSON 输入 parameters、收藏/置顶和时间戳。与包、运行、计划无级联删除关系；不充当执行定义。 |
-| `platform_task_preset_execution` | 常用配置的预算覆盖附属表，以 preset ID 关联闭合 executionOptions；与配置同事务保存，删除配置时清除，不改变业务 parameters。 |
-| `platform_resources` | model/tool 资源；非敏感 config、加密且默认 deferred 的 credentials、presence 和 credential revision。 |
-| `platform_plugin_releases` | `(plugin_id, artifact_digest)` 主键；保存不可变发布描述及工具契约。 |
-| `platform_plugins` | 插件当前发布指针和 enabled 状态；不保存插件业务实例。 |
-| `platform_runs` | Run ID、唯一 launch ID、launch intent digest、完整不可变 resolved spec、状态、输出、错误代码及时间戳；spec 内保存包/计划/绑定/来源/绝对 deadline。 |
-| `platform_result_metadata` | Run ID附属标记：乐观revision、isFavorite、isRead、note、updatedAt；不改冻结输出。 |
-| `platform_attention_receipts` | 当前执行变化身份的查看标记、乐观revision、updatedAt；不保存另一份执行状态机。 |
-| `platform_commands` | Run start/cancel outbox；保存尝试、创建和投递时间以及 admission rejection code。与 Run 创建或取消请求原子写入。 |
-| `platform_evidence` | 调用证据 ID、Run ID、parent ID 和 payload。payload 区分 node、agent、model、tool、attempt，并含 status、输入输出、时间和安全 metadata。 |
-| `platform_tool_operations` | 与工具 evidence ID 对应的 operation 状态机；保存 effect、输入摘要、参数、调用上下文和已确认结果。 |
+包修订、插件发布、Run 的 `spec`、已确认的证据和 operation 结果都不可改写，这由事务、身份 advisory lock 和写入边界校验保证，而不是数据库约束，JSONB 列本身可以更新。业务标题、`hasUnknownEffects`/`hasUnknownResults`、`unknownEvidenceIds`/`readUnknownEvidenceIds`、结果阅读模型、执行更新和模型用量汇总都在读取时从 Run、`spec`、证据和 fire 记录派生，没有结果表、计费表或持久化标记列；读取路径见[架构说明](架构说明.md#前端与-http)。
 
-Run 创建、身份冲突检查、取消请求和投递确认由 [`PlatformRunStore`](../backend/app/infrastructure/platform_run_store.py) 管理；证据写入、调用身份及已确认终态保护由 [`evidence_records.py`](../backend/app/infrastructure/evidence_records.py) 和 [`evidence_store.py`](../backend/app/infrastructure/evidence_store.py) 管理。不可变性由事务、身份锁及写入边界校验共同实现，不应表述为所有 JSONB 列均具数据库 immutable constraint。
+删除计划只设置 `desired_deleted` 并递增修订，计划、触发和 fire 行都保留。读缓存行只在新获取时间更晚时替换；命中时有效期取存储的过期时间与 `fetchedAt` 加本次 TTL 中较早者，且不返回给来源 Run 自身，命中结果的 `cacheProvenance` 记录 `hit`、`cacheKey`、`sourceRunId`、`sourceOperationId`、`fetchedAt` 和 `expiresAt`。
 
-Run status 为 `queued`、`running`、`succeeded`、`failed`、`cancelled`；evidence status 还包括 `pending`、`blocked`、`skipped`、`timed_out`、`unknown`。取消请求只设置请求时间并产生 command，不能直接把正在执行的 Run 改成 cancelled。最终 projection 消费引擎终态，不拥有调度权。
+## 写入身份与冲突
 
-业务标题从固定 spec 的参数和定义派生，`hasUnknownEffects` 从非 `attempt` 的 unknown 逻辑证据结合 Run 冻结工具 effect 派生，唯一明确 read 的工具证据投影为 `hasUnknownResults`；结果阅读模型对应 `readUnknownEvidenceIds`，`unknownEvidenceIds` 保留可能写入身份。write 或无法可靠分类的历史证据仍属于可能写入。分类只读已有 spec/payload，不改写历史 evidence，也不读取当前发布；它们没有独立持久列。业务结果阅读模型由 Run 输出和已确认的节点/工具输出投影，不另存结果表。历史筛选、计数与排序在数据库完成；分页的 `snapshotAt` 仅限制 Run 创建时间上界。查询与阅读边界见 [`架构说明`](架构说明.md#前端与-http)。
+下列写入由身份或乐观修订防止重复和覆盖，冲突返回 409 和表中的错误代码。
+
+| 写入 | 身份或修订 | 幂等与冲突 |
+| --- | --- | --- |
+| 启动、重跑、修改输入后启动 | 请求中的 `launchId`；`launch_digest` 覆盖包与 Workflow key、参数、来源和非空的预算覆盖 | 同一 `launchId` 且意图相同返回原 Run；意图或包修订不同为 `launch_identity_conflict`。 |
+| 保存包修订 | (`package_key`, `package_hash`) | 同身份内容不同为 `revision_conflict`。 |
+| 登记插件发布 | (`plugin_id`, `artifact_digest`) | 同身份描述不同为 `release_conflict`。 |
+| 创建计划 | 请求中的 `requestId` 成为 schedule ID | 同定义重试返回原记录且不增加修订；定义不同为 `schedule_identity_conflict`。 |
+| 手动触发计划 | (`schedule_id`, `triggerId`) | 同一 `triggerId` 返回原回执。 |
+| 保存草稿 | 客户端 ID 与 `revision`（新草稿为 0，每次内容变化加 1） | 内容相同的重复写入幂等；修订过期为 `draft_conflict`；`pending` 期间除 `pending`、`bindingToken` 外的变化为 `draft_pending`。 |
+| 删除草稿 | 查询参数 `revision`（≥1） | 修订过期为 `draft_conflict`；`pending` 且其 `launchId` 还没有 Run 时为 `draft_pending`。 |
+| 保存常用配置 | 请求的 `packageHash` 须等于当前包指针 | 不等为 `preset_package_changed`。 |
+| 修改结果标记 | `expectedRevision`（无记录时为 0），至少一个非 null 字段 | 修订过期为 `result_metadata_conflict`。 |
+| 标记执行更新 | 更新身份与 `expectedRevision` | 该身份已不是当前状态为 `attention_changed`；修订过期为 `attention_read_conflict`。 |
+
+把结果标为已读会在同一事务为该 Run 当前的执行更新写入已读回执。Run 的执行更新身份是 Run ID、状态、结束时间及其非 attempt 逻辑证据的 ID、状态与错误代码的摘要，没有 Run 的 fire 失败按触发、状态、错误和引擎身份计算；观察时间不参与，所以重复读取不产生新身份，`unknown` 核实后的状态变化会产生新身份。
+
+## 任务草稿
+
+草稿 payload 是闭合合同：名称、原包修订（`packageKey`、`workflowKey`、`packageHash`）、可选 `sourceRunId`、`hasParameters` 与已应用的 `parameters`（任意 JSON 根）、尚未应用的 `jsonText`（不超过 1,000,000 字符，可以是非法 JSON）、`executionOptions`、稳定的 `launchId`、`pending` 和 `bindingToken`。保存只检查所引用的包修订和 Workflow 存在，以及 `sourceRunId` 与原 Run 的包、Workflow 和修订一致（否则 422 `draft_source_mismatch`），不按 Workflow schema 校验参数，启动时照常校验。`pending` 表示用该草稿的 `launchId` 发出的启动尚待核实，此时草稿必须带准备得到的 `bindingToken` 且没有 `jsonText`；非 pending 草稿不保留 token。草稿和常用配置都拒绝参数中（草稿还包括 `jsonText` 中）的凭据类键名，如 `password`、`apiKey`、`authorization`，错误不回显值。
 
 ## 常用配置与收藏
 
-[`task_preset_store.py`](../backend/app/infrastructure/task_preset_store.py) 定义独立新增表 `platform_task_presets`；初始化注册到同一 Core metadata，再由现有加锁 `create_all` 创建缺失表，不修改已有表或处置实例数据。`/api/task-presets` 提供列表、创建、读取、完整更新与删除。
+`platform_task_presets.parameters` 是可空 JSONB，用三种值区分含义：JSON `null` 表示只收藏任务、不含输入；SQL NULL 表示显式保存的 `null` 输入；其他 JSON 值原样保存。读取由值和 `parameters IS NULL` 推导 `hasParameters`。请求省略 `hasParameters` 时按 `parameters` 是否非 null 推断，因此保存 `null` 输入必须显式发送 `hasParameters: true`；`hasParameters: false` 同时带非 null 输入会被拒绝。
 
-API 使用 `hasParameters` 区分命名业务输入与无输入收藏：为 `true` 时，`parameters` 可以是符合 Workflow input schema 的对象、数组、标量或显式 JSON `null`；为 `false` 时只收藏任务，不能同时携带非 null 输入。创建和完整更新沿用同一规则。为兼容既有请求，省略 `hasParameters` 时根据非 null 的 `parameters` 推断为 `true`；参数缺失或为 null 则推断为 `false`。要保存有效的 JSON null 输入，必须明确发送 `hasParameters: true`。
-
-存储继续使用原有可空 JSONB `parameters` 列，不新增 `hasParameters` 列。既有无输入收藏保存为 JSONB 的 JSON null；显式有效 JSON null 输入保存为 SQL NULL；其他 JSON 值原样保存。读取通过原值及 `parameters IS NULL` 查询投影推导 `hasParameters`，保留既有收藏含义，不重解释或重写旧记录。
-
-保存时锁定当前包指针并核对调用者的 `packageHash`；有输入时按现有闭合 input schema 完整校验并拒绝凭据字段，不读取或复制资源凭据。读取会按当前定义重校验并返回当前 hash、`hasParameters`、`needsRevalidation`、安全诊断和验证状态；无输入收藏在定义可用时为 `not_applicable`，显式 null 输入仍参与 schema 校验。定义变化不会丢弃字段或改写原输入，版本不符的保存返回 409，待用户核对当前版本后再次保存。列表按置顶、收藏、更新时间排序。
-
-保存与删除配置均不创建运行或计划，也不改写包、既有运行快照或结果。配置仅提供重新填入业务表单的输入来源，执行仍通过 Workflow Package/v2 和既有启动边界完成。
-
-预算覆盖保存在独立的 `platform_task_preset_execution` 表；初始化 `create_all` 可创建该表，不给已有 presets 表加列，也不重写旧 parameters 或收藏语义。没有附属记录时视为未覆盖。保存校验所选工作流的助手，读取随当前定义重校验，不静默删除失效覆盖。预算和业务输入分别通过闭合合同保存。
-
-## 计划与限流/缓存
-
-| 表 | 用途 |
-| --- | --- |
-| `platform_schedules` | JSON schedule definition、期望修订、已同步修订、删除意图、同步错误和更新时间。定义包含 cron、timezone、overlap、catchup window、参数和独立预算覆盖。 |
-| `platform_schedule_targets` | 以 schedule ID 关联的附属表；记录最近一次写入引擎的修订和 Core task queue，用于在 Core 升级后把安排重新指向当前 Core。由 `create_all` 新建，不给 `platform_schedules` 加列。 |
-| `platform_schedule_triggers` | `(schedule_id, trigger_id)` 主键；手动触发的稳定时间身份、请求时间、投递时间和错误。同 schedule 的 identity time 唯一。 |
-| `platform_schedule_fires` | 每次实际 fire 的 trigger、schedule、Temporal workflow/run 身份、scheduled time、Core Run ID、状态和错误。 |
-| `platform_io_resource_permits` | 跨 Worker 的外部 I/O 并发许可与过期时间。 |
-| `platform_io_resource_rates` | 资源请求间隔协调。 |
-| `platform_read_tool_cache` | cache key 指向已确认只读工具 operation，保存 fetched/expiry 时间；不另存可变结果副本。 |
-
-计划表是期望配置和查询来源，Temporal Schedule 负责日历、时区、重叠和补触发。fire action 等待完整 Run 结束；投影修复关联与终态不启动新执行。删除计划记录删除意图并同步引擎，保留其本地记录、triggers、fires 和历史 Run。按当前 Core 重新写入引擎不改变期望修订、已同步修订或同步状态。相关实现为 [`schedule_store.py`](../backend/app/infrastructure/schedule_store.py)、[`schedule_fires.py`](../backend/app/infrastructure/schedule_fires.py)。
-
-创建请求提供 `requestId` 时，该值作为持久 schedule ID；同身份、同定义重试复用原记录并继续同步，不增加 revision，不同定义返回 409 `schedule_identity_conflict`。HTTP 创建恢复先检查已提交的身份，再决定是否校验当前包，因此包暂不可用或 schema 已改变不会阻断原创建请求的重试。
-
-读缓存必须由 Agent 的 `toolCache` 显式声明，只支持 read 工具。缓存键绑定 release、input 和 resource 身份；读取使用原 operation 的不可变输出与来源。`cacheProvenance` 保存 hit、cacheKey、sourceRunId、sourceOperationId、fetchedAt 和 expiresAt，实际有效期同时受来源记录和当前请求 TTL 限制。当前 Run 的确认恢复不通过跨 Run cache。参见 [`tool_cache_store.py`](../backend/app/infrastructure/tool_cache_store.py)。
+保存时在包锁内核对 `packageHash`，按当前定义校验输入 schema 和预算覆盖，并把覆盖写入 `platform_task_preset_execution`；没有该行视为没有覆盖。读取按当前定义重新校验，返回 `validationStatus`（`valid`、`invalid`、`unavailable`、`not_applicable`）、`needsRevalidation` 和诊断；失效的输入或覆盖只报告为 `invalid`，不改写或删除。列表按置顶、收藏、更新时间排序。
 
 ## 快照与凭据版本
 
-`ResolvedRunSpec` 保存完整 package definition、所选 Workflow plan、参数、模型/资源非敏感配置、credential revision、所需 plugin releases、tool alias、Core digest、deadline 和 origin。预算另外保存用户选择 `executionOptions.agentBudgets` 和已解析的 `effectiveAgentBudgets`；不改 package definition 或 packageHash。启动时这些值与 Run 和 start command 同事务提交；不存在必须在后续事务补齐的独立 snapshot 行。
+Run 的不可变快照就是 `platform_runs.spec` 中的 `ResolvedRunSpec`，与 Run 和 start command 同事务写入，没有单独的快照行。它包含 `definition`（整个包定义）、`plan`（只含所选 Workflow 的编译计划）、参数、有覆盖时的 `executionOptions` 与解析后的 `effectiveAgentBudgets`、模型与工具资源绑定（非敏感配置和 `credentialRevision`）、所需插件发布、工具别名、Core 制品摘要、绝对 `deadline` 和 `origin`。`origin.kind` 为 `manual`、`rerun`、`reuse` 或 `schedule`；重跑和修改输入记录 `sourceRunId`，定时触发记录 `scheduleId`、`triggerId` 和 `scheduledAt`。
 
-资源读取只选择 config、presence 和 revision，不解密 credentials。[`EncryptedJSONB`](../backend/app/infrastructure/secret_storage.py) 通过应用加密密钥保护凭据；普通参数、定义、证据和配置不是加密凭据字段。原始凭据不得放进 package YAML 或普通参数。
+重跑和省略 `executionOptions` 的修改输入继承原 Run 的有效预算，没有预算字段的旧快照按其冻结定义解析；显式 `{}` 恢复包默认值。重跑或修改输入沿用同一 `launchId` 重试时，使用原命令记录的覆盖，不重新推导。
 
-编辑资源配置而不提交 credentials 会保留凭据 revision；显式写入新的 credentials 会生成新 revision。I/O 使用 `resolve_bound_credentials` 核对固定 revision；旧 revision 被轮换后不再可用，返回 `resource_binding_changed`。系统没有历史凭据归档，也不允许旧 Run 默默使用当前新凭据。历史快照和证据读取仍不依赖解密或外部服务。
-
-新 Run 默认使用当前包及绑定；rerun 使用原包修订和参数，但重新解析当前资源/插件/Core 并生成新 deadline 与 Run ID，origin 保存 `sourceRunId`。修改输入复用同样固定原包修订，保存用户修改后的参数，origin.kind 为 `reuse` 且记录 `sourceRunId`。新运行不继承原运行结果。schedule origin 还保存 schedule、trigger 和 scheduled time。
-
-Rerun 继承原运行有效预算；旧快照缺少独立预算字段时从原冻结定义恢复。reuse 省略执行选项时同样继承原预算，显式覆盖才改变本次选择，显式空对象恢复原包默认。准备标识包含覆盖和有效预算；同一 launchId 改变预算返回身份冲突。重复安排在 JSON definition 中保存覆盖，每次触发结合当时包定义重新解析并冻结；失效助手引用拒绝启动。草稿在已有 JSON payload 保存覆盖，并与输入一起受 revision、pending 和原启动身份保护。
+资源读取只选择 config、是否已配置和 `credential_revision`，不解密 credentials。只改 config 保留原 revision；提交 credentials（包括空对象）生成新的 UUID revision。I/O 由 [`resolve_bound_credentials`](../backend/app/infrastructure/platform_store.py) 按 Run 绑定的 revision 取值，revision 已变时返回 409 `resource_binding_changed`；系统不保留历史凭据。凭据规则见[开发规范](开发规范.md)。
 
 ## 执行证据与内容寻址存储
 
-工具 operation 的身份、上下文和输入摘要在网络发送前保留；每次 execute/query/cache validation 是独立 attempt。已成功 operation 不允许被不同内容覆盖，写效果不确定时保留 `unknown`。模型成功与其网络 attempt 成功批量原子确认，避免部分确认。 新模型网络尝试的安全 metadata 保存 `resourceId`、`modelBindingDigest`；HTTP 失败保存白名单 `errorCategory`（quota/authentication/rate_limit/model/input/unknown），不保存供应商错误正文。最近模型观察从已有 `platform_evidence` 按当前配置和凭据修订摘要读取，不新增表或改写历史 payload。
+`platform_evidence` 按 ID 写入：身份字段（Run、parent、node、kind、attempt、operation、tool、input）不可更改（`evidence_identity_conflict`），进入终态的证据不可更改状态、输出、错误代码和 metadata（`evidence_result_conflict`）。调用归属按下表校验，父记录必须属于同一 Run 和节点：
 
-同一 operation 的执行所有权使用会话级 PostgreSQL advisory lock，不增设另一张待执行队列表。操作记录与网络尝试仍是持久证据；锁只防止存活调用的重叠执行，不能证明外部写一定没有发生。重叠调用的等待、未知结果核实和恢复边界见 [`架构说明`](架构说明.md#modeltool-gateway)。
-
-证据的调用归属按下表校验，父记录必须属于同一 Run 和节点；它与编译计划的依赖 DAG 分开保存。
-
-| evidence kind | 调用归属 |
+| kind | parentId |
 | --- | --- |
-| `node` | 直接属于 Run，parentId 为空。 |
-| `agent` | parentId 指向本节点的一条 node evidence。 |
-| `model`、`tool` | parentId 指向本次 Agent attempt；工具另保存 operationId 和限定 toolId。 |
-| `attempt` | parentId 指向模型调用或工具 operation；attempt 序号及 networkKind 记录实际网络尝试。 |
+| `node` | 空，直接属于 Run。 |
+| `agent` | 本节点的 `node` 证据。 |
+| `model`、`tool` | 本次 Agent 执行的 `agent` 证据；工具证据的 ID 即 operation ID，另存限定的 `toolId`。 |
+| `attempt` | `model` 或 `tool` 证据；`metadata.networkKind` 为模型的 `model_request`，或工具的 `execute`、`query`、`cache_validation`。 |
 
-多上游汇聚节点只有一个 Run/节点/Agent 归属，通过计划中的边和输入/输出引用关联多个来源，不伪造多个调用父级。终态 Agent/节点投影完成提交后才传播恰逢提交的取消；Run 的 cancelled 状态可以与已完成节点的 succeeded 证据并存。引擎补投影只处理尚未终结的 Run，不能取代终态证据本身的可靠提交。
+调用归属树与编译计划的依赖图分开保存：多上游汇聚节点只有一条 Run/节点/Agent 归属链，多个来源由计划中的边和输入引用关联，不伪造多个父级。同一工具 operation 的执行所有权使用会话级 `pg_try_advisory_lock`，不另设待执行队列表；锁只防止存活调用重叠执行，不能证明外部写入没有发生，等待与恢复见[架构说明](架构说明.md#modeltool-gateway)。
 
-大输入/输出和 Temporal payload 通过 [`artifact_store.py`](../backend/app/infrastructure/artifact_store.py)、[`evidence_payloads.py`](../backend/app/infrastructure/evidence_payloads.py) 和 [`temporal_payloads.py`](../backend/app/infrastructure/temporal_payloads.py) 保存。公开引用包括 digest、sizeBytes 和 mediaType，内部 `$artifact` 字段为保留 envelope。读取核验完整内容，拒绝缺失、篡改和非普通文件；已确认结果不能指向可覆盖的普通文件路径。
+模型证据与其网络 attempt 在同一事务确认。二者的 metadata 保存 `resourceId`、`modelBindingDigest`（含凭据修订的绑定摘要，最近观察按它对应当前配置）、实际请求的 `outputTokenLimit` 与 `outputTokenLimitParameter`、供应商报告的 `usage.inputTokens`/`usage.outputTokens`（未报告为 null，不推断）和闭合的 `finishReason`；没有 `metadata.usage` 的旧证据从成功响应里的 SDK 用量读取，只采用正数，零值视为未知。失败另存 `failureType` 和 `errorCategory`：HTTP 失败只按状态码和结构化错误标识归为 `quota`、`authentication`、`rate_limit`、`model`、`input` 或 `unknown`，不保存供应商错误正文；输出超限、用量缺失和截断分别为 `output_limit`、`usage_unavailable` 和 `output_truncated`，对应稳定失败代码 `model_output_limit_exceeded`、`model_usage_unavailable` 和 `model_output_truncated`，并保留已报告的用量和结束原因。Agent 预算耗尽记为 `agent_budget_exceeded`，读取时归为 `budget_exceeded`。
 
-Core closure 使用另一目录，manifest 固定文件字节、锁文件和 Python 版本。运行所需 PostgreSQL、Temporal 历史、artifact 目录、Core closure 及其可核验环境必须共同保留；单独备份查询表不足以恢复执行。当前没有自动 Run/产物保留清理或 package/Run 删除 API。
+证据输入输出、operation 参数与结果、Run 输出和引擎间传递的值序列化后超过 64 KiB 时写入产物目录（sha256 寻址，单个对象不超过 64 MiB），原位置只保留单键引用 `{"$artifact": {"digest": …, "sizeBytes": …, "mediaType": …}}`，因此 Workflow schema 不能声明 `$artifact` 字段。超过同一阈值的 Temporal payload 也写入产物目录，引擎历史只保留引用。读取核验大小与 digest，拒绝缺失、篡改、符号链接和非普通文件。Core 制品保存在另一目录，见[架构说明](架构说明.md#制品数据与安全)。
 
 ## 插件业务数据
 
-Finance 自己定义 `text_templates`、`reports`、`market_quotes`、`research_monitor_snapshots`、`research_monitor_heads` 和 `plugin_operations`；Notes 自己定义 `notes`、`note_provenance` 与 `plugin_operations`。Digital Oracle 当前无业务持久化要求。插件 PostgreSQL 用户不能读取 Core 私有表；Core metadata 不包含这些业务表。
+插件表不属于 Core metadata，由各插件启动时在自己的数据库执行 `create_all`，同样只创建缺失表，也不在下文的兼容检查范围内。Finance 的数据库有 `text_templates`、`reports`、`market_quotes`、`research_monitor_snapshots`、`research_monitor_heads` 和 `plugin_operations`；Notes 的数据库有 `notes`、`note_provenance` 和 `plugin_operations`；Digital Oracle 没有业务持久化。两个 Compose 共用的 [`init-target-databases.sh`](../docker/init-target-databases.sh) 让每个数据库归对应角色所有并撤销 PUBLIC 的连接权限，插件角色因此不能连接 Core 数据库。该脚本挂载为 PostgreSQL 的 initdb 脚本，只在数据目录首次初始化时执行，不论启用哪些插件都创建 Core、Finance 和 Notes 的数据库与角色；已有实例不会执行之后修改过的脚本，新增有状态插件的数据库和角色需要另行创建。
 
-`research_monitor_snapshots` 保存显式 monitor key、scope hash、截止时刻、冻结范围、所属 Run、证据及覆盖记录、四状态观察、前一基线和报告结果。`research_monitor_heads` 以 monitor key/scope hash 为复合主键，保存最新有效观察的快照与截止。首次成功事务冻结截止；相同 operation 的提交后重放返回原值，提交前已确认回滚允许重新取得时间。同一范围的观察/报告更新持有事务 advisory lock，较旧截止完成时不倒退头指针，无效观察不推进基线。比较只针对范围选定的来源，额外采集资料可留存但不影响该范围的新鲜度或变化判断。
+`plugin_operations` 是各插件的 operation journal：以 operation ID 为主键，保存工具 ID、工具/参数/scope 指纹、scope 摘要和结果；业务效果与结果在该 operation 的事务级 advisory lock 下同事务提交。重放、去重和 `not_found` 语义见[写操作与恢复](writing-extensions.md#写操作与恢复)。
 
-观察与报告状态分开：完整有效的观察不因后续模型或报告失败而变成无效；无变化可以推进观察基线并跳过报告。新报告的只读 `metadata.researchSnapshotId` 只能由研究写工具随调用身份保存，绑定同 Run、已判定需要研究且尚未完成报告的精确观察。绑定工具再次检查报告和快照身份，并保存正文摘要；普通上传/编辑 API 不能伪造此字段。写效果和操作回执沿用同一插件 Journal 事务。新表由 `create_all` 创建，不修改旧表或回填历史报告。
+`note_provenance` 以 `note_id`（外键 `notes.id`）为主键，保存 `source_kind` 和 JSON `source_ids`，与笔记及 operation 结果同事务写入；没有该行的笔记读取为 `unclassified` 和空引用，不按内容推断。字段与检索规则见 [Notes 来源与检索合同](writing-extensions.md#notes-来源与检索合同)。
 
-Finance 的普通 report API 与 Agent report 写入有不同生命周期：Agent 来源报告禁止覆盖或删除。Notes 记录不可变。Notes 1.2.0 新增旁表 `note_provenance`，以 `note_id` 外键关联 `notes.id`，保存 `source_kind` 和 JSON `source_ids`；新笔记、来源与操作回执同事务提交。初始化只创建缺失表，不 ALTER 或回填原 notes。无旁表记录时读投影为 `unclassified` 和空引用，不按内容猜测或改写历史。引用只能指向授权集合中已存在的笔记，详细输入及检索规则见[插件接入](writing-extensions.md#notes-来源与检索合同)。两种写路径在同一插件事务提交业务效果与 operation result，并通过 operation lock 和输入/工具/scope 身份核验去重。详情见 [`writing-extensions.md`](writing-extensions.md)。
+`research_monitor_snapshots` 每行是一次显式观察：`monitor_key`、规范化的范围及其 `scope_hash`、冻结的 `cutoff_at`、所属 `run_id`、证据、观察结果、`previous_snapshot_id`、`report_status`（`pending`、`succeeded`、`failed`）、`report_id` 和 `report_digest`。`research_monitor_heads` 以 (`monitor_key`, `scope_hash`) 为主键，指向最新有效观察的快照和截止时刻。三个 monitor 工具都经 journal 写入，并对同一 (`monitor_key`, `scope_hash`) 持有事务级 advisory lock。
 
-## 初始化与数据影响
+`monitor_begin` 在新快照中冻结截止时刻：已提交的调用重放时返回原结果，提交前回滚的调用重试时取得新的截止。`monitor_observe` 对每个快照只执行一次，与截止更早的最近一次有效观察比较，结果为 `invalid`、`no_baseline`、`changed` 或 `unchanged`。只有有效观察推进头指针，而且只在截止更晚时推进，较旧的快照后完成不会使它倒退；无效观察不会成为基线，之后的模型或报告失败也不会让有效观察失效，`unchanged` 推进基线但不需要报告。比较只覆盖范围选定的来源，额外采集的资料可以保存，但不影响该范围的新鲜度和变化判断。
 
-`create_all` 在初始化锁下只创建当前 metadata，不升级已有表。[`schema_compatibility.py`](../backend/app/infrastructure/schema_compatibility.py) 在发布镜像中运行 `python -m app.infrastructure.schema_compatibility`，只读比对全部 Core metadata 与现有数据库：已有表缺少模型列，或存在模型不再写入的必填列时判为不兼容；部署在切换前据此停止。独立数据导入与普通保存锁定同一 package 身份；missing-only 在事务内保留已存在的操作者指针，显式 update 才推进指针。启动数据目录可选，不属于 create_all 或 Core 可执行 closure。数据库初始化不再将过期 lease 的 Run 直接标记失败；恢复由 Temporal 的历史和固定 Worker 执行。
+研究写工具保存报告时，`metadata.researchSnapshotId` 只能指向同一 Run 中需要研究且报告仍为 `pending` 的快照。`monitor_report_attach` 只能设置一次报告状态；成功时核对报告由同一 Run 创建并带有该快照 ID，再记录 `report_id` 和正文摘要。
 
-根 Compose 使用独立 `.signaldeck-target` 数据目录和独立 Core/Finance/Notes 数据库，不读取、重置或迁移旧模型连接、工作流、运行、模板及报告表。切换到该数据布局需要按 STATUS 数据政策处理；初始化路径不提供旧数据迁移。
+## 初始化与 schema 演进
 
-持久化回归入口包括 [`test_platform_persistence.py`](../backend/tests/test_platform_persistence.py)、[`test_execution_projection.py`](../backend/tests/test_execution_projection.py)、[`test_artifact_store_target.py`](../backend/tests/test_artifact_store_target.py)、[`test_platform_api.py`](../backend/tests/test_platform_api.py)、[`test_independent_plugins.py`](../backend/tests/test_independent_plugins.py) 和 [`test_terminal_projection_cancellation.py`](../backend/tests/test_terminal_projection_cancellation.py)。常用配置、派生结果和计划创建身份分别见 [`test_task_presets.py`](../backend/tests/test_task_presets.py)、[`test_task_experience.py`](../backend/tests/test_task_experience.py) 和 [`test_target_schedules.py`](../backend/tests/test_target_schedules.py)。这些入口与实际 Temporal/Worker 集成验收的完成记录一同由 [`STATUS.md`](../STATUS.md) 关联。
+API、dispatcher 和 worker 启动时在 advisory lock 下对 Core metadata 执行 `create_all`，worker 另外创建 I/O 许可和读缓存表。`create_all` 只创建缺失的表，从不修改已有表；项目没有迁移框架，也不回填数据。因此持久化变更以新增表承载，例如以父记录 ID 为主键的附属表：给已有表的模型增加列（即使可空）会让现有数据库不兼容；模型只能停止写入可空，或有默认值、identity、computed 值的已有列。
 
-### 显式任务草稿
+[`schema_compatibility.py`](../backend/app/infrastructure/schema_compatibility.py) 由新镜像在切换前对现有数据库运行（命令见[部署说明](../docker/deployment.md)），只读比对 `app.infrastructure` 下全部声明式 base 的表，即上文的 20 张 Core 表，忽略同一进程中插件或测试声明的 base。数据库中缺失的表报告为 `created_on_start`；已有表缺少模型列，或包含模型不写入、`NOT NULL` 且没有默认值、identity 或 computed 值的列时判为 `incompatible`；数据库里的其他表只列出，不判失败。输出只含表名和列名，不兼容时退出码为 1。
 
-`task_draft_store.py` 注册独立新增表，由 Core 初始化 `create_all` 创建，不修改旧表。`GET /api/task-drafts` 与 `GET /api/task-drafts/{id}` 读取保存内容和原修订 Workflow；读取不初始化执行引擎。`PUT /api/task-drafts/{id}` 使用客户端稳定 ID 和 `revision`（新草稿为 0）；每次内容更新递增，重复同内容写入幂等，过期版本返回 `draft_conflict`（409）。`DELETE` 必须携带查询参数 `revision`，不删除 Run 或输出。
-
-草稿合同闭合；`parameters` 允许所有 JSON 根，`hasParameters=false` 保留未应用参数缺失，`jsonText` 单独保存尚未应用文本（含非法 JSON）。草稿保存不要求参数符合 Workflow schema，启动仍执行既有参数及绑定校验。`packageHash` 指向原不可变修订，读取另外报告当前 hash 与 `needsRevalidation`；`sourceRunId` 如有必须匹配原 Run 的包、Workflow 和修订。参数及 JSON 键中的资源凭据拒绝保存，错误不回显值。
-
-启动前先保存 `pending=true`、原 `launchId` 和准备检查的 `bindingToken`；待确认状态不得修改已保存输入/来源/身份。前端在获得成功 Run 回执后清理草稿，确定的启动拒绝解除 pending 后允许重新核对；网络响应丢失保留原身份。持久化失败不发送启动，重试保存使用原 ID 和内容。浏览器不持久保存这些业务值。
-
-## 结果标记与执行更新
-
-`GET/PATCH /api/runs/{id}/metadata` 使用 `expectedRevision`（缺省记录为0）及显式非null修改字段；未提交字段不覆盖，过期版本返回409。标为已读在同一事务写入当前Run变化的查看回执；取消收藏或清空note仅删除标记内容。Run、spec、输出和调用证据不受修改。
-
-`GET /api/attention` 从全库当前完成/失败/取消/unknown Run及无Run失败fire投影，再过滤分页。Run变化身份基于状态与非网络attempt逻辑证据的状态/错误，重复观察更新时间不会创建新身份；unknown核实后的逻辑状态会改变身份。fire身份基于冻结触发/引擎身份和状态/错误，不因重复观察时间更新而重复。`PATCH /api/attention/{identity}` 使用 `expectedRevision` 写当前更新的 `isRead`；过时身份或读标记冲突返回409。已查看的写入效果 unknown 继续出现在待处理视图；只读结果 unknown 可通过查看回执清除待看状态，但原执行失败与证据仍可发现。
-
-此列表首次纳入已有记录的当前事实，不保留全部历史事件；`snapshotAt` 为当前事实发生时间上界，状态变化可能使旧分页中的条目退出当前窗口。刷新移除窗口与页码取得新状态。上述两张独立新表由现有初始化注册并创建，不修改旧表，也不提供旧数据迁移或删除。
-
-只读不确定投影还包括冻结 `model` 策略的未知模型回复，以及冻结工具授权完整且无写工具的未知 Agent/节点。模型请求不会自身执行已声明工具；真正工具写入的逻辑 unknown 仍独立保留。分类仅更新读取结果，不改写原 evidence；历史缺失策略或授权时不补默认值。
-
-## 模型用量读投影
-
-收到模型响应时（包括已报告输出超限而拒绝的响应），模型及对应网络尝试的 `metadata.usage` 仅保存供应商实际报告的 `inputTokens`/`outputTokens`（缺少时为null）。同一逻辑模型 ID 的网络重试、确认副本和恢复不重复计数；失败网络未报告的消耗不推断。实际请求的 `outputTokenLimit`、`outputTokenLimitParameter` 与闭合结束原因 `finishReason` 保存在调用证据；供应商已报告输出超过请求上限时保存 `model_output_limit_exceeded` 失败、`output_limit` 安全类别及 usage（聚合运行失败保留此分类），恢复仍拒绝该响应，不将其文本变为成功输出。旧 SDK 输出的默认零值没有存在性依据时保留未知。运行汇总和按调用首次开始时间归属的当地日汇总读取现有证据，不新增计费表；按冻结模型配置分组，保留用量及耗时覆盖数量。
-
-有限累计预算要求输入和输出计量完整，只有数值输出限制时要求输出计量；必要计量缺失保存 `model_usage_unavailable`，明确截断保存 `model_output_truncated`。这些失败保留已报告计数及结束原因，恢复读取原失败，不再次发起同一网络调用。未发送输出上限时不伪造请求限制；不限额也不把缺失计量记成零。Agent 累计额度或次数耗尽记录 `agent_budget_exceeded`，结果投影区别于供应商账户额度不足。
+Core 没有 Run、产物或 Core 制品的自动保留清理，也没有删除包、Run 或资源的 API。

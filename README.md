@@ -1,16 +1,10 @@
 # SignalDeck
 
-SignalDeck 是供可信单用户使用的自托管 Agent 工作流平台：选择任务、填写业务信息、通过 Temporal 执行并阅读结果，也可保存常用配置或设置重复执行。专家使用同一份 YAML 制作可复用 Agent 和声明式 DAG，检查完整调用证据。
-
-## 当前状态
-
-当前开发档位为 **MVP**，围绕本地内网个人使用验证工作流的端到端闭环，并保持现有数据、密钥与运行快照约束。此处只是派生摘要，完整状态以 [`STATUS.md`](STATUS.md) 为准。
-
-**SD-TARGET-001、简化操作 S1–S6 和工作流解耦均已完成本地闭环验收**，工作流解耦实现已合入 `main`；版本与验证范围以 [`STATUS.md`](STATUS.md#已完成迭代) 为准。所有保存的 Workflow 使用同一任务/输入/结果路径，工作流数据独立分发；原验收及集成复验见[解耦验证记录](docs/工作流解耦方案.md#验证记录)。当前产品合同和技术边界已融入正式文档；本地验收不代表生产部署验证。
+SignalDeck 是供可信单用户使用的自托管 Agent 工作流平台：选择任务、填写业务信息、通过 Temporal 执行并阅读结果，也可保存常用配置或设置重复执行。专家使用同一份 YAML 制作可复用 Agent 和声明式 DAG，并检查完整调用证据。
 
 ## 快速开始
 
-启动需要 Docker 和 Docker Compose v2；执行包含模型策略 Agent 的工作流还需要可用的模型资源配置。
+启动需要 Docker 和 Docker Compose v2；执行含模型策略 Agent 的工作流还需要可用的模型资源。
 
 ```bash
 git clone https://github.com/coachpo/signaldeck.git
@@ -18,64 +12,37 @@ cd signaldeck
 ./start.sh
 ```
 
-启动脚本构建并运行本地开发栈，默认应用地址为 `http://localhost:8080`，可用 `APP_PORT` 覆盖端口。应用无需访问口令，适用于可信内网。后台启动、查看状态和停止使用同一脚本，以保持 Compose 项目名、数据目录和插件配置一致：
+`./start.sh` 构建镜像并在前台运行本地栈，按 `Ctrl+C` 停止。应用默认地址为 `http://localhost:8080`（`APP_PORT`），无需访问口令；Temporal UI 为 `http://localhost:8233`（`TEMPORAL_UI_PORT`）。两者只绑定 `127.0.0.1`。其他生命周期命令使用同一脚本：
 
 ```bash
-./start.sh --detach
+./start.sh --detach      # 后台启动
 ./start.sh status
-./start.sh logs worker
-./start.sh stop
-./start.sh down
+./start.sh logs worker   # 跟随指定服务的日志；省略服务名时跟随全部
+./start.sh stop          # 停止服务
+./start.sh down          # 删除本栈容器与网络
 ```
 
-`stop` 停止服务；`down` 删除本栈容器与网络，两者均保留数据。前台启动后按 `Ctrl+C` 也会停止服务。默认 Compose 项目名为 `signaldeck-target-local`，数据库、Temporal 历史、产物和固定 Core 执行环境保存在仓库下 `.signaldeck-target/`；可用 `COMPOSE_PROJECT_NAME` 和 `SIGNALDECK_DATA_DIR` 指定另一套独立实例。此栈不复用旧版数据卷，不自动迁移、重置或删除旧实例数据。
+默认 Compose 项目名为 `signaldeck-target-local`，数据库、Temporal 历史、产物和固定 Core 执行环境以 bind mount 保存在仓库下被 Git 忽略的 `.signaldeck-target/`。`stop`、`down` 以及 `docker compose down -v` 都不会清除这些目录，不能用来重置数据。另起一套空白实例时，指定新的 `COMPOSE_PROJECT_NAME`、`SIGNALDECK_DATA_DIR` 和不冲突的 `APP_PORT`、`TEMPORAL_UI_PORT`；从另一份检出启动时还要设置不同的 `SIGNALDECK_LOCAL_IMAGE_PREFIX`，否则会覆盖同名的 `:local` 镜像。使用自定义环境变量时，后续 `status`、`logs`、`refresh-plugins`、`stop` 和 `down` 也须带同样设置。清理这样的实例时先运行 `./start.sh down`，再删除它的数据目录和带自定义前缀的 `:local` 镜像；数据目录中的 Core 制品是只读的（文件 0444、目录 0555），删除前先恢复写权限（如 `chmod -R u+w <数据目录>`）。
 
-首次打开应用进入普通模式的**任务**页，新实例默认没有工作流。通过专家制作或通用 `POST /api/workflow-packages/import` 添加工作流后，任务目录自动显示所有已保存的 Workflow；填写业务信息并检查准备情况，缺少连接时按页面提示就地配置，再开始执行。**结果**展示正文、回执、来源和实际状态，可重跑、修改输入或设置重复执行。**设置**管理显示偏好和已连接服务；专家模式还可配置完整资源与插件并检查技术证据。
+新实例没有工作流：可在专家模式中制作，或按 [`demo/README.md`](demo/README.md) 通过 `POST /api/workflow-packages/import` 手工导入示例；`demo/` 不是平台组件，见[工作流与平台解耦原则](docs/产品说明.md#工作流与平台解耦原则)。
 
-[`demo/`](demo/) 只保存示例工作流，不属于平台组件；除说明性文档外，平台源码、测试、构建和启动均不依赖或引用其中内容。应用镜像不包含示例，Compose 默认不挂载或导入工作流。用户可按示例说明，通过公开导入 API 手工导入选定 YAML；部署方也可显式配置外部工作流目录。导入默认只创建缺失 key，已有 key 的更新需要显式普通保存或 update 导入，重启不会自动升级。详见[独立数据导入](docs/工作流解耦方案.md#独立数据导入与分发)。
-
-默认启用 Finance、Digital Oracle 和 Notes 三个独立插件进程。新实例在主站侧栏显示 Finance 的**报告**和 Notes 的**资料**入口，也可从设置、插件管理和结果进入；插件内容与主站共用 `APP_PORT`，不再默认发布 8091/8093。Temporal UI 保留 `http://localhost:8233` 运维入口，可用 `TEMPORAL_UI_PORT` 覆盖。可通过 `SIGNALDECK_PLUGINS` 指定逗号分隔的插件集合，例如：
+默认启用 Finance、Digital Oracle 和 Notes 三个独立插件；`SIGNALDECK_PLUGINS` 以逗号分隔选择插件，空值只启动通用平台：
 
 ```bash
 SIGNALDECK_PLUGINS=notes ./start.sh --detach
 ```
 
-空值只启动通用平台。启动时 bootstrap 注册缺失的本地插件描述与默认资源，保留已有配置；插件不可用时可在修复服务后运行 `./start.sh refresh-plugins` 刷新已选插件的 release。使用自定义环境变量时，后续状态、刷新和停止命令也应使用相同设置。插件使用说明见 [`plugins/README.md`](plugins/README.md)。
+插件不发布宿主机端口，页面经应用端口访问。每次启动都按本次构建生成数据目录中的 `plugin-mounts.json`，只读挂载给 Core 与 Nginx；bootstrap 只登记缺失的插件和默认资源，已登记插件保持原发布。插件代码或打包文件变化后，先用同样的环境变量重新运行 `./start.sh --detach`，重建镜像并替换插件服务；再在本栈运行时执行 `./start.sh refresh-plugins`，它从运行中插件的 `/release` 重新登记所选插件的当前发布并保留启用状态（会重新创建应用容器）。只重建不刷新时 Core 仍登记原发布，调用该插件的运行会以 `plugin_release_unavailable` 失败。
 
-启动脚本在镜像构建后读取制品描述，生成数据目录内的 `plugin-mounts.json`，将同一文件只读挂载给 Core 与 Nginx。登记内容变化会更新应用容器配置，使代理在重新创建时读取新映射。路径包含制品摘要，业务菜单使用插件声明的名称。自定义挂载可设置 `SIGNALDECK_PLUGIN_MOUNTS_FILE=/absolute/path/mounts.json`；文件格式、访问边界及独立部署方式见[统一插件页面](docs/writing-extensions.md#统一插件页面)。直接调用 `docker compose up` 时须自行提供登记文件，缺省空登记仍可运行通用平台。
+本地重建会原地替换插件服务，旧发布的页面随之不可用；需要保留旧发布时，须为其单独运行服务，并用 `SIGNALDECK_PLUGIN_MOUNTS_FILE=/absolute/path/mounts.json` 提供包含旧挂载的登记（脚本不改写显式指定的文件），格式见[统一插件页面](docs/writing-extensions.md#统一插件页面)。Finance 与 Oracle 访问 SEC 所需的 `EDGAR_CONTACT_EMAIL` 以及 Oracle 的 `FRED_API_KEY` 从 shell 或仓库根目录被 Git 忽略的 `.env` 读取，其他插件配置见 [`plugins/README.md`](plugins/README.md)。
 
-已有插件配置在普通启动时保持原发布，需明确执行 `refresh-plugins` 才切换当前发布。刷新前应为仍被历史链接或运行引用的旧发布保留独立服务和挂载；本地自动生成的文件只描述本次构建，不会自动维护旧服务。旧快照和地址不改写，旧挂载下线后显示不可用；不要把旧挂载键重新分配给新版本。
+普通模式的连接选择默认读取 [`docker/connection-presets.local.json`](docker/connection-presets.local.json)（Notes 保存到 `research`，Finance 只允许 `MSFT`、`AAPL`，不含模型）；替换时用 `SIGNALDECK_CONNECTION_PRESETS_FILE=/absolute/path/connections.json ./start.sh --detach` 指向一个已存在的文件，格式见[普通模式的连接选择](docs/writing-extensions.md#普通模式的连接选择)。
 
-普通连接选择由部署方提供。默认挂载 [`docker/connection-presets.local.json`](docker/connection-presets.local.json)，其中只有与本地 bootstrap 一致的 Notes 保存位置（`research`）及 Finance 查询范围（`MSFT`、`AAPL`）；它不配置模型，也不证明相关插件当前在线。研究任务使用的 `research-model` 需要部署方填入已验证的服务地址、模型及凭据字段说明，然后通过只读文件提供给 Core：
-
-```bash
-SIGNALDECK_CONNECTION_PRESETS_FILE=/absolute/path/connections.json ./start.sh --detach
-```
-
-此变量在宿主机表示文件路径；Compose 将它挂载到容器固定路径 `/etc/signaldeck/connection-presets.json`。文件只包含非敏感配置，密钥由操作者在任务页输入。预设不会自动部署、登记或替换服务；普通用户仍需选择并确认账户、范围和保存位置。文件格式及部署方配置说明见 [插件接入](docs/writing-extensions.md#普通模式的连接选择)。
-
-栈中的 API、命令 dispatcher、固定制品 worker 和 Temporal 分别运行；浏览器关闭不停止后台执行。根 `Dockerfile` 构建正式应用镜像 `ghcr.io/coachpo/signaldeck`，包含前端静态资源、Nginx 和 Core 后端；dispatcher、worker 以不同角色复用该镜像。上面的源码启动方式明确使用 local 模式和持久 SQLite 的 Temporal `start-dev` 服务。服务器部署使用独立入口 [`docker/compose.production.yml`](docker/compose.production.yml)，统一启动应用、独立 PostgreSQL、持久化 Temporal 和插件，无需在服务器编译源码。[部署说明](docker/deployment.md)包含首次配置、拉取启动、日常 `pull` / `up -d`、持久化及健康验证命令；本地验证不代表目标服务器已通过验收。
-
-## 主要能力
-
-- 任务：从保存的 Workflow 自动发现任务，按声明生成输入；支持完整 JSON、就地连接、开始前设置核对，以及常用输入、收藏和置顶。
-- 结果：正文/回执优先，保留来源、缺失、附件和真实状态；支持全历史搜索、筛选、排序、分页以及重跑和输入复用。
-- 自动执行：从任务或结果继承输入，用常用频率与明确时区安排重复执行，查看 Temporal 返回的时间、同步状态和触发来源；复杂 cron 与高级策略保留。
-- 专家工作区：同一 YAML 的属性编辑、编译诊断、图视口、完整资源/插件配置及运行快照与调用证据。
-- Finance：独立插件提供已有格式生成报告、具体报告阅读/下载，以及专家模板制作；Core 不拥有模板或报告数据。
-
-当前流程与验收要求见 [`产品说明`](docs/产品说明.md)，简化操作的历史验证结果与范围见 [`Sprint 独立验收索引`](docs/planning/sprint-verification.md)。
+本地栈使用 local 模式和开发版 Temporal，只用于源码本地运行；服务器部署使用已发布的应用镜像和 [`docker/compose.production.yml`](docker/compose.production.yml)，见[部署说明](docker/deployment.md)。
 
 ## 文档
 
-- [投研升级实现与验证](docs/planning/research-upgrade-readiness.md)：可信证据、可选信号、显式监测及本地验收记录。
-- [自动化测试消融与精简实测](docs/test-ablation-2026-09-16.md)：测试入口、故障对照、精简依据与验证边界。
-- [三项实测优化验证](docs/planning/observed-gaps-verification.md)：输出上限、只读/写入不确定性与Notes来源过滤的本地交付记录。
-
-- [`docs/README.md`](docs/README.md)：文档索引与权威边界。
-- [`docs/产品说明.md`](docs/产品说明.md)：产品范围、流程、需求和验收。
-- [`docs/架构说明.md`](docs/架构说明.md)：当前组件、数据流、部署边界和架构例外。
-- [`docs/工作流解耦方案.md`](docs/工作流解耦方案.md)：已实施的工作流解耦契约、独立数据导入、历史呈现影响与验证证据。
-- [`CONTRIBUTING.md`](CONTRIBUTING.md)：开发环境、启动、检查、测试、工作流和完成定义。
-- [`docs/开发规范.md`](docs/开发规范.md)：项目特有的技术和实现规则。
-- [`docs/源代码规模与职责规则.md`](docs/源代码规模与职责规则.md)：通用的规模与职责规则。
+- [`docs/README.md`](docs/README.md)：文档索引与各文档的权威范围。
+- [`STATUS.md`](STATUS.md)：开发档位、部署与数据边界。
+- [`CONTRIBUTING.md`](CONTRIBUTING.md)：开发环境、检查测试与发布。
+- [`docker/deployment.md`](docker/deployment.md)：服务器部署。

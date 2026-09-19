@@ -1,26 +1,51 @@
 # 贡献指南
 
-本文件是本地开发、验证和完成定义的入口。项目事实分别由 [`STATUS.md`](STATUS.md)、[`docs/产品说明.md`](docs/产品说明.md) 和 [`docs/架构说明.md`](docs/架构说明.md) 维护；项目特有技术规则由 [`docs/开发规范.md`](docs/开发规范.md) 维护。
-
 ## 开发环境与依赖
 
-- Backend：`backend/pyproject.toml` 要求 Python >=3.13；CI、应用镜像及固定 Core 执行环境使用 Python 3.13.13，CI 与镜像使用 uv 0.11.7。
-- Frontend：`frontend/package.json` 要求 Node >=24，并固定 pnpm 10.30.1；CI 使用 Node 24，镜像构建使用 Node 26。
-- 依赖以 `backend/uv.lock` 和 `frontend/pnpm-lock.yaml` 为准；按现有锁文件安装，不在普通环境准备中升级依赖。
-- 完整本地栈需要 Docker Compose v2，使用 PostgreSQL 16 和 Temporal；普通安装与启动见 [`README.md`](README.md#快速开始)。
-
-安装依赖：
+- Backend：`backend/pyproject.toml` 要求 Python >=3.13；CI、应用镜像和固定 Core 执行环境使用 Python 3.13.13，CI 与应用镜像使用 uv 0.11.7。worker 用 uv 按 Python 3.13.13 为每个 Core 制品建立执行环境，热更新开发、E2E 和部分 backend 测试都需要 uv 能提供该版本（可先运行 `uv python install 3.13.13`）。
+- Frontend：`frontend/package.json` 要求 Node >=24 并固定 pnpm 10.30.1；CI 使用 Node 24，镜像中的前端构建阶段使用 Node 26。
+- 插件镜像的 Python、uv 和依赖由各插件的 Dockerfile 与冻结锁文件单独固定；Core 升级依赖不代表插件同步升级。
+- 依赖以 `backend/uv.lock` 和 `frontend/pnpm-lock.yaml` 为准，按锁文件安装，普通环境准备不升级依赖。
+- 本地栈、未指定数据库时的测试容器和镜像检查需要 Docker；热更新开发、真实 Temporal 的 backend 测试、E2E 和 ablation 需要 [Temporal CLI 1.8.3](#temporal-cli)。
 
 ```bash
 (cd backend && uv sync --frozen)
 (cd frontend && pnpm install --frozen-lockfile)
 ```
 
+### FastAPI 版本上限
+
+`backend/pyproject.toml` 把 FastAPI 限制在 `>=0.136.3,<0.137`：FastAPI 0.137 把 `include_router` 的路由嵌套为私有的 `_IncludedRouter`，使 0.64b0 之前的 `opentelemetry-instrumentation-fastapi` 在部分路由匹配（例如 405）时崩溃；0.64b0 需要 `opentelemetry-sdk>=1.43`，而锁定的 Logfire 版本把 SDK 限制在 1.43 以下。解除前先核对目标 Logfire 版本的依赖元数据允许 `opentelemetry-sdk>=1.43`，并确认整个依赖集合能同时解析出 `opentelemetry-instrumentation-fastapi>=0.64b0`；只看到 SDK 上限放宽不够。满足后修改 FastAPI 约束，在 `backend/` 中重新锁定并打印实际解析版本：
+
+```bash
+uv lock --upgrade-package fastapi --upgrade-package logfire \
+  --upgrade-package opentelemetry-instrumentation-fastapi
+uv run --frozen python - <<'PY'
+from pathlib import Path
+import tomllib
+
+names = {"fastapi", "logfire", "opentelemetry-sdk", "opentelemetry-instrumentation-fastapi"}
+for package in tomllib.loads(Path("uv.lock").read_text())["package"]:
+    if package["name"] in names:
+        print(f'{package["name"]}: {package["version"]}')
+PY
+```
+
+核对完整锁文件 diff，再在同一目录对候选依赖组合运行以下回归（数据库准备见 [Backend 测试数据库](#backend-测试数据库)），它们依次覆盖 Core 包编辑、Finance 业务 HTTP、Logfire instrumentation 注册，以及经过 instrumentation 的 `/api/runs` 的 GET-only/405 行为。这些回归和适用的后端门禁全部通过后，才移除上限及其注释。
+
+```bash
+uv run pytest \
+  tests/test_platform_api.py::test_definition_editor_uses_canonical_immutable_source \
+  tests/test_independent_plugins.py::test_finance_owned_crud_compile_upload_and_immutable_agent_reports \
+  tests/test_runtime_config_health.py::test_create_app_instruments_fastapi_with_logfire \
+  tests/test_core_api.py::test_run_catalog_is_get_only_with_logfire_instrumentation
+```
+
 ## 开发启动
 
-完整本地开发栈使用 [`start.sh`](start.sh)，启动、插件选择和停止命令见 [`README.md`](README.md#快速开始)。默认目标数据放在 `.signaldeck-target/`，独立于旧实例。Compose 不向宿主机发布 PostgreSQL 或 Temporal RPC 端口，不能直接将 `db:5432` 或 `temporal:7233` 用于宿主机进程。
+完整本地栈由 [`start.sh`](start.sh) 以 Docker Compose 运行，启动、插件选择、停止和本地数据保留见 [`README.md`](README.md#快速开始)；正式镜像与生产 Compose 的配置见[部署说明](docker/deployment.md)。本地栈不向宿主机发布 PostgreSQL 和 Temporal RPC 端口，宿主机进程不能使用 `db:5432` 或 `temporal:7233`。
 
-需要热更新时，准备独立且可从宿主机访问的 PostgreSQL，以及 Temporal CLI **1.8.3（内含 Server 1.31.2）**。API、dispatcher 和 worker 的终端必须设置相同的 `DATABASE_URL`、`AGENT_PLATFORM_ENCRYPTION_KEY`、`TEMPORAL_ADDRESS` 和下列绝对目录；worker 还需可用的 uv 和 Python 3.13.13。目录应属于本次开发实例，不指向旧版或不可丢弃数据。
+热更新开发在宿主机运行各进程，需要一个宿主机可访问、只属于本次开发实例的 PostgreSQL 16 和 [Temporal CLI](#temporal-cli)。在仓库根目录为 API、dispatcher 和 worker 的每个终端设置相同的 `DATABASE_URL`、`AGENT_PLATFORM_ENCRYPTION_KEY` 和以下变量，使三者读写同一组绝对目录：
 
 ```bash
 export SIGNALDECK_RUNTIME_MODE=local
@@ -28,49 +53,70 @@ export TEMPORAL_ADDRESS=127.0.0.1:7233
 export SIGNALDECK_ARTIFACT_DIR="$PWD/.signaldeck-dev/artifacts"
 export SIGNALDECK_CORE_ARTIFACT_DIR="$PWD/.signaldeck-dev/core"
 export SIGNALDECK_CORE_ENV_DIR="$PWD/.signaldeck-dev/core-environments"
-export SIGNALDECK_CORE_PYTHON_VERSION=3.13.13
 mkdir -p "$PWD/.signaldeck-dev/temporal"
 ```
 
-平台默认不安装任何工作流。需要启动时导入外部数据时，可显式设置 `SIGNALDECK_WORKFLOW_DATA_DIR=/absolute/path/workflows`；留空或选择空目录仍可正常运行。该目录由开发者自行提供，不引用仓库中的示例。导入只创建缺失 key，已有工作流通过普通编辑或显式 update 导入更新。示例工作流可由用户经公开导入 API 手工导入，不能成为开发、测试或启动的前置条件。
-
-在仓库根目录分别打开终端执行（Temporal 已在运行时复用其地址）：
+然后在各终端分别运行（已有 Temporal 时复用其地址，跳过第一条）：
 
 ```bash
-temporal server start-dev --ip 127.0.0.1 --port 7233 --db-filename "$PWD/.signaldeck-dev/temporal/target.db"
+"${TEMPORAL_CLI:-/tmp/sd-temporal-bin/temporal}" server start-dev --ip 127.0.0.1 --port 7233 --db-filename "$PWD/.signaldeck-dev/temporal/target.db"
 (cd backend && uv run uvicorn app.main:app --reload --host 127.0.0.1 --port 8000)
 (cd backend && uv run python -m app.workers.command_dispatcher)
 (cd backend && uv run python -m app.workers.artifact_worker --serve)
 (cd frontend && pnpm dev --host 127.0.0.1)
 ```
 
-Vite 默认使用 5173 端口，开发 API client 默认访问 `http://127.0.0.1:8000/api`；改用其他 backend 地址时设置 `VITE_API_BASE_URL`。API 原子保存 Run、快照和启动命令，dispatcher 投递命令并同步投影，Temporal 与固定制品 worker 执行工作流。API 重载发布新 Core 制品，已有运行继续使用其绑定制品；保留的制品和产物目录是恢复所需数据，不应随源码更新清空。
+API、dispatcher 和 worker 缺一不可，职责见 [`backend/README.md`](backend/README.md)。Vite 默认端口为 5173，开发构建的 API client 默认访问 `http://127.0.0.1:8000/api`，改用其他 backend 时设置 `VITE_API_BASE_URL`；backend 默认只接受 5173 和 4173 端口上 `127.0.0.1`、`localhost` 的跨域请求，前端改用其他地址时设置 `CORS_ALLOWED_ORIGINS`（逗号分隔）。API 每次重载时若 Core 源码有变化就发布新的 Core 制品，worker 为它建立新的执行环境；已有 Run 继续使用其绑定的制品，所以 `.signaldeck-dev/` 下的制品和产物是恢复所需数据，不随源码更新清空。
 
-根 Dockerfile 构建正式应用镜像，app 角色运行 Nginx 和 FastAPI；dispatcher、worker 在独立容器中复用该镜像。正式入口 [`docker/compose.production.yml`](docker/compose.production.yml) 统一启动独立 PostgreSQL、Temporal 和业务插件；根 Compose 明确使用 local 模式和 Temporal 开发服务。环境变量与边界见 [`docs/架构说明.md`](docs/架构说明.md) 和[部署说明](docker/deployment.md)。插件应使用从对应调用进程可达的 endpoint；宿主机开发不会自动注册 Compose 内网地址的插件。
+平台默认不安装工作流；需要启动时导入时，把 `SIGNALDECK_WORKFLOW_DATA_DIR` 设为自备工作流目录的绝对路径，导入语义见[独立数据导入与分发](docs/工作流解耦方案.md#独立数据导入与分发)。宿主机开发不会自动登记插件：插件按 [`plugins/README.md`](plugins/README.md#build-and-run) 单独运行，登记的 endpoint 必须能从 worker 进程访问。
 
-### 测试数据库与 E2E 环境
+## 测试数据库与 E2E 环境
 
-Backend pytest 的数据库 fixture 优先使用 `TEST_DATABASE_URL`，其次使用 `DATABASE_URL`。两者均未设置时，fixture 会启动或复用 `signaldeck-target-test-postgres-volume` 容器，默认分配宿主机随机端口，可通过 `LOCAL_POSTGRES_PORT` 指定端口。容器使用 `pgvector/pgvector:pg16`，数据默认保存在 Docker 管理的命名卷 `signaldeck-target-test-postgres-data`，避免 macOS 宿主机文件共享路径上的数据库文件权限错误。它与根 Compose 的数据库是不同的启动路径。
+### Temporal CLI
 
-显式设置 `SIGNALDECK_TEST_POSTGRES_DIR` 仍可使用宿主机目录，此模式沿用 `signaldeck-target-test-postgres` 容器名。默认卷模式不会停止、替换或迁移旧容器及 `backend/.data/test-postgres/`；两套存储分别保留。出现 `could not open/remove file ... Permission denied` 时，不通过放宽目录权限或 SQL GRANT 掩盖物理存储错误；取消目录覆盖并使用默认卷，或通过上述数据库 URL 显式选择可用实例。停止容器保留卷，测试仅清理自己创建的临时数据库。
+Temporal CLI 1.8.3（内含 Server 1.31.2）的默认路径为 `/tmp/sd-temporal-bin/temporal`。在 macOS arm64 上安装：
 
-测试连接需要有权限访问 `postgres` 管理库并创建、删除临时 database；每个数据库 fixture 创建独立的 `signaldeck_test_*` 库并在结束时删除。自动创建的本地容器和数据目录会保留，测试不把应用数据库当作临时库清空。
+```bash
+curl -fsSL https://github.com/temporalio/cli/releases/download/v1.8.3/temporal_cli_1.8.3_darwin_arm64.tar.gz \
+  -o /tmp/sd-temporal-cli.tar.gz
+mkdir -p /tmp/sd-temporal-bin
+tar -xzf /tmp/sd-temporal-cli.tar.gz -C /tmp/sd-temporal-bin
+/tmp/sd-temporal-bin/temporal --version
+```
 
-Playwright 使用 `DATABASE_URL`（不读取 `TEST_DATABASE_URL`，缺省为 backend 的本地 25432 地址），要求 PostgreSQL 已可连接并具备同样的建库/删库权限。还需安装上述固定版本的 Temporal CLI；可通过 `TEMPORAL_CLI` 指定可执行文件，否则启动器依次查找 `/tmp/sd-temporal-bin/temporal` 和 PATH 中的 `temporal`，版本不匹配会拒绝启动。
+其他平台下载同一版本对应的发布包；CI 用 [`install-temporal-cli.sh`](.github/scripts/install-temporal-cli.sh) 安装并校验 Linux x86_64 版本。backend 测试和 ablation 只读取 `TEMPORAL_CLI`，缺省为上述路径；E2E 启动器依次使用 `TEMPORAL_CLI`、上述路径和 PATH 中的 `temporal`，版本不是 1.8.3（Server 1.31.2）时拒绝启动。
 
-E2E 启动器创建独立的 `signaldeck_e2e_*` Core 库、Notes/Finance/Oracle 插件库和临时目录，启动 Temporal（默认 RPC 17233）、fake OpenAI-compatible provider（18081）、Notes（18082）、Finance（18083）、Oracle（18084）、dispatcher、固定制品 worker、backend（8001）和 frontend preview（4173）。backend 和 frontend 端口由 `SIGNALDECK_E2E_BACKEND_PORT`、`SIGNALDECK_E2E_FRONTEND_PORT` 改写，fixture API 请求跟随 backend 端口；Temporal 与模型端口由 `SIGNALDECK_E2E_TEMPORAL_PORT`、`SIGNALDECK_FAKE_PROVIDER_PORT` 改写；插件端口分别由 `SIGNALDECK_E2E_NOTES_PORT`、`SIGNALDECK_E2E_FINANCE_PORT`、`SIGNALDECK_E2E_ORACLE_PORT` 改写。
+### Backend 测试数据库
 
-`SIGNALDECK_E2E_BUILD_DIR` 指定前端构建和预览共用的产物目录，默认 `dist`；同时运行多套 E2E 环境时使用不同目录，避免重新构建覆盖另一实例的页面。E2E 后端 CORS 仅允许本机所配置前端端口的 `127.0.0.1` 和 `localhost` 来源。
+Backend pytest 的数据库 fixture 依次使用 `TEST_DATABASE_URL`、`DATABASE_URL`。两者都未设置时，fixture 通过 Docker 启动或复用容器 `signaldeck-target-test-postgres-volume`（`pgvector/pgvector:pg16`，数据在命名卷 `signaldeck-target-test-postgres-data`），它只绑定 `127.0.0.1`，宿主机端口默认随机，可用 `LOCAL_POSTGRES_PORT` 指定。设置 `SIGNALDECK_TEST_POSTGRES_DIR` 时改用该宿主机目录和容器 `signaldeck-target-test-postgres`。出现 `could not open/remove file ... Permission denied` 时，不要放宽目录权限或用 SQL GRANT 掩盖存储错误，应取消该目录设置改用默认卷，或用上述 URL 选择可用实例。
 
-启动器提供测试专用的普通连接预设，插件使用受控业务端点，模型使用 fake provider，不需要真实 LLM key。结束时清理所拥有的进程、临时目录和临时库，不复用已有 web server；测试输出的截图和报告保存在 Git 忽略的目录中。测试约束见 [`backend/tests/AGENTS.md`](backend/tests/AGENTS.md) 和 [`frontend/e2e/AGENTS.md`](frontend/e2e/AGENTS.md)，三引擎比较的范围和复现入口见 [`docs/执行引擎比较.md`](docs/执行引擎比较.md)。
+连接账户需能访问 `postgres` 管理库并创建、删除数据库：每个数据库 fixture 创建独立的 `signaldeck_test_*` 库并在结束时删除，不清空任何应用数据库。自动创建的容器和卷在测试后保留。
 
-### 本地数据保留
+### Playwright E2E
 
-普通停止和容器移除使用 `./start.sh stop` 或 `./start.sh down`；两者均保留目标数据。当前 Compose 使用宿主机 bind mount，`docker compose down -v` 不会清除这些目录，不能作为目标数据重置命令。需要一套空白实例时，指定新的 `COMPOSE_PROJECT_NAME`、`SIGNALDECK_DATA_DIR` 及不冲突端口；旧数据的删除、重置或迁移须另行明确授权。数据与兼容政策以 [`STATUS.md`](STATUS.md) 为准。
+`pnpm test:e2e` 以及下文的 integrated、fault 配置都由 Playwright 启动一套自有环境：Temporal dev server、fake OpenAI-compatible provider、Notes/Finance/Oracle 插件、dispatcher、固定制品 worker、backend 和前端 preview。它不复用已有服务，也不连接已有 Temporal。
+
+- 数据库只取 `DATABASE_URL`（不读 `TEST_DATABASE_URL`），未设置时使用 backend 默认的 `signaldeck:signaldeck@localhost:25432/signaldeck`。PostgreSQL 须已可连接，账户权限同上；启动器为 Core 和每个插件创建 `signaldeck_e2e_*` 库，结束时只删除这些库。以 `LOCAL_POSTGRES_PORT=25432` 运行过 pytest 后，其自动创建的容器即满足该默认地址。
+- 模型使用 fake provider，Finance 使用确定性行情，连接预设只写入临时目录，Logfire 凭据和 OTLP 导出地址被清空：不需要真实 LLM key，也不向外发送遥测。
+- 前端构建与 preview 共用 `SIGNALDECK_E2E_BUILD_DIR` 指定的目录，默认 `dist`。非 integrated 配置的前端 API 地址优先取环境中的 `VITE_API_BASE_URL`，未设置时指向 E2E backend，因此不要在运行 E2E 的 shell 中导出开发用的该变量。backend CORS 只允许所配前端端口上的 `127.0.0.1` 与 `localhost`。同时运行多套 E2E 时，每套使用不同的端口和构建目录。
+- 结束时停止自有进程，删除临时目录（Temporal 数据、制品、Core 包和执行环境）与自有数据库；截图和报告写入 Git 忽略的目录。
+
+| 服务 | 默认端口 | 覆盖变量 |
+| --- | --- | --- |
+| backend API（fixture 的 API 请求跟随该端口） | 8001 | `SIGNALDECK_E2E_BACKEND_PORT` |
+| 前端 preview | 4173 | `SIGNALDECK_E2E_FRONTEND_PORT` |
+| Temporal dev server | 17233 | `SIGNALDECK_E2E_TEMPORAL_PORT` |
+| fake OpenAI-compatible provider | 18081 | `SIGNALDECK_FAKE_PROVIDER_PORT`；backend 使用的完整地址可用 `SIGNALDECK_FAKE_PROVIDER_BASE_URL` 改写 |
+| Notes 插件 | 18082 | `SIGNALDECK_E2E_NOTES_PORT` |
+| Finance 插件 | 18083 | `SIGNALDECK_E2E_FINANCE_PORT` |
+| Oracle 插件 | 18084 | `SIGNALDECK_E2E_ORACLE_PORT` |
+| 通用测试插件（仅 integrated 配置） | 18085 | `SIGNALDECK_E2E_GENERIC_PORT` |
+
+测试编写约束见 [`backend/tests/AGENTS.md`](backend/tests/AGENTS.md) 和 [`frontend/e2e/AGENTS.md`](frontend/e2e/AGENTS.md)。
 
 ## 检查、测试与构建
 
-以下质量门禁与 [CI](.github/workflows/ci.yml) 对齐，按受影响范围运行；文档变更只需相关文档校验和差异检查。Backend：
+以下门禁与 [CI](.github/workflows/ci.yml) 一致，按受影响范围运行；只改文档时核对链接并运行 `git diff --check`。完整 backend `pytest` 需要上文的数据库与 Temporal CLI；`tests/test_notes_browser.py` 还会构建插件 UI 并用 Playwright Chromium 打开页面，因此先安装前端依赖和 Chromium。
 
 ```bash
 (cd backend && uv run ruff check app tests)
@@ -79,8 +125,6 @@ E2E 启动器创建独立的 `signaldeck_e2e_*` Core 库、Notes/Finance/Oracle 
 (cd backend && uv run mypy app)
 (cd backend && uv run pytest)
 ```
-
-Frontend：
 
 ```bash
 (cd frontend && pnpm lint)
@@ -91,69 +135,54 @@ Frontend：
 (cd frontend && pnpm test:e2e)
 ```
 
-统一插件页面的浏览器回归使用独立配置，启动真实 Finance、Notes 和第三个测试插件，覆盖草稿、冻结结果链接、路径式深链接、停用入口及四档屏幕宽度：
+机器负载高时，完整 Vitest 和真实 Temporal 测试可能超时：降低并发（如 `pnpm test:run --maxWorkers=2`）或单独重跑，不要放宽超时或断言。
+
+部署配置、网关生成器和运维 skill 脚本的单元测试：
 
 ```bash
-(cd frontend && pnpm exec playwright test --config playwright.integrated.config.ts)
-python3 -m unittest discover -s frontend/gateway -p 'test_*.py'
 python3 -m unittest discover -s docker -p 'test_*.py'
-python3 docker/test_plugin_gateway.py
-```
-
-正式应用镜像加独立 PostgreSQL/Temporal 的单机部署验证使用 `docker/verify_deployment.py`；镜像参数、隔离存储和清理范围见[部署说明](docker/deployment.md)。
-
-该配置沿用上面的隔离数据库与端口约定，可用 `SIGNALDECK_E2E_BUILD_DIR` 选择独立构建目录。其 Vite 代理验证页面流程；`docker/test_plugin_gateway.py` 用自己的临时 Docker 容器和网络验证实际 Nginx 的无需口令访问、凭据剥离、编码路径、内部接口隔离与离线上游。修改应用或插件镜像时，仍执行相应真实镜像构建和隔离 Compose 验证。
-
-涉及取消后的未知写效果、插件离线或执行服务停止后的历史读取时，补充独立故障配置：
-
-```bash
-(cd frontend && pnpm exec playwright test --config playwright.fault.config.ts)
-```
-
-该配置串行运行 `faults.spec.ts`，在插件关闭后停止启动器自己创建的 Temporal，再核对历史结果和调用证据。普通 E2E 同样覆盖该用例的插件离线分支，但不停止 Temporal；两个配置应分别运行。Finance 自有页面、模板和报告的专项回归入口见 [`plugins/finance/README.md`](plugins/finance/README.md#验证)。
-
-若变更了根 Dockerfile，补充运行：
-
-```bash
-docker build .
-```
-
-所有变更最后运行：
-
-```bash
-git diff --check
-```
-
-## 开发工作流
-
-1. 先读取与任务相关的 `STATUS.md`、下方当前开发策略、产品说明、架构说明、开发规范和适用的子目录 `AGENTS.md`。按 [`产品说明`](docs/产品说明.md#验收标准) 确认受影响的产品合同和验收编号；需要追溯已完成迭代时查阅 [`STATUS.md`](STATUS.md#已完成迭代)。开发档位只选择执行默认值，不改变产品范围和已有硬约束。
-2. 搜索已有实现、接口和测试，确认变更所属模块、产品行为和架构依赖方向。维护当前 v2 定义、Temporal 单一执行权威与独立插件边界，依据已验证事实作出设计选择。
-3. 先运行与改动直接相关的最小检查；完成后按影响范围运行 backend/frontend 质量门禁，并保持 API contract、snapshot/provenance 和文档同步。测试使用独立的最小 fixture；平台检查不得读取、引用或同步 `demo/` 内容，示例变更不要求修改平台测试。
-4. 修改 secret、错误详情、包导出、运行读取或日志路径时，检查现有加密、脱敏和安全投影约束。
-5. 检查精确 diff、未纳入无关文件，并按下方共享完成定义交付。交付时报告受影响的验收编号、变更、验证结果和实际限制；只把已验证完成的行为写入产品和架构说明。
-
-## 发布
-
-`./release.sh patch --dry-run` 预览一次发布。正式运行 `./release.sh patch`（或 `minor`、`major`、明确的 `X.Y.Z`）需要发布授权：它要求干净且包含 `origin/main` 的 `main` 和递增的版本，同步 `VERSION`、`backend/VERSION`、`backend/pyproject.toml`、`backend/uv.lock` 中的项目版本、`frontend/VERSION` 与 `frontend/package.json`，校验锁文件、`/health` 版本测试和前端构建，然后提交 `chore: bump version to X.Y.Z`、打 `vX.Y.Z` 标签并推送 main 与标签。插件版本各自独立。脚本不部署实例；CI 的 `version-sync` 要求六处版本一致。
-
-标签触发 [`Docker Images`](.github/workflows/docker-images.yml)：发布提交的 CI 全部通过后才发布四个 `linux/arm64` 镜像，推送 main 和 PR 不发布镜像。发布进行中不要再推送 main，否则会取消发布提交的 CI。[`cleanup.yml`](.github/workflows/cleanup.yml) 只清理 7 天前的工作流记录，从不删除镜像版本：历史多架构镜像的各平台 manifest 没有标签，删除会破坏仍在使用的固定插件和回滚镜像。
-
-实例巡检、备份与恢复演练、发布和带门禁的部署由 `.agents/skills/` 下的三个运维 skill 执行，Claude Code 通过 `.claude/skills/` 链接加载；入口见[文档索引](docs/README.md#专项文档)，执行证据写入忽略目录 `artifacts/evidence/`。修改这些脚本后运行：
-
-```bash
+python3 -m unittest discover -s frontend/gateway -p 'test_*.py'
 for tests in .agents/skills/*/scripts/tests; do python3 -m unittest discover -s "$tests" -p 'test_*.py'; done
 ```
 
-## 项目文档
+CI 的 job 与上述命令对应：`version-sync`（六处版本一致与这些单元测试）、`backend-quality` 与 `frontend-quality`（两组门禁中 E2E 以外的命令）、`frontend-e2e`（前三个 job 通过后运行 `pnpm test:e2e`）和 `container-images`（构建四个镜像并运行 `docker/verify_deployment.py`，Trivy 扫描不阻断）。CI 只上传 Trivy 报告，不上传 Playwright 报告或 trace。本地单独复现一个 spec 用 `(cd frontend && pnpm exec playwright test e2e/<name>.spec.ts)`，HTML 报告写入 Git 忽略的 `frontend/playwright-report/`；trace 只在第一次重试时记录，本地默认不重试。
 
-规范文档的索引和权威边界见 [`docs/README.md`](docs/README.md)。数据表见 [`docs/data-model.md`](docs/data-model.md)，扩展编写见 [`docs/writing-extensions.md`](docs/writing-extensions.md)，依赖遗留事项见 [`docs/handover-deps-follow-up.md`](docs/handover-deps-follow-up.md)。
+CI 不运行以下套件，按改动范围补充：
+
+```bash
+(cd frontend && pnpm exec playwright test --config playwright.integrated.config.ts)
+(cd frontend && pnpm exec playwright test --config playwright.fault.config.ts)
+python3 docker/test_plugin_gateway.py
+```
+
+- integrated 配置额外启动通用测试插件，把各插件登记为同源挂载，由 Vite preview 代理 `/api` 与 `/_plugins/<mountKey>/`，再运行 `integrated-plugins.spec.ts`（只在该配置下执行）和 `shell.spec.ts`。修改插件宿主、挂载登记或插件页面时运行。
+- fault 配置串行运行 `faults.spec.ts`，在插件关闭后再停止启动器自有的 Temporal，核对历史结果和调用证据仍可读取。普通 E2E 也运行该 spec，只跳过停止 Temporal 的分支；改动涉及执行服务停止后的历史读取时运行 fault 配置。
+- `docker/test_plugin_gateway.py` 需要 Docker，用自己的临时容器和网络验证实际 Nginx 的无口令访问、凭据剥离、编码路径、内部接口隔离与离线上游。修改 `docker/nginx.conf.template` 或 `frontend/gateway/` 时运行。
+
+插件自身的测试与镜像冒烟见 [`plugins/README.md`](plugins/README.md)，Finance 页面、模板和报告的浏览器回归见 [`plugins/finance/README.md`](plugins/finance/README.md#验证)。
+
+修改根 `Dockerfile` 时运行 `docker build .`。修改应用或插件镜像、生产 Compose 时，再按[部署说明](docker/deployment.md#健康检查与本地验证)构建镜像并运行 `docker/verify_deployment.py`。所有变更最后运行 `git diff --check`。
+
+## 开发工作流
+
+1. 读取 `STATUS.md`、下方当前开发策略、相关规范文档和适用的子目录 `AGENTS.md`；按[产品说明](docs/产品说明.md#验收标准)确认受影响的产品合同和验收编号，按[架构说明](docs/架构说明.md)确认变更所属模块和依赖方向。
+2. 先运行与改动直接相关的最小检查，再按影响范围运行[质量门禁](#检查测试与构建)；修改 secret、错误详情、包导出、运行读取或日志路径时，检查现有加密、脱敏和安全投影约束。
+3. 检查精确 diff，不带入无关文件，按下方[完成定义](#完成定义)交付，并说明受影响的验收编号、验证结果和实际限制。
+
+## 发布
+
+`./release.sh patch --dry-run` 预览一次发布：只打印将执行的修改和命令，不改文件，也跳过干净工作区与分支检查。正式发布运行 `./release.sh patch`（或 `minor`、`major`、明确的 `X.Y.Z`；`--yes` 跳过确认）。脚本要求位于干净且已包含最新 `origin/main` 的 `main`，当前六处版本一致，目标版本更高，标签在本地和远端都未被使用；随后同步 `VERSION`、`backend/VERSION`、`backend/pyproject.toml`、`backend/uv.lock` 中的项目版本、`frontend/VERSION` 与 `frontend/package.json`（插件版本各自独立），运行 `uv lock --check`、`/health` 版本测试和前端构建并确认只改动了这六处，再提交 `chore: bump version to X.Y.Z`、打 `vX.Y.Z` 标签并推送 main 与标签。脚本不部署实例；CI 的 `version-sync` job 要求六处版本一致。
+
+`v*` 标签触发 [`Docker Images`](.github/workflows/docker-images.yml)：其 `verify-ci` job 每 30 秒查询一次发布提交上的 `ci.yml` 运行，最多约 40 分钟；只有结论为 success 才构建并推送应用与三个插件的 `linux/arm64` 镜像，失败、取消或超时都拒绝发布。推送 main 和 PR 不发布镜像；手动运行跳过 `verify-ci`，也不移动 `latest`。镜像名、完整标签（含手动运行的标签）和部署时的版本固定见[部署说明](docker/deployment.md#发布与镜像版本)。发布进行中不要再推送 main：CI 会取消同一分支上进行中的运行，包括发布提交的 CI。[`cleanup.yml`](.github/workflows/cleanup.yml) 只删除 7 天前的工作流运行记录（至少保留 3 条），从不删除镜像版本：历史多架构镜像的各平台 manifest 没有标签，删除未打标签的版本会破坏仍在使用的固定插件和回滚镜像。
+
+实例巡检、备份与恢复演练、发布和带门禁的部署由 `.agents/skills/` 下的三个运维 skill 执行，入口见[文档索引](docs/README.md#专项文档)。
 
 <!-- write-project-docs:shared-contributing:start -->
 ## 当前开发策略
 
 **开发档位：`MVP`**
 
-围绕 [`docs/产品说明.md`](docs/产品说明.md) 已确认的核心价值、范围、非目标、验收与退出条件，完成最小可观察的端到端闭环。本档位永久豁免安全、隐私、数据、密钥与凭据管理、兼容、审计/监控/SLO 和法规合规要求的主动投入。
+围绕 [`docs/产品说明.md`](docs/产品说明.md) 已确认的产品范围、非目标和验收标准，完成最小可观察的端到端闭环。
 
 ### 本档位必须完成
 
@@ -177,42 +206,20 @@ for tests in .agents/skills/*/scripts/tests; do python3 -m unittest discover -s 
 
 ## 通用设计原则
 
-在满足已确认的功能范围、架构边界、质量属性、安全性、兼容性和运行约束的前提下，按以下顺序选择设计方案：
-
-1. 项目中已有、经验证且仍适用的设计、模式、接口或组件；
-2. 适用的正式标准、标准协议，以及平台或框架的官方推荐方案；
-3. 在相似场景中被广泛采用、持续维护且有可靠实践证据的成熟行业方案；
-4. 只有上述方案不能满足已核实约束时，才采用满足当前需求的最小定制设计。
-
-“广泛使用”只是候选信号，不是充分的采用理由。采用前按风险核对需求适配、安全与兼容、主要失败模式、维护与迁移成本；不得为套用惯例引入当前范围不需要的能力、抽象或依赖。
-
-涉及架构边界、依赖方向、数据责任、安全边界或长期依赖的重要设计选择，应在设计结果中记录适用依据、主要权衡和验证方式。采用定制设计时，同时说明成熟方案不适用的已核实约束。高风险且证据不足时，先定义可观察的成功、失败和退出条件，再执行当前权限允许的最小可逆验证；不得把未接受或未实现的候选写成当前架构事实。
+优先沿用项目中已验证且仍适用的设计，其次是适用的正式标准或官方推荐方案、成熟且持续维护的行业方案；只有它们不满足已核实约束时才做最小定制设计。涉及架构边界、依赖方向、数据责任、安全边界或长期依赖的选择，记录依据、主要权衡和验证方式，定制设计还要说明成熟方案不适用的约束；未接受或未实现的候选不写成当前架构事实。
 
 ## 通用实现原则
 
-在满足功能范围、架构边界、正确性、安全性和可验证性的前提下，按以下顺序选择实现方式：
-
-1. 项目中已有的实现；
-2. 语言标准库；
-3. 平台原生能力；
-4. 项目已安装且适合当前场景的依赖；
-5. 适合当前环境、成熟、活跃并被广泛使用的第三方库；
-6. 满足当前需求的最小自定义实现。
-
-新增代码前先搜索已有实现。不要为小功能引入大型依赖；不要为假设中的未来需求创建抽象层、扩展层或兼容层；保持自定义实现局部、简单且可测试。
-
-实现必须遵守 [`docs/架构说明.md`](docs/架构说明.md) 的项目架构事实、[`docs/开发规范.md`](docs/开发规范.md) 的项目/技术专属规则，以及 [`docs/源代码规模与职责规则.md`](docs/源代码规模与职责规则.md) 的统一规模与职责规则。
+新增代码前先搜索已有实现；依次复用项目已有实现、语言标准库、平台原生能力、已安装依赖和成熟的第三方库，最后才写局部、简单、可测试的最小实现。不为小功能引入大型依赖，不为假设需求建立抽象、扩展或兼容层。实现遵守 [`docs/架构说明.md`](docs/架构说明.md)、[`docs/开发规范.md`](docs/开发规范.md) 和 [`docs/源代码规模与职责规则.md`](docs/源代码规模与职责规则.md)。
 
 ## 完成定义
 
 一项变更只有在以下条件全部满足时才算完成：
 
-- 实现符合已确认的功能范围和验收条件；
-- 重要设计选择已验证成熟方案的适用性；采用定制方案时，已记录不适用约束、主要权衡和验证方式；
-- 保持既有架构边界和依赖方向，没有加入无关职责或顺手改动；
-- 已满足适用的项目/技术专属开发规范；
+- 实现符合已确认的范围和验收条件，保持既有架构边界和依赖方向，没有加入无关职责或顺手改动；
+- 满足适用的开发规范，重要设计选择已按通用设计原则记录依据；
 - 相关测试、静态检查、格式检查和构建验证已经通过；
-- 已按开发规范完成唯一权威文档、机器合同和验证的同步；
+- 已按开发规范完成唯一权威文档（见[文档索引](docs/README.md)）、机器合同和验证的同步；
 - 没有提交密钥、凭据、个人数据、生成产物或无关文件；
 - 已按源代码规模与职责规则完成检查，并报告需要说明的长文件。
 <!-- write-project-docs:shared-contributing:end -->

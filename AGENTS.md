@@ -1,66 +1,45 @@
 # SignalDeck Agent Guide
 
-SignalDeck is a trusted single-user Agent workflow platform: YAML Workflow Packages define reusable Agents and declarative DAGs, manual or scheduled launches create durable runs, and operators inspect execution evidence and outputs. Product scope and the development tier are owned by [STATUS.md](STATUS.md) and the [product specification](docs/产品说明.md).
-
-## Communication
-
-- Do not send optional progress commentary; report required results, blockers, and final status.
-- Do not revert, overwrite, or stage user changes you did not make.
+SignalDeck is a trusted single-user, self-hosted Agent workflow platform: YAML Workflow Packages define reusable Agents and declarative DAGs, manual or scheduled launches create durable Temporal runs, and the operator reads results and execution evidence.
 
 ## Change Routing
 
 | Change | Start here |
 | --- | --- |
-| Backend APIs, definitions, persistence, and execution | [backend/app/AGENTS.md](backend/app/AGENTS.md); HTTP composition starts in `backend/app/main.py`, domain contracts in `backend/app/domain/`, use cases and ports in `backend/app/application/`, adapters in `backend/app/infrastructure/`. |
-| Independent plugins, providers, Templates, and Reports | [plugin integration](docs/writing-extensions.md) and [plugin artifacts](plugins/README.md); Finance owns Templates and Reports under `plugins/finance/`. |
-| Worker recovery, launch delivery, and schedules | `backend/app/workers/artifact_worker.py`, `command_dispatcher.py` and `schedule_fire.py`; Temporal adapters live in `backend/app/infrastructure/`. |
-| Backend regression coverage | [backend/tests/AGENTS.md](backend/tests/AGENTS.md). |
-| Frontend tasks, results, settings, and expert authoring | [frontend/AGENTS.md](frontend/AGENTS.md); route ownership starts in `frontend/src/routes.ts`, with local guides under affected features and E2E. |
-| Workflow Package examples | [demo/AGENTS.md](demo/AGENTS.md); standalone examples, outside platform implementation and validation. |
-| Documentation | [docs/AGENTS.md](docs/AGENTS.md) and the canonical navigation below. |
-| Product behavior and architecture | [Product specification](docs/产品说明.md), [architecture](docs/架构说明.md) and [development rules](docs/开发规范.md); completed iteration history is in [STATUS.md](STATUS.md#已完成迭代). |
-| Local launch and container images | `start.sh` and root Compose for local/demo; root `Dockerfile`, `docker/compose.production.yml`, and `.github/workflows/docker-images.yml` for the application image and independent plugin images. |
-| Releases and deployed instances | `release.sh` and the [release commands](CONTRIBUTING.md#发布); the operator skills under `.agents/skills/` (linked into `.claude/skills/`): `signaldeck-ops-inspect` read-only, `signaldeck-backup-restore` and `signaldeck-release-deploy` only with explicit authorization. |
+| Backend API, definitions, persistence, execution, workers and schedules | [backend/app/AGENTS.md](backend/app/AGENTS.md). |
+| Backend tests | [backend/tests/AGENTS.md](backend/tests/AGENTS.md). |
+| Frontend | [frontend/AGENTS.md](frontend/AGENTS.md). |
+| Independent plugins, providers, Templates and Reports | [Plugin contract](docs/writing-extensions.md) and [plugin artifacts](plugins/README.md); Finance owns Templates and Reports under `plugins/finance/`. |
+| Workflow Package examples | [demo/AGENTS.md](demo/AGENTS.md). |
+| Product behavior, architecture, cross-boundary rules and other documentation | [Product specification](docs/产品说明.md), [architecture](docs/架构说明.md) and [development rules](docs/开发规范.md); the [document index](docs/README.md) lists every document and [docs/AGENTS.md](docs/AGENTS.md) holds the authoring rules. Keep `backend/README.md`: the root `Dockerfile` and `backend/pyproject.toml` reference it. |
+| Local stack and images | `start.sh` and root `docker-compose.yml` for the local/demo stack; root `Dockerfile`, `docker/compose.production.yml` and `.github/workflows/docker-images.yml` for the application and plugin images; operation in [deployment](docker/deployment.md). |
+| Releases and deployed instances | `release.sh` and the [release commands](CONTRIBUTING.md#发布); operator skills under `.agents/skills/` (linked into `.claude/skills/`): `signaldeck-ops-inspect` read-only, `signaldeck-backup-restore` and `signaldeck-release-deploy` only with explicit authorization. |
 
-## Cross-Cutting Boundaries
+## Invariants
 
-- Follow the product boundaries, current architecture and development contracts. Workflow Packages remain the executable workflow authoring root; do not introduce compatibility shims or legacy execution paths unless explicitly re-scoped.
-- Apply the [workflow/platform decoupling principle](docs/产品说明.md#工作流与平台解耦原则) to all workflows: keep workflow declarations in package data and business implementation/pages in independent plugins. Never dispatch or infer business semantics from hard-coded package/workflow IDs or business field names in Core/frontend code. Shared versioned contracts are allowed; workflow packages must not depend on platform internals. Use the frozen, closed [presentation and distribution contracts](docs/工作流解耦方案.md); historical generic fallback and deferred artifact selectors are explicit boundaries, not reasons to restore business inference.
-- DAG execution, the Agent contract and independently deployed plugins are current product boundaries. Do not add auth/RBAC product surfaces, multi-tenant accounts, a plugin marketplace, Studio, Tryout, memory, fork, portfolio, simulations, backtests or restore historical orchestration/runtime-v2 product entry points unless explicitly re-scoped. Preserve Finance ownership of Templates and Reports.
-- Preserve external camelCase through `CamelModel`, API-owned `{code, message, details[]}` errors, and string serialization for money, quantities, and market values. Apply [development rules](docs/开发规范.md) across both API producers and browser consumers.
-- Secret values must never appear in reads, exports, run details, logs, diagnostics, API error details, or metadata. Use existing encryption and safe projection boundaries; internal runtime payloads are not browser response models.
-- Keep YAML source safety and source locations in `domain/definition_parser.py`, graph semantics and deterministic hashes in `domain/compiler.py`, and launch resource/tool resolution in `application/launch.py` (paths relative to `backend/app/`). Package schemas stay closed; do not introduce `additionalProperties`, `allowAdditionalProperties`, or `patternProperties`, or silently discard unsupported constraints.
-- Execute and rerun from immutable package snapshots. Preserve queue, schedule, and run provenance when changing the corresponding flows.
-- PostgreSQL initialization uses `create_all`. Startup YAML imports and API `missing_only` imports share ordinary normalization and atomically create missing package keys without overwriting operator revisions; explicit updates may advance the current pointer while preserving immutable revisions. Workflow data stays outside the Core executable closure. Durable command delivery and Temporal own execution recovery; query projections must not schedule work. There is no migration framework; follow the [data and rebuild policy](STATUS.md) for schema changes.
-- Frontend data access uses feature hooks and `queryKeys`; shared components remain presentational. Follow [frontend/DESIGN.md](frontend/DESIGN.md) for visual changes.
-- `demo/` contains standalone example workflows, not platform components or fixtures. Platform code, tests, verification scripts, builds and startup configuration must neither reference nor depend on its files or contents. Explanatory documentation may reference examples. Test platform contracts with independently owned, minimal fixtures; changing or removing examples must not require platform changes.
+- Workflows are package data. Core and frontend code never dispatch on or infer business meaning from package/workflow keys or business field names; business logic, persistence and pages live in independent plugins that Core never imports and reaches only through the [plugin contract](docs/writing-extensions.md); workflow data couples to the platform only through the versioned contracts in [工作流解耦方案](docs/工作流解耦方案.md) ([principle](docs/产品说明.md#工作流与平台解耦原则)).
+- `demo/` holds standalone examples, not platform components or fixtures: platform code, tests, verification scripts, builds and startup configuration never reference it, and changing an example never requires a platform change.
+- Do not add auth/RBAC, multi-tenancy, a plugin marketplace, Studio, Tryout, memory, fork, portfolio, simulation or backtest surfaces, compatibility shims or legacy execution paths unless the scope is explicitly changed ([product scope](docs/产品说明.md#产品范围)).
+- Secret values never appear in reads, exports, run details, logs, diagnostics, API error details or metadata; reuse the existing encryption and safe-projection boundaries ([credential rules](docs/开发规范.md#外部合同与凭据)).
+- Package schemas stay closed: never introduce `additionalProperties`, `allowAdditionalProperties` or `patternProperties`, and reject unsupported constraints instead of dropping them ([schema subset](docs/writing-extensions.md#固定协议与-schema-子集)). Runs and reruns execute from immutable snapshots; preserve launch, schedule and run provenance.
+- Persistence grows by new tables: `create_all` only creates missing tables and there is no migration framework, so a column added to an existing table's model, even a nullable one, breaks existing databases. For Core models, the read-only `python -m app.infrastructure.schema_compatibility` gate, run from the new image before switching, rejects changes that existing databases cannot satisfy ([schema evolution](docs/data-model.md#初始化与-schema-演进), [data policy](STATUS.md#数据与兼容性)).
+- Every file under a plugin's directory, READMEs included, and under the shared `plugins/runtime/` is part of the plugin artifact digest; the Finance and Notes images also bundle the UI built from `frontend/src/plugin-ui` with the shared frontend modules it imports. Any such edit creates a new plugin release identity ([release identity](docs/writing-extensions.md#发布描述)): rebuild the local stack with `./start.sh --detach`, then run `./start.sh refresh-plugins` to register the rebuilt release ([local stack](README.md#快速开始)); deployed instances keep the old release until a plugin upgrade.
 
-## Validation and Local Runtime
+## Working Copy, Runtime and Checks
 
-Use the verified setup, checks, and completion rules in [CONTRIBUTING.md](CONTRIBUTING.md), then run `git diff --check`. Follow the nearest subtree guide for focused checks.
-
-`./start.sh` is the local/demo launcher; the default application URL is `http://localhost:${APP_PORT:-8080}`. The root Dockerfile builds the supported `ghcr.io/coachpo/signaldeck` application image: frontend assets, Nginx, and Core API run as the app role; dispatcher and worker use the same image in separate containers. PostgreSQL, Temporal, and business plugins remain independent. Production wiring is owned by `docker/compose.production.yml`; root Compose explicitly selects local mode and the development Temporal service. A root Dockerfile change requires local `docker build .` validation. The app, Core API and public plugin business APIs require no access token; keep app access within the trusted-network boundary.
-
-`release.sh` owns the six version surfaces; plugin versions stay independent. `docker-images.yml` publishes the four `linux/arm64` images only from `v*` tags whose commit passed CI; do not publish from `main`, create separate frontend/backend releases, or prune untagged image versions. Keep release manifests, rollout evidence and snapshots in ignored `artifacts/evidence/`.
-
-For dependency changes, inspect the manifests, lockfiles, and [dependency follow-up](docs/handover-deps-follow-up.md). Do not lift FastAPI `<0.137` until Logfire allows `opentelemetry-sdk>=1.43` and FastAPI instrumentation resolves to `>=0.64b0`. Node 26 Dockerfiles use pinned global pnpm installation; do not reintroduce `corepack enable`.
+- Other sessions may work in the same checkout: do not revert, overwrite or stage changes you did not make.
+- The app, Core API and plugin business APIs take no access token, so keep them inside the trusted network ([deployment boundary](STATUS.md#部署与使用)).
+- In a worktree or second checkout, run `./start.sh` only with its own `COMPOSE_PROJECT_NAME`, `SIGNALDECK_DATA_DIR`, `APP_PORT`, `TEMPORAL_UI_PORT` and `SIGNALDECK_LOCAL_IMAGE_PREFIX` ([local instances](README.md#快速开始)): the default project `signaldeck-target-local` and its `:local` images belong to the user's running stack.
+- Follow [CONTRIBUTING.md](CONTRIBUTING.md) for setup, checks and completion and the nearest subtree guide for focused checks.
+- `release.sh` owns the six version surfaces; plugin versions are independent. `docker-images.yml` publishes the four `linux/arm64` images from `v*` tags only after CI passed on the tagged commit, and manual runs publish only `manual-<sha>` tags. Never publish from `main`, split frontend and backend images, or prune untagged image versions.
+- Keep FastAPI below 0.137, including in Dependabot updates, until the unlock conditions and regressions in [CONTRIBUTING](CONTRIBUTING.md#开发环境与依赖) pass. The Node 26 Dockerfiles install the pinned pnpm with `npm install -g`; do not use `corepack enable`.
 
 <!-- write-project-docs:document-navigation:start -->
 ## 项目文档导航
 
-执行相关任务前，只读取确认相关事实、约束和验收标准所需的章节：
+执行任务前，从[文档索引](docs/README.md)找到相关事实、约束和验收标准的权威文档，只读取所需章节；开发档位、部署边界和数据政策见 [`STATUS.md`](STATUS.md)。
 
-- [项目状态](STATUS.md)
-- [文档索引](docs/README.md)
-- [产品说明](docs/产品说明.md)
-- [架构说明](docs/架构说明.md)
-- [开发规范](docs/开发规范.md)
-- [源代码规模与职责规则](docs/源代码规模与职责规则.md)
-- [贡献指南](CONTRIBUTING.md)
-
-需要确认相关事实、约束或交付意图时，查阅 `STATUS.md` 和产品说明。使用档位默认值或豁免前，确认[当前开发策略](CONTRIBUTING.md#当前开发策略)存在、有效且适用于本次任务，并读取其中相关的要求、边界和切换条件。档位默认值不替代事实、不扩大用户授权，也不覆盖用户要求、项目硬性规则及必需检查。
-
-本轮任务中已核实的信息，在来源未变化且仍适用时可复用；事实、档位、范围或要求变化，或出现冲突证据时，重新核实受影响的信息。
+使用档位默认值或豁免前，确认[当前开发策略](CONTRIBUTING.md#当前开发策略)适用于本次任务，并遵守其中的[不可越过的边界](CONTRIBUTING.md#不可越过的边界)。
 
 ## 项目文档内容边界
 
@@ -69,4 +48,5 @@ For dependency changes, inspect the manifests, lockfiles, and [dependency follow
 - 除非用户明确要求并提供可验证依据，不新增审批、汇报、会议、排期、人员治理、发布治理、提交管理、业务 KPI/SLO 或类似内容。
 - 不为上述主题创建文档、章节、占位符或“待确认”项。
 - 已有且经验证的开发、测试、构建和部署命令仍按对应权威文档记录；本区块不改变产品、架构或工程事实。
+- 文档只描述当前状态：迭代记录、单次运行的证据与计数、提交和部署进度以及本地证据路径不写入文档，历史由 Git 保留。
 <!-- write-project-docs:document-navigation:end -->
