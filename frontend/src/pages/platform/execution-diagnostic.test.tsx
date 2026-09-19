@@ -30,6 +30,11 @@ it("explains an unusable reply without implying that contacting the model failed
   expect(screen.getByText("模型没有按任务要求提供可用结果。可以重试，或检查助手的结果要求。")).toBeVisible();
   expect(screen.queryByText(/具体原因未知|额度不足|认证失败|agent_output_invalid|JSON|schema|原响应/)).not.toBeInTheDocument();
 });
+it("explains a credential update during a run without exposing the binding change", () => {
+  render(<ExecutionDiagnostic code="resource_binding_changed" />);
+  expect(screen.getByText("服务连接的凭据在本次运行开始后已更新，本次运行不会改用新凭据。请重新运行，新的运行会使用当前保存的凭据。")).toBeVisible();
+  expect(screen.queryByText(/具体原因未知|resource_binding_changed|绑定|版本|revision/)).not.toBeInTheDocument();
+});
 it("shows authentication handling and an exact recent evidence link", () => {
   render(<MemoryRouter><ModelObservationDetails observation={{
     status: "failed", observedAt: "2026-09-10T09:00:00Z", errorCode: "model_http_error",

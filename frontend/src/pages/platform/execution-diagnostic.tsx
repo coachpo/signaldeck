@@ -26,6 +26,7 @@ const codeGuidance: Record<string, string> = {
   resource_not_found: "缺少所需服务连接。请补齐连接后再运行。",
   model_not_found: "缺少模型连接。请在设置中补齐模型连接。",
   resource_unavailable: "所需服务连接不可用。请检查连接配置和服务状态。",
+  resource_binding_changed: "服务连接的凭据在本次运行开始后已更新，本次运行不会改用新凭据。请重新运行，新的运行会使用当前保存的凭据。",
   binding_invalid: "连接设置不完整。请检查服务、账户和业务范围。",
   plugin_unavailable: "所需服务尚未登记或启用。请在设置中检查服务连接与启用状态。",
 };
