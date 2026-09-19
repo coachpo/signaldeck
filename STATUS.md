@@ -96,7 +96,7 @@ Finance 1.4.0 的 `price_events_lookup` 改为按分红复权价格识别事件�
 
 新增 11 项、调整 4 项规则与工具测试；Finance、研究与插件相关回归共 482 项通过，改动文件的 ruff/black/isort 通过。真实 Yahoo 日线复核（28 只美股、近 250 个交易日、默认参数）：除息日被识别的向下缺口从 9 个降到 2 个；每只每年约有 `window_move` 2.1、`spike_reversal` 0.8、`near_high_low` 6.7、`engulfing` 9.0、`failed_breakout` 10.6、`pin_bar` 11.6、`drawdown`（10%）15.4 个事件；`minBaseSessions=20` 使 60 日新高/新低从 34.2 个降到 3.8 个，相对强弱从 34.1 个降到 3.3 个。规则没有用真实行情评估预测准确率。
 
-实现已通过提交 `792ac294` 合入 `main` 并推送，尚未发布版本或部署。新规则和字段改变 Finance 合同与制品摘要，实际启用须登记新的不可变发布和 endpoint，并保留旧 Run 的原绑定。
+实现已通过提交 `792ac294` 合入 `main` 并推送，随 v0.2.1 发布；capy 实例的插件升级见[部署与使用](#部署与使用)。新规则和字段改变 Finance 合同与制品摘要，实际启用须登记新的不可变发布和 endpoint，并保留旧 Run 的原绑定。
 
 ## 部署与使用
 
@@ -108,7 +108,7 @@ Finance 1.4.0 的 `price_events_lookup` 改为按分红复权价格识别事件�
 
 2026-09-19 起按版本发布：`release.sh` 统一版本号并打 `vX.Y.Z` 标签，发布提交的 CI 全部通过后才发布 `linux/arm64` 镜像；实例经运维 skill 备份后部署并固定到镜像 digest，命令见[贡献指南](CONTRIBUTING.md#发布)。
 
-capy 实例（部署仓库 `coachpo/curse` 的 `signaldeck` Compose 项目，局域网 `192.168.1.222:8089`）于 2026-09-19 10:28 UTC 按该流程部署并核验：应用镜像为 `ghcr.io/coachpo/signaldeck:v0.2.0@sha256:ff80ebb3f036492d145ba3b22eda4315ef406864700bf66d1ac492bcd4ca35ce`（发布提交 `b10785f8`），由 `signaldeck/backend.env` 的 `SIGNALDECK_VERSION` 固定，此前该文件固定的 cc49642a 与实际运行的 84c3ec46 不一致的问题已消除。切换前完成静默备份（`backups/signaldeck/20260919T102154Z-managed`，一次性容器恢复演练通过）和 schema 兼容检查（20 张 Core 表全部兼容）；切换后 `/health` 报告 0.2.0，应用各角色运行该 digest，其余服务镜像不变，持久表行数未减少，7 个只读 API 和 6 个插件页面挂载返回 200，300 秒观察期内无重启。同日 12:00 UTC 按插件升级流程把 Finance 1.3.0 与 Oracle 升级到 v0.2.0 发布：新服务 `finance-b10785f8`、`digital-oracle-b10785f8` 运行 `sha-b10785f8…` 镜像并在 `backend.env` 固定 digest，插件目录当前发布分别指向新端点（Finance 制品摘要 `1a533a79…`，Oracle `1886ae2b…`）；被取代的 `finance-cc49642a`、`digital-oracle` 及更早的历史服务保留在 `legacy-plugins`，7 个页面挂载全部返回 200；Notes 1.3.0（84c3ec46）不变。升级前静默备份为 `backups/signaldeck/20260919T115316Z-managed`，恢复演练通过。观测时 Core 中 Run 与工作流包均为 0，资源 2 条。以上是观测时事实，不代表持续健康。
+capy 实例（部署仓库 `coachpo/curse` 的 `signaldeck` Compose 项目，局域网 `192.168.1.222:8089`）于 2026-09-19 10:28 UTC 按该流程部署并核验：应用镜像为 `ghcr.io/coachpo/signaldeck:v0.2.0@sha256:ff80ebb3f036492d145ba3b22eda4315ef406864700bf66d1ac492bcd4ca35ce`（发布提交 `b10785f8`），由 `signaldeck/backend.env` 的 `SIGNALDECK_VERSION` 固定，此前该文件固定的 cc49642a 与实际运行的 84c3ec46 不一致的问题已消除。切换前完成静默备份（`backups/signaldeck/20260919T102154Z-managed`，一次性容器恢复演练通过）和 schema 兼容检查（20 张 Core 表全部兼容）；切换后 `/health` 报告 0.2.0，应用各角色运行该 digest，其余服务镜像不变，持久表行数未减少，7 个只读 API 和 6 个插件页面挂载返回 200，300 秒观察期内无重启。同日 12:00 UTC 按插件升级流程把 Finance 1.3.0 与 Oracle 升级到 v0.2.0 发布：新服务 `finance-b10785f8`、`digital-oracle-b10785f8` 运行 `sha-b10785f8…` 镜像并在 `backend.env` 固定 digest，插件目录当前发布分别指向新端点（Finance 制品摘要 `1a533a79…`，Oracle `1886ae2b…`）；被取代的 `finance-cc49642a`、`digital-oracle` 及更早的历史服务保留在 `legacy-plugins`，7 个页面挂载全部返回 200；Notes 1.3.0（84c3ec46）不变。升级前静默备份为 `backups/signaldeck/20260919T115316Z-managed`，恢复演练通过。同日约 12:45 UTC 发布 v0.2.1（发布提交 `c48995c0`），并按同一流程把 Finance 升级到 1.4.0：新服务 `finance-c48995c0` 运行 `sha-c48995c0…` 镜像并在 `backend.env` 固定 digest，插件目录当前发布指向该端点（制品摘要 `f40dcfff…`），1.3.0 的 `finance-b10785f8` 移入 `legacy-plugins`，8 个页面挂载全部返回 200；升级前静默备份为 `backups/signaldeck/20260919T124108Z-managed`，恢复演练通过。v0.2.1 的应用代码与 v0.2.0 相比只有版本号不同，应用镜像仍保持 v0.2.0。观测时 Core 中 Run 与工作流包均为 0，资源 2 条。以上是观测时事实，不代表持续健康。
 
 仓库配置不能证明实际实例的部署、外部用户或数据状态；当前未核实“没有外部用户”或“没有不可丢弃数据”。MVP 档位不替代这些事实，也不授予数据重置权限。
 
