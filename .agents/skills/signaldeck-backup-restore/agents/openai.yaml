@@ -1,0 +1,6 @@
+interface:
+  display_name: "SignalDeck Backup Restore"
+  short_description: "Back up, retain, and restore-test SignalDeck safely"
+  default_prompt: "Use $signaldeck-backup-restore to plan a verified SignalDeck backup or a disposable restore drill with explicit safety gates."
+policy:
+  allow_implicit_invocation: true

@@ -56,6 +56,9 @@ jobs:
         run: |
           python3 -m unittest discover -s docker -p 'test_*.py'
           python3 -m unittest discover -s frontend/gateway -p 'test_*.py'
+          for tests in .agents/skills/*/scripts/tests; do
+            python3 -m unittest discover -s "$tests" -p 'test_*.py'
+          done
 
   backend-quality:
     runs-on: ubuntu-latest

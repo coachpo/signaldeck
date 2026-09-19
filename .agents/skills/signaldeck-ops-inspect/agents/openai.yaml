@@ -1,0 +1,6 @@
+interface:
+  display_name: "SignalDeck Ops Inspect"
+  short_description: "Inspect SignalDeck operational state without mutations"
+  default_prompt: "Use $signaldeck-ops-inspect to collect a secret-safe SignalDeck deployment snapshot and report drift."
+policy:
+  allow_implicit_invocation: true
