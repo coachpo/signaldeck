@@ -1,4 +1,4 @@
-# Local/demo SD-TARGET-001 stack. Dedicated host data never reuses legacy volumes.
+# Local/demo stack. Dedicated host data never reuses legacy volumes.
 x-core-environment: &core-environment
   SIGNALDECK_RUNTIME_MODE: local
   SIGNALDECK_PLUGIN_MOUNTS_FILE: /etc/signaldeck/plugin-mounts.json

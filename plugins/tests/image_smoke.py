@@ -61,8 +61,9 @@ def start(name):
     ]
     if name != "digital-oracle":
         args += ["-e", "PLUGIN_DATABASE_URL"]
+    version = Path("plugins", name.replace("-", "_"), "VERSION").read_text().strip()
     subprocess.run(
-        args + [f"signaldeck-{name}:sd-target-001"], env=env, check=True, stdout=subprocess.DEVNULL
+        args + [f"signaldeck-{name}:{version}"], env=env, check=True, stdout=subprocess.DEVNULL
     )
     for _ in range(160):
         try:

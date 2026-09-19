@@ -6,7 +6,7 @@ import { captureResponsiveEvidence } from "./responsive-evidence";
 
 test.use({ timezoneId: "Europe/Helsinki" });
 
-test("PU-S3: optional output budget survives editing and model usage is readable", async ({ page, request }) => {
+test("optional output budget survives editing and model usage is readable", async ({ page, request }) => {
   test.setTimeout(180_000);
   const { key } = await seed(request);
   const launch = async (launchId: string) => {
@@ -62,7 +62,7 @@ test("PU-S3: optional output budget survives editing and model usage is readable
   await breakdown.focus();
   await breakdown.press("Enter");
   await expect(section.getByText(/fake-e2e-model/)).toBeVisible();
-  const directory = resolve("../output/playwright/personal-use-s3");
+  const directory = resolve("../output/playwright/model-usage");
   await mkdir(directory, { recursive: true });
   const visuals = await captureResponsiveEvidence(page, directory, "model-usage", section, [{ name: "model breakdown", locator: breakdown }]);
   await page.goto("/settings");

@@ -25,9 +25,15 @@ def finance_client(request):
         )
     raw = os.environ.get("TEST_DATABASE_URL")
     if not raw:
+        # The container that the backend test fixture (backend/tests/conftest.py) uses.
+        container = (
+            "signaldeck-target-test-postgres"
+            if os.environ.get("SIGNALDECK_TEST_POSTGRES_DIR")
+            else "signaldeck-target-test-postgres-volume"
+        )
         port = (
             subprocess.check_output(
-                ["docker", "port", "signaldeck-target-test-postgres", "5432/tcp"],
+                ["docker", "port", container, "5432/tcp"],
                 text=True,
             )
             .strip()

@@ -10,7 +10,7 @@ import {
   type ResponsiveObservation,
 } from "./responsive-evidence";
 
-test("UX01/03/06: four ordinary tasks execute with real plugins and retain reusable results", async ({
+test("four ordinary tasks execute with real plugins and retain reusable results", async ({
   page,
   request,
 }, testInfo) => {

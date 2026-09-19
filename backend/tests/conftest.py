@@ -143,7 +143,7 @@ def _ensure_start_local_database() -> URL:
                 "--label",
                 "io.signaldeck.production-artifact=false",
                 "--label",
-                "io.signaldeck.test-resource=sd-target-001",
+                "io.signaldeck.test-resource=backend-tests",
                 "-e",
                 "POSTGRES_DB=signaldeck",
                 "-e",

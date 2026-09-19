@@ -78,7 +78,7 @@ docs/pending-design/*
 .codebase-memory/*
 .opencode/*
 
-# SD-TARGET-001 local host persistence
+# Local stack host persistence
 /.signaldeck-target/
 /.signaldeck-dev/
 

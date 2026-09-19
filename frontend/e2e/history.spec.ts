@@ -33,7 +33,7 @@ async function capture(request: APIRequestContext, packageKey: string, title: st
   return launched.json();
 }
 
-test("UX03: complete history preserves filters, respects local dates and refreshes the snapshot", async ({
+test("complete history preserves filters, respects local dates and refreshes the snapshot", async ({
   page,
   request,
 }, testInfo) => {

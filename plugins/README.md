@@ -86,7 +86,7 @@ uv run pytest tests/test_independent_plugins.py -q
 
 These tests run the plugins against isolated PostgreSQL databases through a real MCP Streamable HTTP client and server; they call no model service or paid provider. The Finance and Notes page tests are described in their READMEs.
 
-`plugins/tests/image_smoke.py` checks the three built images. It expects the tags `signaldeck-finance:sd-target-001`, `signaldeck-digital-oracle:sd-target-001` and `signaldeck-notes:sd-target-001` (build or re-tag the images above), a local PostgreSQL resolved like the [backend test database](../CONTRIBUTING.md#测试数据库与-e2e-环境) that the containers reach through `host.docker.internal`, and the backend virtual environment. From the repository root:
+`plugins/tests/image_smoke.py` checks the three built images. It runs them by the tags that the build commands above give them, each plugin's `VERSION`, and expects a local PostgreSQL resolved like the [backend test database](../CONTRIBUTING.md#测试数据库与-e2e-环境) that the containers reach through `host.docker.internal`, and the backend virtual environment. From the repository root:
 
 ```sh
 backend/.venv/bin/python plugins/tests/image_smoke.py
