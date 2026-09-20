@@ -25,6 +25,8 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.engine import make_url
 
 PLUGINS = Path(__file__).resolve().parents[2] / "plugins"
+# The current Notes release identity comes from the artifact, not a literal.
+NOTES_RELEASE = (PLUGINS / "notes" / "VERSION").read_text().strip()
 for directory in ("runtime", "finance", "digital_oracle", "notes"):
     sys.path.insert(0, str(PLUGINS / directory))
 
@@ -333,7 +335,7 @@ def test_real_mcp_third_plugin_upgrade_keeps_old_release_and_dedupes(database_ur
 
     async def scenario():
         assert old_release["artifactDigest"] != new_release["artifactDigest"]
-        assert old_release["releaseId"] == "1.3.0" and new_release["releaseId"] == "1.4.0"
+        assert old_release["releaseId"] == NOTES_RELEASE and new_release["releaseId"] == "1.4.0"
         context = invocation("example/notes/create")
         async with streamable_http_client(old_url) as (read, write, _):
             async with ClientSession(read, write) as session:
@@ -556,7 +558,7 @@ def test_notes_1_1_schema_remains_live_beside_current_release(database_url, tmp_
         assert not saved.isError
         assert set(saved.structuredContent) == {"id", "collection", "title", "text"}
         new, new_url, new_release = _launch(PLUGINS, database_url, _free_port())
-        assert new_release["releaseId"] == "1.3.0"
+        assert new_release["releaseId"] == NOTES_RELEASE
         assert new_release["contractDigest"] != old_release["contractDigest"]
         assert asyncio.run(call(new_url, old_release, "legacy-frozen", arguments)).isError
         repeated = asyncio.run(call(old_url, old_release, "legacy-frozen", arguments))
