@@ -49,7 +49,7 @@ class ProductionComposeTests(unittest.TestCase):
         cls.config = json.loads(result.stdout)
         cls.services = cls.config["services"]
 
-    def test_four_published_images_without_builds_or_split_services(self):
+    def test_one_published_image_without_builds_or_split_services(self):
         self.assertNotIn("backend", self.services)
         self.assertNotIn("frontend", self.services)
         self.assertEqual(
@@ -59,7 +59,7 @@ class ProductionComposeTests(unittest.TestCase):
         for name in ("finance", "notes", "digital-oracle"):
             self.assertEqual(
                 self.services[name]["image"],
-                f"ghcr.io/coachpo/signaldeck-{name}:replace-with-published-sha-tag",
+                "ghcr.io/coachpo/signaldeck:replace-with-published-sha-tag",
             )
         for name, service in self.services.items():
             with self.subTest(service=name):
@@ -160,6 +160,7 @@ class ProductionComposeTests(unittest.TestCase):
         for key in (
             *REQUIRED_SECRETS,
             "SIGNALDECK_IMAGE",
+            "SIGNALDECK_PLUGIN_IMAGE",
             "DATABASE_URL",
             "TEMPORAL_ADDRESS",
         ):
@@ -191,10 +192,26 @@ class ProductionComposeTests(unittest.TestCase):
                     service["environment"]["SIGNALDECK_RUNTIME_MODE"], "production"
                 )
                 self.assertEqual(service["stop_grace_period"], "30s")
-        for role in ("dispatcher", "worker", "plugin-mounts", "bootstrap"):
+        for role in (
+            "dispatcher",
+            "worker",
+            "plugin-mounts",
+            "bootstrap",
+            "finance",
+            "notes",
+            "digital-oracle",
+        ):
             self.assertTrue(self.services[role]["healthcheck"]["disable"])
         for role in ("plugin-mounts", "bootstrap"):
             self.assertEqual(self.services[role]["image"], app["image"])
+        # Plugin roles run the same image under an independently pinned reference,
+        # so an application update never moves a registered plugin release.
+        for role in ("finance", "notes", "digital-oracle"):
+            service = self.services[role]
+            self.assertEqual(service["command"], [role])
+            self.assertEqual(service["image"].split(":", 1)[0], app["image"].split(":", 1)[0])
+            self.assertNotEqual(service["image"], app["image"])
+            self.assertFalse(service.get("volumes"))
         for variable in (
             "SIGNALDECK_ARTIFACT_DIR",
             "SIGNALDECK_CORE_ARTIFACT_DIR",

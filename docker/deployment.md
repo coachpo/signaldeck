@@ -1,20 +1,20 @@
 # 单应用镜像部署
 
-应用镜像 `ghcr.io/coachpo/signaldeck` 包含前端静态资源、Nginx 和 Core API：`app` 容器运行 Nginx 与 API，`dispatcher`、`worker` 是同一镜像的独立角色；PostgreSQL、Temporal 和业务插件独立运行。服务器部署使用 [`compose.production.yml`](compose.production.yml)，根 `docker-compose.yml` 与 `start.sh` 只用于源码本地运行，适用边界见 [`STATUS.md`](../STATUS.md#部署与使用)。服务器不编译源码；固定 Core worker 首次安装某个制品的依赖时需要访问锁文件中的公共下载地址，之后复用保留的执行环境和 uv 缓存。
+应用镜像 `ghcr.io/coachpo/signaldeck` 包含前端静态资源、Nginx、Core API 和三个业务插件：`app` 容器运行 Nginx 与 API，`dispatcher`、`worker`、`finance`、`notes`、`digital-oracle` 是同一镜像的独立角色，各插件在镜像内有自己的冻结锁文件和虚拟环境；PostgreSQL 和 Temporal 独立运行。服务器部署使用 [`compose.production.yml`](compose.production.yml)，根 `docker-compose.yml` 与 `start.sh` 只用于源码本地运行，适用边界见 [`STATUS.md`](../STATUS.md#部署与使用)。服务器不编译源码；固定 Core worker 首次安装某个制品的依赖时需要访问锁文件中的公共下载地址，之后复用保留的执行环境和 uv 缓存。
 
 维护中的 capy 实例不按本文操作，而是由部署仓库的 `deploy.sh` 和 `.agents/skills/` 下的三个运维 skill 管理，见 [capy 适配说明](../.agents/skills/signaldeck-ops-inspect/references/capy.md)。
 
 ## 发布与镜像版本
 
-发布流程见[贡献指南](../CONTRIBUTING.md#发布)。每个 `vX.Y.Z` 标签在 GHCR 发布四个镜像：`ghcr.io/coachpo/signaldeck`、`signaldeck-finance`、`signaldeck-notes` 和 `signaldeck-digital-oracle`，都是不附 provenance/SBOM 的 `linux/arm64` 单平台 manifest。标签为 `vX.Y.Z`、`X.Y.Z`、`X.Y`、`sha-<完整提交 SHA>` 和 `latest`，`latest` 只表示最近一次发布。手动运行 [`Docker Images`](../.github/workflows/docker-images.yml) 时可选 `all`（默认）、`app`、`finance`、`notes` 或 `digital-oracle`，只发布 `manual-<完整提交 SHA>` 标签。
+发布流程见[贡献指南](../CONTRIBUTING.md#发布)。每个 `vX.Y.Z` 标签在 GHCR 发布一个镜像 `ghcr.io/coachpo/signaldeck`，是不附 provenance/SBOM 的 `linux/arm64` 单平台 manifest。标签为 `vX.Y.Z`、`X.Y.Z`、`X.Y`、`sha-<完整提交 SHA>` 和 `latest`，`latest` 只表示最近一次发布。手动运行 [`Docker Images`](../.github/workflows/docker-images.yml) 不选择服务，只发布 `manual-<完整提交 SHA>` 标签。
 
-部署时把应用镜像固定为 `ghcr.io/coachpo/signaldeck:vX.Y.Z@sha256:<digest>`，digest 可用 `docker buildx imagetools inspect ghcr.io/coachpo/signaldeck:vX.Y.Z` 查看。插件镜像独立固定到完整 SHA 标签、版本标签或 digest，普通 `pull` 因而不会把运行中的插件 endpoint 原地换成新发布。插件镜像与应用共用同一组发布标签；插件自身的版本号（`plugins/<插件>/VERSION`）不是镜像标签，`compose.production.yml` 中 `signaldeck-<插件>:<版本>` 形式的默认值只是本地构建名。
+部署时把应用镜像固定为 `ghcr.io/coachpo/signaldeck:vX.Y.Z@sha256:<digest>`，digest 可用 `docker buildx imagetools inspect ghcr.io/coachpo/signaldeck:vX.Y.Z` 查看。插件角色用独立的 `SIGNALDECK_PLUGIN_IMAGE` 固定到自己的标签或 digest，可以与 `SIGNALDECK_IMAGE` 不同，普通 `pull` 因而不会把运行中的插件 endpoint 原地换成新发布。插件自身的版本号（`plugins/<插件>/VERSION`）是发布描述中的 `releaseId`，不是镜像标签。
 
 Public 的 GHCR 包可匿名拉取；私有包需在服务器用具有 `read:packages` 的 classic PAT 执行 `docker login ghcr.io -u <用户名>`。公开仓库不会让镜像包自动公开。
 
 ## 首次部署
 
-需要 arm64 宿主机、Docker Compose **2.20 或以上**（生产 Compose 使用 `depends_on.required`），且该发布的四个镜像都已发布。`compose.production.yml` 以绑定挂载使用同目录的数据库与 Temporal 初始化脚本和 Temporal 动态配置，因此服务器检出与镜像相同的发布标签；配置和密钥保存在检出目录之外：
+需要 arm64 宿主机、Docker Compose **2.20 或以上**（生产 Compose 使用 `depends_on.required`），且该发布的镜像已发布。`compose.production.yml` 以绑定挂载使用同目录的数据库与 Temporal 初始化脚本和 Temporal 动态配置，因此服务器检出与镜像相同的发布标签；配置和密钥保存在检出目录之外：
 
 ```bash
 git clone https://github.com/coachpo/signaldeck.git ~/signaldeck
@@ -25,7 +25,7 @@ python3 docker/create_env.py \
   --plugin-tag "sha-$(git rev-parse HEAD)"
 ```
 
-`create_env.py` 按 [`production.env.example`](production.env.example) 写入权限 0600 的 `~/.config/signaldeck/production.env`，生成五个独立数据库密码和资源加密 key，不输出密钥；文件已存在时拒绝覆盖。`--plugin-tag` 只接受 `sha-` 加 40 位小写十六进制，同时固定三个插件镜像；`--app-image` 必填，只接受 `<镜像>:vX.Y.Z`、`<镜像>:vX.Y.Z@sha256:<digest>` 或 `<镜像>@sha256:<digest>`，`latest` 等浮动标签会被拒绝。以后更新沿用同一个 env 文件和项目名，不重新生成密码或 key。
+`create_env.py` 按 [`production.env.example`](production.env.example) 写入权限 0600 的 `~/.config/signaldeck/production.env`，生成五个独立数据库密码和资源加密 key，不输出密钥；文件已存在时拒绝覆盖。`--plugin-tag` 只接受 `sha-` 加 40 位小写十六进制，固定三个插件角色共用的 `SIGNALDECK_PLUGIN_IMAGE`；`--app-image` 必填，只接受 `<镜像>:vX.Y.Z`、`<镜像>:vX.Y.Z@sha256:<digest>` 或 `<镜像>@sha256:<digest>`，`latest` 等浮动标签会被拒绝。以后更新沿用同一个 env 文件和项目名，不重新生成密码或 key。
 
 ```bash
 sdcompose() {
@@ -55,7 +55,7 @@ SIGNALDECK_IMAGE="$new" sdcompose run --rm --no-deps -T --entrypoint python app 
   -m app.infrastructure.schema_compatibility
 ```
 
-检查通过后把 env 文件中的 `SIGNALDECK_IMAGE` 改为同一引用，再执行 `sdcompose pull` 和 `sdcompose up -d`。app、dispatcher、worker 以及 plugin-mounts、bootstrap 随 `SIGNALDECK_IMAGE` 一起切换；插件保持各自固定的镜像，数据卷不变。`stop` 和 `down` 保留命名卷；**不要使用 `down -v`**，它会删除全部数据卷。
+检查通过后把 env 文件中的 `SIGNALDECK_IMAGE` 改为同一引用，再执行 `sdcompose pull` 和 `sdcompose up -d`。app、dispatcher、worker 以及 plugin-mounts、bootstrap 随 `SIGNALDECK_IMAGE` 一起切换；三个插件角色仍按 `SIGNALDECK_PLUGIN_IMAGE` 固定，数据卷不变。`stop` 和 `down` 保留命名卷；**不要使用 `down -v`**，它会删除全部数据卷。
 
 插件升级不能只改旧服务的镜像标签再 `up`：运行和页面挂载绑定插件 endpoint 与制品 digest，新发布须作为新服务和新上游与旧服务并存，挂载初始化也拒绝把已登记的上游改绑到另一个制品。规则见[独立接入与升级](../docs/writing-extensions.md#独立接入与升级)。
 
@@ -64,7 +64,7 @@ SIGNALDECK_IMAGE="$new" sdcompose run --rm --no-deps -T --entrypoint python app 
 | 配置 | 说明 |
 | --- | --- |
 | `SIGNALDECK_IMAGE` | app、dispatcher、worker、plugin-mounts 和 bootstrap 共用的应用镜像，固定为带 digest 的发布引用。 |
-| `SIGNALDECK_FINANCE_IMAGE`、`SIGNALDECK_NOTES_IMAGE`、`SIGNALDECK_ORACLE_IMAGE` | 各插件独立固定的镜像；模板由 `SIGNALDECK_PLUGIN_TAG` 派生。 |
+| `SIGNALDECK_PLUGIN_IMAGE` | finance、notes 和 digital-oracle 角色共用、与应用独立固定的同一镜像；模板由 `SIGNALDECK_PLUGIN_TAG` 派生。 |
 | `COMPOSE_PROFILES`、`SIGNALDECK_PLUGINS` | 启用的插件，模板为 `finance,notes,digital-oracle`；两者须一致，同时设为空只启动通用平台。 |
 | `AGENT_PLATFORM_ENCRYPTION_KEY` | 资源凭据加密 key；更换后已保存的凭据无法解密。 |
 | `APP_PORT` | 应用端口，默认 8089，只绑定 `127.0.0.1`。 |
@@ -93,9 +93,7 @@ sdcompose run --rm --no-deps --entrypoint temporal \
 
 ```bash
 docker build -t signaldeck:local .
-docker build -f plugins/notes/Dockerfile -t signaldeck-notes:1.3.0 .
-backend/.venv/bin/python docker/verify_deployment.py \
-  --app-image signaldeck:local --notes-image signaldeck-notes:1.3.0
+backend/.venv/bin/python docker/verify_deployment.py --app-image signaldeck:local
 ```
 
-验证器只使用本机 Unix socket Docker 上下文，以随机项目名、端口和密码启动 `compose.production.yml`，不读取仓库 `.env`，不调用模型或外部 provider，结束时只删除本次自有的容器、网络和卷。它核对无口令访问、数据库角色隔离、插件挂载与登记、一次真实 Notes 任务、SIGTERM 平滑停止、容器重建后的计划、Temporal 历史、Core 制品与产物，以及执行服务离线时的历史读取。加 `--finance-image <镜像>` 同时验证 Finance 的启动、登记与页面挂载，加 `--oracle-image <镜像>` 验证 Oracle 的启动与登记（Oracle 没有页面）。何时运行见[贡献指南](../CONTRIBUTING.md#检查测试与构建)。
+验证器只使用本机 Unix socket Docker 上下文，以随机项目名、端口和密码启动 `compose.production.yml`，不读取仓库 `.env`，不调用模型或外部 provider，结束时只删除本次自有的容器、网络和卷。它启用全部三个插件角色，核对无口令访问、数据库角色隔离、插件挂载与登记、一次真实 Notes 任务、SIGTERM 平滑停止、容器重建后的计划、Temporal 历史、Core 制品与产物，以及执行服务离线时的历史读取。`--plugin-image <镜像>` 让插件角色使用另一个镜像，默认与 `--app-image` 相同。何时运行见[贡献指南](../CONTRIBUTING.md#检查测试与构建)。

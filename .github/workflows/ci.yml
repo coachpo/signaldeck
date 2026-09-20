@@ -174,7 +174,7 @@ jobs:
         id: rev
         run: echo "short=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
 
-      - name: Build application image
+      - name: Build the single application image
         uses: docker/build-push-action@v7
         with:
           context: .
@@ -186,36 +186,6 @@ jobs:
             VITE_GIT_REVISION=${{ steps.rev.outputs.short }}
           cache-from: type=gha,scope=ci-app
           cache-to: type=gha,scope=ci-app,mode=max
-
-      - name: Build Finance plugin image
-        uses: docker/build-push-action@v7
-        with:
-          context: .
-          file: ./plugins/finance/Dockerfile
-          tags: signaldeck-finance:ci
-          load: true
-          cache-from: type=gha,scope=ci-finance
-          cache-to: type=gha,scope=ci-finance,mode=max
-
-      - name: Build Notes plugin image
-        uses: docker/build-push-action@v7
-        with:
-          context: .
-          file: ./plugins/notes/Dockerfile
-          tags: signaldeck-notes:ci
-          load: true
-          cache-from: type=gha,scope=ci-notes
-          cache-to: type=gha,scope=ci-notes,mode=max
-
-      - name: Build Digital Oracle plugin image
-        uses: docker/build-push-action@v7
-        with:
-          context: ./plugins
-          file: ./plugins/digital_oracle/Dockerfile
-          tags: signaldeck-digital-oracle:ci
-          load: true
-          cache-from: type=gha,scope=ci-digital-oracle
-          cache-to: type=gha,scope=ci-digital-oracle,mode=max
 
       - name: Install uv and set Python version
         uses: astral-sh/setup-uv@v7
@@ -230,11 +200,7 @@ jobs:
 
       - name: Verify the single-host deployment bundle
         run: |
-          backend/.venv/bin/python docker/verify_deployment.py \
-            --app-image signaldeck:ci \
-            --notes-image signaldeck-notes:ci \
-            --finance-image signaldeck-finance:ci \
-            --oracle-image signaldeck-digital-oracle:ci
+          backend/.venv/bin/python docker/verify_deployment.py --app-image signaldeck:ci
 
       - name: Install pinned Trivy
         uses: aquasecurity/setup-trivy@e07451d2e059ed86c2870430ea286b3a9e0bf241
@@ -252,12 +218,11 @@ jobs:
             echo "Trivy scans are non-blocking. Reports are uploaded as artifacts; HIGH/CRITICAL, fixed-only."
             echo ""
           } >> "$GITHUB_STEP_SUMMARY"
-          for image in signaldeck signaldeck-finance signaldeck-notes signaldeck-digital-oracle; do
-            status=0
-            trivy image --severity HIGH,CRITICAL --ignore-unfixed --exit-code 0 --format sarif --output "trivy-reports/$image.sarif" "$image:ci" || status=$?
-            trivy image --severity HIGH,CRITICAL --ignore-unfixed --exit-code 0 --format table --output "trivy-reports/$image.txt" "$image:ci" || status=$?
-            echo "- \`$image:ci\`: Trivy status \`$status\`" >> "$GITHUB_STEP_SUMMARY"
-          done
+          image=signaldeck
+          status=0
+          trivy image --severity HIGH,CRITICAL --ignore-unfixed --exit-code 0 --format sarif --output "trivy-reports/$image.sarif" "$image:ci" || status=$?
+          trivy image --severity HIGH,CRITICAL --ignore-unfixed --exit-code 0 --format table --output "trivy-reports/$image.txt" "$image:ci" || status=$?
+          echo "- \`$image:ci\`: Trivy status \`$status\`" >> "$GITHUB_STEP_SUMMARY"
           exit 0
 
       - name: Upload Trivy scan artifacts

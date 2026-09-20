@@ -32,7 +32,7 @@ cd signaldeck
 SIGNALDECK_PLUGINS=notes ./start.sh --detach
 ```
 
-插件不发布宿主机端口，页面经应用端口访问。每次启动都按本次构建生成数据目录中的 `plugin-mounts.json`，只读挂载给 Core 与 Nginx；bootstrap 只登记缺失的插件和默认资源，已登记插件保持原发布。插件代码或打包文件变化后，先用同样的环境变量重新运行 `./start.sh --detach`，重建镜像并替换插件服务；再在本栈运行时执行 `./start.sh refresh-plugins`，它从运行中插件的 `/release` 重新登记所选插件的当前发布并保留启用状态（会重新创建应用容器）。只重建不刷新时 Core 仍登记原发布，调用该插件的运行会以 `plugin_release_unavailable` 失败。
+插件是同一本地镜像的独立角色，不发布宿主机端口，页面经应用端口访问。每次启动都按本次构建生成数据目录中的 `plugin-mounts.json`，只读挂载给 Core 与 Nginx；bootstrap 只登记缺失的插件和默认资源，已登记插件保持原发布。插件代码或打包文件变化后，先用同样的环境变量重新运行 `./start.sh --detach`，重建那一个镜像并替换插件服务；再在本栈运行时执行 `./start.sh refresh-plugins`，它从运行中插件的 `/release` 重新登记所选插件的当前发布并保留启用状态（会重新创建应用容器）。只重建不刷新时 Core 仍登记原发布，调用该插件的运行会以 `plugin_release_unavailable` 失败。
 
 本地重建会原地替换插件服务，旧发布的页面随之不可用；需要保留旧发布时，须为其单独运行服务，并用 `SIGNALDECK_PLUGIN_MOUNTS_FILE=/absolute/path/mounts.json` 提供包含旧挂载的登记（脚本不改写显式指定的文件），格式见[统一插件页面](docs/writing-extensions.md#统一插件页面)。Finance 与 Oracle 访问 SEC 所需的 `EDGAR_CONTACT_EMAIL` 以及 Oracle 的 `FRED_API_KEY` 从 shell 或仓库根目录被 Git 忽略的 `.env` 读取，其他插件配置见 [`plugins/README.md`](plugins/README.md)。
 

@@ -1,4 +1,5 @@
-# Local/demo stack. Dedicated host data never reuses legacy volumes.
+# Local/demo stack. One built image serves every role; dedicated host data
+# never reuses legacy volumes.
 x-core-environment: &core-environment
   SIGNALDECK_RUNTIME_MODE: local
   SIGNALDECK_PLUGIN_MOUNTS_FILE: /etc/signaldeck/plugin-mounts.json
@@ -125,10 +126,10 @@ services:
   finance:
     restart: unless-stopped
     profiles: ["finance"]
-    build:
-      context: .
-      dockerfile: plugins/finance/Dockerfile
-    image: ${SIGNALDECK_LOCAL_IMAGE_PREFIX:-signaldeck-target}-finance:local
+    image: ${SIGNALDECK_LOCAL_IMAGE_PREFIX:-signaldeck-target}-app:local
+    command: ["finance"]
+    healthcheck:
+      disable: true
     depends_on:
       db:
         condition: service_healthy
@@ -141,10 +142,10 @@ services:
   digital-oracle:
     restart: unless-stopped
     profiles: ["digital-oracle"]
-    build:
-      context: ./plugins
-      dockerfile: digital_oracle/Dockerfile
-    image: ${SIGNALDECK_LOCAL_IMAGE_PREFIX:-signaldeck-target}-digital-oracle:local
+    image: ${SIGNALDECK_LOCAL_IMAGE_PREFIX:-signaldeck-target}-app:local
+    command: ["digital-oracle"]
+    healthcheck:
+      disable: true
     environment:
       PLUGIN_ENDPOINT: http://digital-oracle:8000/mcp/
       FRED_API_KEY: ${FRED_API_KEY:-}
@@ -154,10 +155,10 @@ services:
   notes:
     restart: unless-stopped
     profiles: ["notes"]
-    build:
-      context: .
-      dockerfile: plugins/notes/Dockerfile
-    image: ${SIGNALDECK_LOCAL_IMAGE_PREFIX:-signaldeck-target}-notes:local
+    image: ${SIGNALDECK_LOCAL_IMAGE_PREFIX:-signaldeck-target}-app:local
+    command: ["notes"]
+    healthcheck:
+      disable: true
     depends_on:
       db:
         condition: service_healthy

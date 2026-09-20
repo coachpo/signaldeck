@@ -19,12 +19,7 @@ assert SPEC and SPEC.loader
 SPEC.loader.exec_module(MODULE)
 
 SHA = "0123456789abcdef" * 2 + "01234567"
-NAMES = {
-    "app": "signaldeck",
-    "finance": "signaldeck-finance",
-    "notes": "signaldeck-notes",
-    "digital-oracle": "signaldeck-digital-oracle",
-}
+NAMES = {"app": "signaldeck"}
 
 
 def manifest() -> dict[str, object]:
@@ -152,9 +147,9 @@ class ManifestTests(unittest.TestCase):
         cases = {
             "unpublished": lambda value: value.update(status="pending"),
             "mutable ref": lambda value: value["images"]["app"].update(ref="ghcr.io/coachpo/signaldeck:v0.2.0"),
-            "other repository": lambda value: value["images"]["notes"].update(repository="ghcr.io/else/signaldeck-notes"),
-            "revision": lambda value: value["images"]["finance"].update(revision="f" * 40),
-            "missing image": lambda value: value["images"].pop("digital-oracle"),
+            "other repository": lambda value: value["images"]["app"].update(repository="ghcr.io/else/signaldeck"),
+            "revision": lambda value: value["images"]["app"].update(revision="f" * 40),
+            "extra image": lambda value: value["images"].update(notes={}),
             "tag": lambda value: value.update(tag="v9.9.9"),
         }
         for name, mutate in cases.items():
@@ -253,12 +248,15 @@ class RemoteProgramTests(unittest.TestCase):
         self.assertEqual(report["tables"], {"platform_runs": "incompatible", "platform_new": "created_on_start"})
         self.assertEqual(list(report["incompatible"]), ["platform_runs"])
 
-    def test_remote_version_spec_and_plugin_application_pattern(self) -> None:
+    def test_remote_version_spec_and_plugin_applications(self) -> None:
         program = remote(MODULE.REMOTE_PLUGIN_COMPARE)
         self.assertEqual(program["version_spec"]("repo/app:v1@sha256:x", "repo/app"), "v1@sha256:x")
-        pattern = program["APPLICATION"]
-        self.assertTrue(pattern.fullmatch("notes_plugin.main:create_app"))
-        self.assertIsNone(pattern.fullmatch("--factory"))
+        applications = program["PLUGIN_APPLICATIONS"]
+        self.assertEqual(
+            set(applications), {"finance", "notes", "digital-oracle"}
+        )
+        self.assertEqual(applications["notes"], ("notes_plugin.main:create_app", "factory"))
+        self.assertEqual(applications["digital-oracle"], ("oracle_plugin.main:app", "app"))
         compile(program["DESCRIBE"], "describe", "exec")
 
 

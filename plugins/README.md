@@ -1,6 +1,6 @@
 # Independent business plugins
 
-These services are separately built Python artifacts. No service imports the Core `app` package or reads Core tables. `runtime/plugin_runtime` is a small, source-distributed library for MCP transport, release identity, wire projection and the operation journal; each image includes its own fixed copy. The public contracts, including release identity and write recovery, are in [writing-extensions.md](../docs/writing-extensions.md); plugin upgrades follow its [upgrade rule](../docs/writing-extensions.md#独立接入与升级).
+These services are separately built Python artifacts. No service imports the Core `app` package or reads Core tables. `runtime/plugin_runtime` is a small, source-distributed library for MCP transport, release identity, wire projection and the operation journal; the single application image carries one copy of it beside each plugin's own source, frozen lock file and virtual environment. The public contracts, including release identity and write recovery, are in [writing-extensions.md](../docs/writing-extensions.md); plugin upgrades follow its [upgrade rule](../docs/writing-extensions.md#独立接入与升级).
 
 | Artifact | Business ownership | Additional surface |
 | --- | --- | --- |
@@ -8,21 +8,21 @@ These services are separately built Python artifacts. No service imports the Cor
 | `digital_oracle` | Prediction markets, SEC filings, market sentiment, macro rates, crypto derivatives, CFTC positioning and options providers; source documents, prediction events and macro evidence for research | None; stateless |
 | `notes` | Non-financial immutable notes and collection search | [Read-only workspace](notes/README.md) at `/`, with its own read-only `/api/collections`, `/api/notes` and `/api/note` |
 
-Each artifact serves MCP at `/mcp/`, its descriptor at `GET /release` and its running release at `GET /health`. Unavailable Oracle providers report their absence; no synthetic upstream evidence is generated. The files under a plugin's directory and `plugins/runtime/` make up that plugin's [artifact digest](../docs/writing-extensions.md#发布描述), so editing anything there, including the Finance and Notes READMEs, produces a new release identity.
+Each plugin runs as its own container and service from the shared image, selected by the role argument `finance`, `notes` or `digital-oracle`, and serves MCP at `/mcp/`, its descriptor at `GET /release` and its running release at `GET /health`. Unavailable Oracle providers report their absence; no synthetic upstream evidence is generated. The files under a plugin's directory and `plugins/runtime/` make up that plugin's [artifact digest](../docs/writing-extensions.md#发布描述), so editing anything there, including the Finance and Notes READMEs, produces a new release identity. Sharing one image does not couple those identities: each digest still covers only its own directory plus the shared runtime.
 
 ## Build and run
 
-Run builds from the repository root. Finance and Notes use the root context to compile the shared UI from the locked frontend dependencies; Oracle keeps the `plugins` context:
+One build from the repository root produces the image that serves every plugin role:
 
 ```sh
-docker build -f plugins/finance/Dockerfile -t signaldeck-finance:1.5.0 .
-docker build -f plugins/digital_oracle/Dockerfile -t signaldeck-digital-oracle:1.0.0 plugins
-docker build -f plugins/notes/Dockerfile -t signaldeck-notes:1.3.0 .
+docker build -t signaldeck:local .
 ```
+
+Run a plugin by passing its role as the container command, for example `docker run signaldeck:local notes`. Each role starts from its own virtual environment on port 8000.
 
 Finance and Notes require `PLUGIN_DATABASE_URL`, pointing to a separately owned PostgreSQL database and role; neither falls back to Core's `DATABASE_URL`. Startup creates only that plugin's missing business tables and its `plugin_operations` journal; table ownership is listed in [data-model.md](../docs/data-model.md#插件业务数据). Oracle has no persistence.
 
-The Finance and Notes images build `frontend/src/plugin-ui` with the platform's React, shadcn primitives and theme sources. Their Python runtime serves the packaged JS/CSS at `/ui` without a running Core, frontend service or Node. The generated assets live in the Git-ignored `runtime/plugin_runtime/web/` and are part of the artifact digest. Before starting Finance or Notes as a local Python process, build them from the repository root:
+The image builds `frontend/src/plugin-ui` with the platform's React, shadcn primitives and theme sources. The Finance and Notes roles serve the packaged JS/CSS at `/ui` without a running Core, frontend service or Node. The generated assets live in the Git-ignored `runtime/plugin_runtime/web/` and are part of the artifact digest. Before starting Finance or Notes as a local Python process, build them from the repository root:
 
 ```sh
 (cd frontend && pnpm install --frozen-lockfile && pnpm build:plugin-ui)
@@ -86,10 +86,10 @@ uv run pytest tests/test_independent_plugins.py -q
 
 These tests run the plugins against isolated PostgreSQL databases through a real MCP Streamable HTTP client and server; they call no model service or paid provider. The Finance and Notes page tests are described in their READMEs.
 
-`plugins/tests/image_smoke.py` checks the three built images. It runs them by the tags that the build commands above give them, each plugin's `VERSION`, and expects a local PostgreSQL resolved like the [backend test database](../CONTRIBUTING.md#测试数据库与-e2e-环境) that the containers reach through `host.docker.internal`, and the backend virtual environment. From the repository root:
+`plugins/tests/image_smoke.py` checks the three plugin roles of the built image. It runs `signaldeck:local`, or the tag in `SIGNALDECK_IMAGE`, and expects a local PostgreSQL resolved like the [backend test database](../CONTRIBUTING.md#测试数据库与-e2e-环境) that the containers reach through `host.docker.internal`, and the backend virtual environment. From the repository root:
 
 ```sh
 backend/.venv/bin/python plugins/tests/image_smoke.py
 ```
 
-It creates UUID-named databases, starts one container per image, checks Finance HTTP compilation plus MCP report write and query and Notes MCP write and query, then removes its containers and databases. CI runs neither this check nor the Finance-only tests.
+It creates UUID-named databases, starts one container per role, checks Finance HTTP compilation plus MCP report write and query and Notes MCP write and query, then removes its containers and databases. CI runs neither this check nor the Finance-only tests.

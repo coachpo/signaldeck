@@ -1,4 +1,5 @@
-# Official single-application-image deployment. See deployment.md.
+# Official single-image deployment: every application and plugin role runs the
+# same published image. See deployment.md.
 x-core-environment: &core-environment
   SIGNALDECK_RUNTIME_MODE: production
   SIGNALDECK_PLUGIN_MOUNTS_FILE: /etc/signaldeck/plugins/plugin-mounts.json
@@ -68,7 +69,11 @@ services:
         condition: service_completed_successfully
   finance:
     profiles: ["finance"]
-    image: ${SIGNALDECK_FINANCE_IMAGE:-signaldeck-finance:1.5.0}
+    image: ${SIGNALDECK_PLUGIN_IMAGE:?Plugin image with tag or digest required}
+    command:
+      - finance
+    healthcheck:
+      disable: true
     environment:
       PLUGIN_DATABASE_URL: ${FINANCE_DATABASE_URL:-}
       PLUGIN_ENDPOINT: http://finance:8000/mcp/
@@ -81,7 +86,11 @@ services:
         condition: service_healthy
   digital-oracle:
     profiles: ["digital-oracle"]
-    image: ${SIGNALDECK_ORACLE_IMAGE:-signaldeck-digital-oracle:1.0.0}
+    image: ${SIGNALDECK_PLUGIN_IMAGE:?Plugin image with tag or digest required}
+    command:
+      - digital-oracle
+    healthcheck:
+      disable: true
     environment:
       PLUGIN_ENDPOINT: http://digital-oracle:8000/mcp/
       FRED_API_KEY: ${FRED_API_KEY:-}
@@ -90,7 +99,11 @@ services:
 
   notes:
     profiles: ["notes"]
-    image: ${SIGNALDECK_NOTES_IMAGE:-signaldeck-notes:1.3.0}
+    image: ${SIGNALDECK_PLUGIN_IMAGE:?Plugin image with tag or digest required}
+    command:
+      - notes
+    healthcheck:
+      disable: true
     environment:
       PLUGIN_DATABASE_URL: ${NOTES_DATABASE_URL:-}
       PLUGIN_ENDPOINT: http://notes:8000/mcp/

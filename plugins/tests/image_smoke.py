@@ -1,4 +1,4 @@
-"""Run the three built plugin images against disposable local PostgreSQL databases."""
+"""Run the three plugin roles of the built image against disposable local PostgreSQL databases."""
 
 import asyncio
 import os
@@ -23,6 +23,7 @@ base = _get_base_database_url()
 if base.host not in {"localhost", "127.0.0.1", "::1"}:
     raise ValueError("Image smoke requires local PostgreSQL")
 admin = create_engine(base.set(database="postgres"), isolation_level="AUTOCOMMIT")
+image = os.environ.get("SIGNALDECK_IMAGE", "signaldeck:local")
 containers = []
 databases = []
 
@@ -61,9 +62,8 @@ def start(name):
     ]
     if name != "digital-oracle":
         args += ["-e", "PLUGIN_DATABASE_URL"]
-    version = Path("plugins", name.replace("-", "_"), "VERSION").read_text().strip()
     subprocess.run(
-        args + [f"signaldeck-{name}:{version}"], env=env, check=True, stdout=subprocess.DEVNULL
+        args + [image, name], env=env, check=True, stdout=subprocess.DEVNULL
     )
     for _ in range(160):
         try:

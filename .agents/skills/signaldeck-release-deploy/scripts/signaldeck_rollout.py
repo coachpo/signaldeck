@@ -183,7 +183,12 @@ REMOTE_PLUGIN_COMPARE = (
     + r'''
 import tempfile
 
-APPLICATION = re.compile(r"[A-Za-z_][A-Za-z0-9_.]*:[A-Za-z_][A-Za-z0-9_]*")
+# Plugin roles of the single image, their ASGI application and how it is imported.
+PLUGIN_APPLICATIONS = {
+    "finance": ("finance_plugin.main:create_app", "factory"),
+    "notes": ("notes_plugin.main:create_app", "factory"),
+    "digital-oracle": ("oracle_plugin.main:app", "app"),
+}
 # Mirrors plugin_runtime.describe, but also accepts a module-level application and
 # prints only the release identity.
 DESCRIBE = """
@@ -210,14 +215,6 @@ def descriptor_identity(raw):
     return {"releaseId": value.get("releaseId"), "artifactDigest": value.get("artifactDigest")}
 
 
-def plugin_application(image_ref):
-    command = json.loads(run(["docker", "image", "inspect", image_ref, "--format", "{{json .Config.Cmd}}"])) or []
-    matches = [item for item in command if APPLICATION.fullmatch(item)]
-    if len(matches) != 1:
-        raise RuntimeError("plugin image command names no single application")
-    return matches[0], "factory" if "--factory" in command else "app"
-
-
 def service_environment(info):
     """The container's own environment minus the values its image defines."""
     image = json.loads(run(["docker", "image", "inspect", info["Image"]]))[0]
@@ -225,7 +222,7 @@ def service_environment(info):
     return [item for item in info.get("Config", {}).get("Env") or [] if item not in defaults]
 
 
-def compare_plugin(info, new_ref):
+def compare_plugin(info, new_ref, profile):
     probe = json.loads(run([
         "docker", "exec", info["Id"], "python", "-c", HTTP_PROBE, "/release", "10", "8000",
     ]))
@@ -233,7 +230,7 @@ def compare_plugin(info, new_ref):
         raise RuntimeError(f"running descriptor returned HTTP {probe['status']}")
     current = descriptor_identity(probe["body"])
     run(["docker", "pull", "--quiet", new_ref])
-    application, kind = plugin_application(new_ref)
+    application, kind = PLUGIN_APPLICATIONS[profile]
     # The descriptor digest covers the service configuration, so describe the new image
     # with the running service's environment, passed through a private file and no network.
     directory = tempfile.mkdtemp(prefix="signaldeck-describe-")
@@ -244,7 +241,7 @@ def compare_plugin(info, new_ref):
         described = subprocess.run(
             [
                 "docker", "run", "--rm", "--network", "none", "--env-file", str(env_file),
-                "--entrypoint", "python", new_ref, "-c", DESCRIBE, application, kind,
+                "--entrypoint", f"{profile}-python", new_ref, "-c", DESCRIBE, application, kind,
             ],
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
@@ -274,13 +271,18 @@ def plugin_compare_main():
     for entry in entries:
         profile = entry.get("profile")
         service = urlsplit(entry.get("descriptorUrl") or "").hostname
-        new_ref = args["images"].get(profile)
+        # Every plugin role runs the release image, so the new reference is shared.
+        new_ref = args["images"].get(profile) or args.get("plugin_image_ref")
         infos = containers.get(service, [])
-        if new_ref is None or len(infos) != 1:
+        if new_ref is None or profile not in PLUGIN_APPLICATIONS or len(infos) != 1:
             results[profile] = {"service": service, "status": "unknown", "reason": "no single current service"}
             continue
         try:
-            results[profile] = {"service": service, "status": "compared", **compare_plugin(infos[0], new_ref)}
+            results[profile] = {
+                "service": service,
+                "status": "compared",
+                **compare_plugin(infos[0], new_ref, profile),
+            }
         except (RuntimeError, ValueError, KeyError) as exc:
             results[profile] = {"service": service, "status": "unknown", "reason": str(exc)}
     print(json.dumps({"plugins": results}, sort_keys=True))
@@ -672,7 +674,7 @@ def main(argv: list[str] | None = None) -> int:
             stages[stage] = ssh_python(
                 args.host,
                 REMOTE_PLUGIN_COMPARE,
-                {**base, "images": {name: ref for name, ref in refs.items() if name != "app"}},
+                {**base, "images": {}, "plugin_image_ref": app_ref},
                 timeout=1800,
             )
         except OpsError as exc:

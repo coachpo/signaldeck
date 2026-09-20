@@ -4,7 +4,7 @@
 
 - Backend：`backend/pyproject.toml` 要求 Python >=3.13；CI、应用镜像和固定 Core 执行环境使用 Python 3.13.13，CI 与应用镜像使用 uv 0.11.7。worker 用 uv 按 Python 3.13.13 为每个 Core 制品建立执行环境，热更新开发、E2E 和部分 backend 测试都需要 uv 能提供该版本（可先运行 `uv python install 3.13.13`）。
 - Frontend：`frontend/package.json` 要求 Node >=24 并固定 pnpm 10.30.1；CI 使用 Node 24，镜像中的前端构建阶段使用 Node 26。
-- 插件镜像的 Python、uv 和依赖由各插件的 Dockerfile 与冻结锁文件单独固定；Core 升级依赖不代表插件同步升级。
+- 应用与三个插件共用同一个镜像，因此共用根 `Dockerfile` 固定的 Python 3.13.13、uv 0.11.7 和 Node 26 构建阶段；各插件仍有自己的 `pyproject.toml`、冻结锁文件和独立虚拟环境，Core 升级依赖不代表插件同步升级。
 - 依赖以 `backend/uv.lock` 和 `frontend/pnpm-lock.yaml` 为准，按锁文件安装，普通环境准备不升级依赖。
 - 本地栈、未指定数据库时的测试容器和镜像检查需要 Docker；热更新开发、真实 Temporal 的 backend 测试、E2E 和 ablation 需要 [Temporal CLI 1.8.3](#temporal-cli)。
 
@@ -145,7 +145,7 @@ python3 -m unittest discover -s frontend/gateway -p 'test_*.py'
 for tests in .agents/skills/*/scripts/tests; do python3 -m unittest discover -s "$tests" -p 'test_*.py'; done
 ```
 
-CI 的 job 与上述命令对应：`version-sync`（六处版本一致与这些单元测试）、`backend-quality` 与 `frontend-quality`（两组门禁中 E2E 以外的命令）、`frontend-e2e`（前三个 job 通过后运行 `pnpm test:e2e`）和 `container-images`（构建四个镜像并运行 `docker/verify_deployment.py`，Trivy 扫描不阻断）。CI 只上传 Trivy 报告，不上传 Playwright 报告或 trace。本地单独复现一个 spec 用 `(cd frontend && pnpm exec playwright test e2e/<name>.spec.ts)`，HTML 报告写入 Git 忽略的 `frontend/playwright-report/`；trace 只在第一次重试时记录，本地默认不重试。
+CI 的 job 与上述命令对应：`version-sync`（六处版本一致与这些单元测试）、`backend-quality` 与 `frontend-quality`（两组门禁中 E2E 以外的命令）、`frontend-e2e`（前三个 job 通过后运行 `pnpm test:e2e`）和 `container-images`（构建那一个镜像并运行 `docker/verify_deployment.py`，Trivy 扫描不阻断）。CI 只上传 Trivy 报告，不上传 Playwright 报告或 trace。本地单独复现一个 spec 用 `(cd frontend && pnpm exec playwright test e2e/<name>.spec.ts)`，HTML 报告写入 Git 忽略的 `frontend/playwright-report/`；trace 只在第一次重试时记录，本地默认不重试。
 
 CI 不运行以下套件，按改动范围补充：
 
@@ -161,7 +161,7 @@ python3 docker/test_plugin_gateway.py
 
 插件自身的测试与镜像冒烟见 [`plugins/README.md`](plugins/README.md)，Finance 页面、模板和报告的浏览器回归见 [`plugins/finance/README.md`](plugins/finance/README.md#验证)。
 
-修改根 `Dockerfile` 时运行 `docker build .`。修改应用或插件镜像、生产 Compose 时，再按[部署说明](docker/deployment.md#健康检查与本地验证)构建镜像并运行 `docker/verify_deployment.py`。所有变更最后运行 `git diff --check`。
+修改根 `Dockerfile`、插件代码或生产 Compose 时运行 `docker build .`，再按[部署说明](docker/deployment.md#健康检查与本地验证)运行 `docker/verify_deployment.py`。所有变更最后运行 `git diff --check`。
 
 ## 开发工作流
 
@@ -173,7 +173,7 @@ python3 docker/test_plugin_gateway.py
 
 `./release.sh patch --dry-run` 预览一次发布：只打印将执行的修改和命令，不改文件，也跳过干净工作区与分支检查。正式发布运行 `./release.sh patch`（或 `minor`、`major`、明确的 `X.Y.Z`；`--yes` 跳过确认）。脚本要求位于干净且已包含最新 `origin/main` 的 `main`，当前六处版本一致，目标版本更高，标签在本地和远端都未被使用；随后同步 `VERSION`、`backend/VERSION`、`backend/pyproject.toml`、`backend/uv.lock` 中的项目版本、`frontend/VERSION` 与 `frontend/package.json`（插件版本各自独立），运行 `uv lock --check`、`/health` 版本测试和前端构建并确认只改动了这六处，再提交 `chore: bump version to X.Y.Z`、打 `vX.Y.Z` 标签并推送 main 与标签。脚本不部署实例；CI 的 `version-sync` job 要求六处版本一致。
 
-`v*` 标签触发 [`Docker Images`](.github/workflows/docker-images.yml)：其 `verify-ci` job 每 30 秒查询一次发布提交上的 `ci.yml` 运行，最多约 40 分钟；只有结论为 success 才构建并推送应用与三个插件的 `linux/arm64` 镜像，失败、取消或超时都拒绝发布。推送 main 和 PR 不发布镜像；手动运行跳过 `verify-ci`，也不移动 `latest`。镜像名、完整标签（含手动运行的标签）和部署时的版本固定见[部署说明](docker/deployment.md#发布与镜像版本)。发布进行中不要再推送 main：CI 会取消同一分支上进行中的运行，包括发布提交的 CI。[`cleanup.yml`](.github/workflows/cleanup.yml) 只删除 7 天前的工作流运行记录（至少保留 3 条），从不删除镜像版本：历史多架构镜像的各平台 manifest 没有标签，删除未打标签的版本会破坏仍在使用的固定插件和回滚镜像。
+`v*` 标签触发 [`Docker Images`](.github/workflows/docker-images.yml)：其 `verify-ci` job 每 30 秒查询一次发布提交上的 `ci.yml` 运行，最多约 40 分钟；只有结论为 success 才构建并推送那个 `linux/arm64` 应用镜像，失败、取消或超时都拒绝发布。推送 main 和 PR 不发布镜像；手动运行跳过 `verify-ci`，也不移动 `latest`。镜像名、完整标签（含手动运行的标签）和部署时的版本固定见[部署说明](docker/deployment.md#发布与镜像版本)。发布进行中不要再推送 main：CI 会取消同一分支上进行中的运行，包括发布提交的 CI。手动运行不再选择服务，只构建同一个镜像。[`cleanup.yml`](.github/workflows/cleanup.yml) 只删除 7 天前的工作流运行记录（至少保留 3 条），从不删除镜像版本：历史多架构镜像的各平台 manifest 没有标签，删除未打标签的版本会破坏仍在使用的固定插件和回滚镜像。
 
 实例巡检、备份与恢复演练、发布和带门禁的部署由 `.agents/skills/` 下的三个运维 skill 执行，入口见[文档索引](docs/README.md#专项文档)。
 

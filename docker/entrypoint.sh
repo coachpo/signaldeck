@@ -11,6 +11,20 @@ case "$role" in
     # Reuse the API configuration contract before starting any long-lived process.
     python -c 'from app.core.config import get_settings; get_settings()'
     ;;
+  # Plugin roles are independent services that never load the Core configuration;
+  # each runs from its own frozen virtual environment.
+  finance)
+    exec finance-python -m uvicorn finance_plugin.main:create_app --factory \
+      --host 0.0.0.0 --port 8000 --no-access-log "$@"
+    ;;
+  notes)
+    exec notes-python -m uvicorn notes_plugin.main:create_app --factory \
+      --host 0.0.0.0 --port 8000 --no-access-log "$@"
+    ;;
+  digital-oracle)
+    exec digital-oracle-python -m uvicorn oracle_plugin.main:app \
+      --host 0.0.0.0 --port 8000 --no-access-log "$@"
+    ;;
   *) exec "$role" "$@" ;;
 esac
 

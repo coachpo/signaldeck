@@ -40,7 +40,7 @@ schema/1 拒绝 `default` 和 `examples`。需要这两个注解的 schema 节�
 
 插件以 `GET /release` 提供描述，`GET /health` 返回 `{status, releaseId}`。Core 通过 `POST /api/plugins` 登记描述，`PATCH /api/plugins/{publisher}/{plugin}` 修改 enabled；同一插件与制品身份不能登记不同描述（`release_conflict`）。目录读取只返回保存的描述和已有 operation 健康观测，不连接插件；禁用的无关插件不参与 launch 解析。
 
-每次调用的 `_meta["signaldeck/release"]` 携带四字段精确身份：pluginId、releaseId、artifactDigest、contractDigest。MCP adapter 验证协议、工具集合与发布绑定，插件也拒绝身份不符的业务调用。制品摘要在进程启动时对插件目录和共享 runtime 下的全部文件计算，包括 VERSION、代码、web assets、Dockerfile、锁文件和随包文档，只排除 `__pycache__`、`.venv` 和 `.git`；Finance 和 Oracle 还绑定已解析的非敏感 provider 设置。因此修改随包文档或这些设置同样会产生新的制品身份。
+每次调用的 `_meta["signaldeck/release"]` 携带四字段精确身份：pluginId、releaseId、artifactDigest、contractDigest。MCP adapter 验证协议、工具集合与发布绑定，插件也拒绝身份不符的业务调用。制品摘要在进程启动时对插件目录和共享 runtime 下的全部文件计算，包括 VERSION、代码、web assets、锁文件和随包文档，只排除 `__pycache__`、`.venv` 和 `.git`；三个插件与应用共用一个镜像，但摘要只覆盖自己的目录和共享 runtime，因此各自的制品身份仍然独立；Finance 和 Oracle 还绑定已解析的非敏感 provider 设置。因此修改随包文档或这些设置同样会产生新的制品身份。
 
 ### 声明结果页面链接
 

@@ -50,19 +50,14 @@ done
 def verify(args):
     env = {key: os.environ[key] for key in ("PATH", "HOME")}
     env.update({name: secrets.token_hex(24) for name in PASSWORDS})
-    plugins = {"notes": args.notes_image}
-    if args.finance_image:
-        plugins["finance"] = args.finance_image
-        env["SIGNALDECK_FINANCE_IMAGE"] = args.finance_image
-    if args.oracle_image:
-        plugins["digital-oracle"] = args.oracle_image
-        env["SIGNALDECK_ORACLE_IMAGE"] = args.oracle_image
+    plugin_image = args.plugin_image or args.app_image
+    plugins = ("finance", "notes", "digital-oracle")
     with socket.socket() as probe:
         probe.bind(("127.0.0.1", 0))
         port = probe.getsockname()[1]
     env.update(
         SIGNALDECK_IMAGE=args.app_image,
-        SIGNALDECK_NOTES_IMAGE=args.notes_image,
+        SIGNALDECK_PLUGIN_IMAGE=plugin_image,
         DATABASE_URL=f"postgresql+psycopg://signaldeck_core:{env['CORE_DB_PASSWORD']}@db:5432/signaldeck_core",
         FINANCE_DATABASE_URL=f"postgresql+psycopg://signaldeck_finance:{env['FINANCE_DB_PASSWORD']}@db:5432/signaldeck_finance",
         NOTES_DATABASE_URL=f"postgresql+psycopg://signaldeck_notes:{env['NOTES_DB_PASSWORD']}@db:5432/signaldeck_notes",
@@ -85,7 +80,7 @@ def verify(args):
     context = json.loads(run(["docker", "context", "inspect"]))[0]
     if not context["Endpoints"]["docker"]["Host"].startswith("unix://"):
         raise RuntimeError("Select a local Unix-socket Docker context for this test")
-    for image in (args.app_image, *plugins.values()):
+    for image in {args.app_image, plugin_image}:
         run(["docker", "image", "inspect", image])
     project = "sd-deployment-check-" + uuid4().hex[:12]
     compose = [
@@ -280,14 +275,9 @@ def verify(args):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--app-image", default="signaldeck:local")
-    parser.add_argument("--notes-image", default="signaldeck-notes:1.3.0")
     parser.add_argument(
-        "--finance-image",
-        help="Also verify Finance startup, registration and page mount",
-    )
-    parser.add_argument(
-        "--oracle-image",
-        help="Also verify Oracle startup and registration without provider calls",
+        "--plugin-image",
+        help="Image for the plugin roles; defaults to the application image",
     )
     args = parser.parse_args()
     verify(args)

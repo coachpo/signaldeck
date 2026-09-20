@@ -83,7 +83,16 @@ class EntrypointTests(unittest.TestCase):
         template.parent.mkdir(parents=True)
         template.write_text("server {}\n")
         (self.root / "etc/nginx/conf.d").mkdir()
-        for name in ("python", "nginx", "uvicorn", "envsubst", "utility"):
+        for name in (
+            "python",
+            "nginx",
+            "uvicorn",
+            "envsubst",
+            "utility",
+            "finance-python",
+            "notes-python",
+            "digital-oracle-python",
+        ):
             stub = self.root / name
             stub.write_text(f"#!{sys.executable}\n{STUB}")
             stub.chmod(0o755)
@@ -183,6 +192,32 @@ class EntrypointTests(unittest.TestCase):
                 self.assertEqual(ready["args"], ["-m", module, *extra, "--example"])
                 process.terminate()
                 self.assertEqual(process.wait(timeout=5), 0)
+
+    def test_plugin_roles_run_their_own_environment_without_core_configuration(self):
+        for role, module in (
+            ("finance", "finance_plugin.main:create_app"),
+            ("notes", "notes_plugin.main:create_app"),
+            ("digital-oracle", "oracle_plugin.main:app"),
+        ):
+            with self.subTest(role=role):
+                self.events.unlink(missing_ok=True)
+                process = self.launch(role, PREFLIGHT_STATUS="4")
+                ready = self.wait_ready(1)[0]
+                self.assertEqual(ready["name"], f"{role}-python")
+                self.assertEqual(ready["pid"], process.pid)
+                self.assertEqual(ready["args"][:3], ["-m", "uvicorn", module])
+                self.assertIn("--port", ready["args"])
+                self.assertEqual(
+                    ready["args"][ready["args"].index("--port") + 1], "8000"
+                )
+                self.assertEqual(
+                    ready["args"][ready["args"].index("--host") + 1], "0.0.0.0"
+                )
+                process.terminate()
+                self.assertEqual(process.wait(timeout=5), 0)
+                self.assertFalse(
+                    any(event["name"] == "python" for event in self.recorded())
+                )
 
     def test_explicit_command_replaces_entrypoint_without_service_configuration(self):
         process = self.launch("utility", "--example", PREFLIGHT_STATUS="4")

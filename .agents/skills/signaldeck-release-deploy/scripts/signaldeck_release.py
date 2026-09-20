@@ -25,13 +25,9 @@ class ReleaseError(RuntimeError):
 SECRET_PATTERN = re.compile(
     r"(?i)(password|passwd|token|secret|api[-_ ]?key|credential|authorization|cookie|database[_ .-]?url)"
 )
-# Matrix services of .github/workflows/docker-images.yml and their GHCR image names.
-IMAGES = {
-    "app": "signaldeck",
-    "finance": "signaldeck-finance",
-    "notes": "signaldeck-notes",
-    "digital-oracle": "signaldeck-digital-oracle",
-}
+# The single image of .github/workflows/docker-images.yml, which every
+# application and plugin role runs, and its GHCR image name.
+IMAGES = {"app": "signaldeck"}
 WORKFLOWS = ("CI", "Docker Images")
 SINGLE_MANIFEST_TYPES = {
     "application/vnd.oci.image.manifest.v1+json",

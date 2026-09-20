@@ -78,7 +78,7 @@ if [[ -z "${SIGNALDECK_PLUGIN_MOUNTS_FILE:-}" || "$generated_registry" == 1 ]]; 
   "${compose[@]}" run --no-deps --rm -T --entrypoint python app \
     /opt/signaldeck/prepare_plugin_mounts.py --factories "$SIGNALDECK_PLUGINS" >"$descriptor_dir/factories"
   while read -r plugin factory; do
-    if ! "${compose[@]}" run --no-deps --rm -T --entrypoint python "$plugin" \
+    if ! "${compose[@]}" run --no-deps --rm -T --entrypoint "$plugin-python" "$plugin" \
       -m plugin_runtime.describe "$factory" >"$descriptor_dir/$plugin.json" </dev/null; then
       rm -f "$descriptor_dir/$plugin.json"
       printf 'Plugin page unavailable: %s; Core remains usable.\n' "$plugin" >&2

@@ -30,7 +30,7 @@ Script paths below are relative to this skill. Run them from the repository root
 
 1. Run `python3 scripts/signaldeck_release.py plan --spec <patch|minor|major|X.Y.Z>`.
 2. Read [references/release-manifest.md](references/release-manifest.md).
-3. Run `python3 scripts/signaldeck_release.py execute --spec <spec> --confirm-release <tag>` once. It runs `release.sh`, waits for the release commit's CI and the tag's `Docker Images` workflow (up to `--timeout-seconds`, default 3600), verifies all four images on the host, and writes the manifest under ignored `artifacts/evidence/signaldeck-ops/releases/`.
+3. Run `python3 scripts/signaldeck_release.py execute --spec <spec> --confirm-release <tag>` once. It runs `release.sh`, waits for the release commit's CI and the tag's `Docker Images` workflow (up to `--timeout-seconds`, default 3600), verifies the published image on the host, and writes the manifest under ignored `artifacts/evidence/signaldeck-ops/releases/`.
 4. If the tag and images were published but writing the manifest failed, use `recover --spec X.Y.Z --confirm-release vX.Y.Z`; it validates only and never re-tags, pushes or rebuilds.
 
 ## Rollout stage
