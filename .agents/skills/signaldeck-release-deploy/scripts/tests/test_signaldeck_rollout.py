@@ -60,7 +60,9 @@ PREFLIGHT = {
         "app_repository": "ghcr.io/coachpo/signaldeck",
     },
     "previous_app_image": "ghcr.io/coachpo/signaldeck:sha-old@sha256:" + "e" * 64,
-    "service_images": {"db": "postgres:16"},
+    # Plugin services run the application repository under their own pins, so the rollout
+    # must leave their images unchanged.
+    "service_images": {"db": "postgres:16", "finance-6198bd5c": "ghcr.io/coachpo/signaldeck:sha-" + "6" * 40},
 }
 
 
@@ -197,6 +199,7 @@ class OrchestrationTests(unittest.TestCase):
         self.assertIn("--confirm-backup", backups[0])
         self.assertEqual(host.payloads["observe"]["seconds"], 5)
         self.assertEqual(host.payloads["post_deploy"]["backup_counts"], {"signaldeck_core": {"public.platform_runs": 1}})
+        self.assertEqual(host.payloads["post_deploy"]["service_images"], PREFLIGHT["service_images"])
 
     def test_incompatible_schema_stops_before_any_change(self) -> None:
         host = FakeHost(compatible=False)

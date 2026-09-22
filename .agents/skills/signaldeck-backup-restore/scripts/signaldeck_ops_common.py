@@ -192,6 +192,17 @@ def project_containers(project):
     return services
 
 
+def version_pinned_services(topology):
+    """Services whose rendered image changes with the stack's version variable."""
+    def rendered_images(value):
+        environment = {**os.environ, topology["version_var"]: value}
+        config = json.loads(run(compose_argv(topology, "config", "--format", "json"), env=environment))
+        return {name: service.get("image") for name, service in config.get("services", {}).items()}
+
+    first, second = rendered_images("ops-probe-a"), rendered_images("ops-probe-b")
+    return {name for name, image in first.items() if second.get(name) != image}
+
+
 def discover(project, backup_root_override=None):
     if not re.fullmatch(r"[a-z0-9][a-z0-9_-]{0,62}", project):
         raise RuntimeError("invalid Compose project name")
@@ -216,12 +227,6 @@ def discover(project, backup_root_override=None):
     for name in REQUIRED_SERVICES:
         if len(services.get(name, [])) != 1:
             raise RuntimeError(f"expected one {name} container, found {len(services.get(name, []))}")
-    app_repository = split_image_ref(services["app"][0]["Config"]["Image"])[0]
-    app_roles = sorted(
-        name
-        for name, infos in services.items()
-        if all(split_image_ref(info["Config"]["Image"])[0] == app_repository for info in infos)
-    )
     if backup_root_override:
         backup_root = Path(backup_root_override)
         if not backup_root.is_absolute():
@@ -230,18 +235,24 @@ def discover(project, backup_root_override=None):
     else:
         backup_root = (deploy_root / "backups").resolve()
     deploy_name = str(service_dir.relative_to(deploy_root))
-    return {
+    topology = {
         "project": project,
         "config_file": config_file,
         "service_dir": service_dir,
         "deploy_root": deploy_root,
         "deploy_name": deploy_name,
         "env_file": env_file,
-        "app_repository": app_repository,
-        "app_roles": app_roles,
+        "app_repository": split_image_ref(services["app"][0]["Config"]["Image"])[0],
         "backup_root": backup_root,
         "version_var": re.sub(r"[^A-Z0-9]", "_", deploy_name.upper()) + "_VERSION",
     }
+    # Plugin services run the same image repository but are pinned by their own variables,
+    # so the application roles are the running services the version variable pins.
+    pinned = version_pinned_services(topology)
+    if "app" not in pinned:
+        raise RuntimeError(f"the app image does not follow {topology['version_var']}")
+    topology["app_roles"] = sorted(name for name in services if name in pinned)
+    return topology
 
 
 def public_topology(topology):

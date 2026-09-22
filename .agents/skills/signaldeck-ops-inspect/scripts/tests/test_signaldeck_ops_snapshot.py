@@ -18,6 +18,8 @@ assert SPEC and SPEC.loader
 SPEC.loader.exec_module(MODULE)
 
 IMAGE = "ghcr.io/coachpo/signaldeck:v0.2.0@sha256:" + "a" * 64
+# Plugin services run the application repository but are pinned by their own variables.
+PLUGIN_IMAGE = "ghcr.io/coachpo/signaldeck:sha-" + "6" * 40
 
 
 def entry(status: str = "running", health: str | None = None, image: str = IMAGE, exit_code: int = 0) -> dict[str, object]:
@@ -28,15 +30,16 @@ def healthy_snapshot() -> dict[str, object]:
     return {
         "repository": {"version_surfaces": {"VERSION": "0.2.0", "backend/VERSION": "0.2.0"}},
         "deployment": {
-            "topology": {"app_roles": ["app", "bootstrap", "dispatcher", "worker"]},
+            "topology": {"app_roles": ["app", "bootstrap", "dispatcher", "plugin-mounts", "worker"]},
             "services": {
                 "app": [entry(health="healthy")],
                 "bootstrap": [entry(status="exited")],
                 "dispatcher": [entry()],
+                "plugin-mounts": [entry(status="exited")],
                 "worker": [entry()],
                 "db": [entry(health="healthy", image="postgres:16")],
                 "temporal": [entry(health="healthy", image="temporalio/server")],
-                "notes-84c3ec46": [entry(image="ghcr.io/coachpo/signaldeck-notes:sha-1")],
+                "notes-84c3ec46": [entry(image=PLUGIN_IMAGE)],
             },
             "pinned_app_image": IMAGE,
             "http": {"ready": {"status": 200}},

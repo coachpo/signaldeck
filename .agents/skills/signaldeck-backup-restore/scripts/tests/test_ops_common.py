@@ -183,6 +183,46 @@ class RemoteHelperTests(unittest.TestCase):
         )
         self.assertEqual(regressions(before, {"signaldeck_core": {**before["signaldeck_core"], "public.platform_runs": 4}}), [])
 
+    def test_application_roles_are_the_services_the_version_variable_pins(self) -> None:
+        repository = "ghcr.io/coachpo/signaldeck"
+        release = f"{repository}:v0.3.0"
+        # The plugin service runs the application repository under its own version variable.
+        running = {
+            **{name: release for name in ("app", "bootstrap", "dispatcher", "plugin-mounts", "worker")},
+            "finance-6198bd5c": f"{repository}:sha-" + "6" * 40,
+            "db": "postgres:16",
+            "temporal": "temporalio/server",
+        }
+
+        def renderer(*followers: str):
+            """Render the version variable into the followers' images; every other image is literal."""
+
+            def render(argv: list[str], env: dict[str, str], **_: object) -> str:
+                self.assertEqual(argv[-3:], ["config", "--format", "json"])
+                images = {**running, "never-started": release}
+                images.update({name: f"{repository}:{env['SIGNALDECK_VERSION']}" for name in followers})
+                return json.dumps({"services": {name: {"image": image} for name, image in images.items()}})
+
+            return render
+
+        with tempfile.TemporaryDirectory() as directory:
+            config = Path(directory) / "signaldeck" / "compose.yml"
+            config.parent.mkdir()
+            config.write_text("services: {}\n", encoding="utf-8")
+            self.remote["compose_rows"] = lambda: [{"Name": "signaldeck", "ConfigFiles": str(config)}]
+            self.remote["project_containers"] = lambda project: {
+                name: [{"Config": {"Image": image}}] for name, image in running.items()
+            }
+            self.remote["run"] = renderer("app", "bootstrap", "dispatcher", "plugin-mounts", "worker", "never-started")
+            topology = self.remote["discover"]("signaldeck")
+            self.assertEqual(topology["version_var"], "SIGNALDECK_VERSION")
+            self.assertEqual(topology["app_repository"], repository)
+            self.assertEqual(topology["app_roles"], ["app", "bootstrap", "dispatcher", "plugin-mounts", "worker"])
+
+            self.remote["run"] = renderer("dispatcher", "worker")
+            with self.assertRaisesRegex(RuntimeError, "does not follow SIGNALDECK_VERSION"):
+                self.remote["discover"]("signaldeck")
+
     def test_engine_databases_are_not_counted(self) -> None:
         self.assertTrue(self.remote["is_engine_database"]("signaldeck_temporal_visibility"))
         self.assertFalse(self.remote["is_engine_database"]("signaldeck_core"))
