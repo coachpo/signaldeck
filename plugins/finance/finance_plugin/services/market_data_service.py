@@ -643,6 +643,17 @@ class MarketDataService:
                     details={"symbol": normalized_symbol, "provider": provider_result.provider},
                 )
             )
+        if any(transaction.filed_at is None for transaction in transactions):
+            warnings.append(
+                self._runtime_warning(
+                    code="insider_filing_time_unavailable",
+                    message=(
+                        "Insider transactions carry their transaction dates only; "
+                        "when each was filed is unavailable"
+                    ),
+                    details={"symbol": normalized_symbol},
+                )
+            )
         return RuntimeInsiderDataLookupResult(
             symbol=(
                 normalize_symbol(provider_result.symbol)

@@ -21,6 +21,12 @@ from . import runtime_types
 from .api import reports, templates
 from .config import FinanceSettings
 from .contracts import RuntimeToolContext
+from .estimate_tools import TOOL_ID as ESTIMATES_TOOL_ID
+from .estimate_tools import definition as estimates_definition
+from .estimate_tools import execute as execute_estimates
+from .holder_tools import TOOL_ID as HOLDERS_TOOL_ID
+from .holder_tools import definition as holders_definition
+from .holder_tools import execute as execute_holders
 from .models.base import Base
 from .models.report import Report
 from .price_event_tools import TOOL_ID as PRICE_EVENTS_TOOL_ID
@@ -92,6 +98,8 @@ def create_app(database_url=None, quote_provider=None, *, settings: FinanceSetti
         for spec, model, title in zip(specs, models, capability_titles, strict=True)
     ]
     definitions.append(price_events_definition())
+    definitions.append(holders_definition())
+    definitions.append(estimates_definition())
     report_schema = model_wire_schema(ReportRead)
     definitions.append(
         tool(
@@ -199,6 +207,10 @@ def create_app(database_url=None, quote_provider=None, *, settings: FinanceSetti
             )
             if any(symbol.upper() not in allowed for symbol in requested):
                 raise ValueError("finance_symbol_not_granted")
+        if name == HOLDERS_TOOL_ID:
+            return execute_holders(arguments, context)
+        if name == ESTIMATES_TOOL_ID:
+            return execute_estimates(arguments, context)
         spec = handlers[name]
         return project(spec.executor(context, spec.parser(json.dumps(arguments))))
 

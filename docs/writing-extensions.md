@@ -196,6 +196,16 @@ Finance 的 `research_evidence_merge` 保存完整证据和来源覆盖，同时
 
 限制：只有日线；Yahoo 历史数据是当前版本，不是时点存档；分红复权依赖 provider 的复权收盘价，provider 未计入的公司行为仍可能表现为跳空；单根错误报价无法与真实波动自动区分。
 
+## Finance 持仓、分析师预期与内部人交易合同
+
+只读工具 `signaldeck/finance/holders_lookup` 和 `signaldeck/finance/analyst_estimates_lookup` 分别读取一只证券的当前持仓结构和分析师一致预期，`insider_data_lookup` 读取它的内部人交易。三者都需要 `finance-market-data`，`symbol` 必须在 `allowedSymbols` 内。持仓和预期是 provider 在 `retrievedAt` 时的当前快照，没有更早的版本，所以不能回答过去某日的持仓或预期；结果也不构成交易建议。
+
+- `holders_lookup` 只接受 `symbol`。输出包括：`breakdown`，即内部人和机构持股占总股本的百分比、机构持股占流通股的百分比以及机构数量；`institutions` 和 `funds`，即 provider 列出的最大机构和基金持有人，每项给出名称、`reportDate`、`percentHeld`、股数、市值和持仓变化百分比 `percentChange`；`insiders`，即内部人的职位、直接持股、最近一笔交易及日期。`reportDate` 取自各持有人最近一期定期申报，不同持有人可能不同。
+- `analyst_estimates_lookup` 接受 `symbol` 和 `ratingChangeLimit`（0–50，默认 10，0 表示不返回评级变动）。`periods` 按 provider 的期间标签组织：`0q` 为当前财季，`+1q` 为下一财季，`0y` 为当前财年，`+1y` 为下一财年，以取数时 provider 的定义为准。每个期间给出 EPS 和营收预期的均值、区间、分析师数、上年同期值、增长百分比和币种，EPS 预期在 7、30、60、90 天前的值，以及近 7 天和 30 天的上调、下调次数。另外还给出目标价区间、当月及前三个月的评级分布、最近几个已报告季度的 EPS 实际值、预期值和意外百分比（新的在前）、最新的评级变动（新的在前）和变动总数 `ratingChangeCount`。发布合同把 `timeoutSeconds` 设为 90 秒，以覆盖对 provider 的五次读取。
+- `insider_data_lookup` 按交易日期从新到旧返回，`startDate` 和 `endDate` 限定的是交易日期。`transactionType` 和 `price` 取自 provider 的交易描述；描述给出价格区间时不填单一价格。provider 只给交易日期、没有申报时间时，结果省略 `filedAt` 并给出 `insider_filing_time_unavailable` warning。
+
+百分比字段都是百分数，例如 `7.97` 表示 7.97%；金额和价格是十进制字符串，股数和计数是整数。provider 读取失败时，结果为空并带 `holders_unavailable` 或 `analyst_estimates_unavailable` warning；provider 没有返回任何数据时，给出 `holders_empty` 或 `analyst_estimates_empty`。任何情况下都不生成替代数据。
+
 ## 独立接入与升级
 
 1. 构建独立服务，发布上述身份与工具合同，在插件端完成 schema、scope 和 effect 校验。

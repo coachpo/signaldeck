@@ -424,7 +424,10 @@ _SOCIAL_SENTIMENT_LOOKUP_PARAMETERS_SCHEMA: dict[str, object] = {
 }
 
 _INSIDER_DATA_LOOKUP_DESCRIPTION = (
-    "Read provider-backed insider transactions for one symbol " "and optional bounded dates."
+    "Read provider-backed insider transactions for one symbol, newest first, optionally "
+    "bounded by transaction date. transactionType and price come from the provider's row "
+    "description, which gives no single price for a price range; filedAt appears only when "
+    "the provider reports the filing time."
 )
 _INSIDER_DATA_LOOKUP_GUIDANCE = (
     "When you need insider transactions, call signaldeck_finance_insider_data_lookup "

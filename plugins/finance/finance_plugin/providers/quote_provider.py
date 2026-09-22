@@ -7,6 +7,19 @@ from typing import Literal, Protocol
 
 from plugin_runtime.formatting import normalize_symbol, to_utc
 
+from ..estimate_contracts import (
+    AnalystEstimatesSnapshot,
+    EarningsSurprise,
+    EpsRevisions,
+    EpsTrend,
+    EstimatePeriod,
+    EstimateRange,
+    PriceTarget,
+    RatingChange,
+    RecommendationCount,
+)
+from ..holder_contracts import HolderPosition, HoldersSnapshot, InsiderHolding, OwnershipBreakdown
+
 
 class QuoteProviderError(Exception):
     def __init__(
@@ -155,6 +168,10 @@ class QuoteProvider(Protocol):
         end_date: datetime | None,
         limit: int,
     ) -> ProviderInsiderData: ...
+
+    def fetch_holders(self, symbol: str) -> HoldersSnapshot: ...
+
+    def fetch_analyst_estimates(self, symbol: str) -> AnalystEstimatesSnapshot: ...
 
 
 class DeterministicQuoteProvider:
@@ -422,6 +439,121 @@ class DeterministicQuoteProvider:
                     transaction_date=transaction_date,
                 )
             ][:limit],
+        )
+
+    def fetch_holders(self, symbol: str) -> HoldersSnapshot:
+        reported = date(2024, 3, 31)
+        return HoldersSnapshot(
+            symbol=normalize_symbol(symbol),
+            provider=self.provider_name,
+            breakdown=OwnershipBreakdown(
+                insiders_percent=Decimal("1.5"),
+                institutions_percent=Decimal("60.2"),
+                institutions_float_percent=Decimal("61.1"),
+                institution_count=4200,
+            ),
+            institutions=[
+                HolderPosition(
+                    holder="Deterministic Institution",
+                    report_date=reported,
+                    percent_held=Decimal("7.5"),
+                    shares=1000000,
+                    value=Decimal("180000000"),
+                    percent_change=Decimal("1.2"),
+                )
+            ],
+            funds=[
+                HolderPosition(
+                    holder="Deterministic Fund",
+                    report_date=reported,
+                    percent_held=Decimal("3.1"),
+                    shares=400000,
+                    value=Decimal("72000000"),
+                    percent_change=Decimal("-0.4"),
+                )
+            ],
+            insiders=[
+                InsiderHolding(
+                    name="Deterministic Insider",
+                    position="Director",
+                    latest_transaction="Purchase",
+                    latest_transaction_date=date(2024, 3, 29),
+                    shares_owned_directly=10000,
+                    position_direct_date=date(2024, 3, 29),
+                )
+            ],
+        )
+
+    def fetch_analyst_estimates(self, symbol: str) -> AnalystEstimatesSnapshot:
+        return AnalystEstimatesSnapshot(
+            symbol=normalize_symbol(symbol),
+            provider=self.provider_name,
+            periods=[
+                EstimatePeriod(
+                    period="0q",
+                    eps=EstimateRange(
+                        average=Decimal("1.5"),
+                        low=Decimal("1.4"),
+                        high=Decimal("1.6"),
+                        year_ago=Decimal("1.3"),
+                        analyst_count=20,
+                        growth_percent=Decimal("15.4"),
+                        currency="USD",
+                    ),
+                    revenue=EstimateRange(
+                        average=Decimal("90000000000"),
+                        low=Decimal("88000000000"),
+                        high=Decimal("92000000000"),
+                        year_ago=Decimal("85000000000"),
+                        analyst_count=18,
+                        growth_percent=Decimal("5.9"),
+                        currency="USD",
+                    ),
+                    eps_trend=EpsTrend(
+                        current=Decimal("1.5"),
+                        seven_days_ago=Decimal("1.5"),
+                        thirty_days_ago=Decimal("1.48"),
+                        sixty_days_ago=Decimal("1.45"),
+                        ninety_days_ago=Decimal("1.44"),
+                    ),
+                    eps_revisions=EpsRevisions(
+                        up_last7_days=1, up_last30_days=3, down_last7_days=0, down_last30_days=1
+                    ),
+                )
+            ],
+            price_target=PriceTarget(
+                current=Decimal("180.5"),
+                high=Decimal("220"),
+                low=Decimal("150"),
+                mean=Decimal("195.2"),
+                median=Decimal("197"),
+            ),
+            recommendations=[
+                RecommendationCount(
+                    period="0m", strong_buy=5, buy=10, hold=8, sell=1, strong_sell=0
+                )
+            ],
+            earnings_history=[
+                EarningsSurprise(
+                    quarter_end=date(2023, 12, 31),
+                    eps_actual=Decimal("1.4"),
+                    eps_estimate=Decimal("1.35"),
+                    eps_difference=Decimal("0.05"),
+                    surprise_percent=Decimal("3.7"),
+                )
+            ],
+            rating_changes=[
+                RatingChange(
+                    at=datetime(2024, 3, 28, 12, tzinfo=UTC),
+                    firm="Deterministic Securities",
+                    to_grade="Buy",
+                    from_grade="Hold",
+                    action="up",
+                    price_target_action="Raises",
+                    current_price_target=Decimal("200"),
+                    prior_price_target=Decimal("185"),
+                )
+            ],
         )
 
     def download_history(self, symbol: str, start: date, end: date) -> list[dict[str, object]]:
