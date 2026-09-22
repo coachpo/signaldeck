@@ -248,6 +248,332 @@ agents:
             type: string
         cutoffAt:
           type: string
+        holders:
+          maxItems: 1
+          type: array
+          items:
+            type: object
+            properties:
+              symbol:
+                type: string
+              provider:
+                type: string
+              breakdown:
+                type: object
+                properties:
+                  insidersPercent:
+                    type: string
+                  institutionsPercent:
+                    type: string
+                  institutionsFloatPercent:
+                    type: string
+                  institutionCount:
+                    type: integer
+                required: []
+                unevaluatedProperties: false
+              institutions:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    holder:
+                      type: string
+                    reportDate:
+                      type: string
+                    percentHeld:
+                      type: string
+                    shares:
+                      type: integer
+                    value:
+                      type: string
+                    percentChange:
+                      type: string
+                  required:
+                  - holder
+                  unevaluatedProperties: false
+              funds:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    holder:
+                      type: string
+                    reportDate:
+                      type: string
+                    percentHeld:
+                      type: string
+                    shares:
+                      type: integer
+                    value:
+                      type: string
+                    percentChange:
+                      type: string
+                  required:
+                  - holder
+                  unevaluatedProperties: false
+              insiders:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    position:
+                      type: string
+                    latestTransaction:
+                      type: string
+                    latestTransactionDate:
+                      type: string
+                    sharesOwnedDirectly:
+                      type: integer
+                    positionDirectDate:
+                      type: string
+                  required:
+                  - name
+                  unevaluatedProperties: false
+              retrievedAt:
+                type: string
+              warnings:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    code:
+                      type: string
+                    message:
+                      type: string
+                    details:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          key:
+                            type: string
+                          value:
+                            type: string
+                        required:
+                        - key
+                        - value
+                        unevaluatedProperties: false
+                  required:
+                  - code
+                  - message
+                  - details
+                  unevaluatedProperties: false
+            required:
+            - symbol
+            - provider
+            - retrievedAt
+            unevaluatedProperties: false
+        estimates:
+          maxItems: 1
+          type: array
+          items:
+            type: object
+            properties:
+              symbol:
+                type: string
+              provider:
+                type: string
+              periods:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    period:
+                      description: 0q current and +1q next fiscal quarter; 0y, +1y years.
+                      type: string
+                    eps:
+                      type: object
+                      properties:
+                        average:
+                          type: string
+                        low:
+                          type: string
+                        high:
+                          type: string
+                        yearAgo:
+                          type: string
+                        analystCount:
+                          type: integer
+                        growthPercent:
+                          type: string
+                        currency:
+                          type: string
+                      required: []
+                      unevaluatedProperties: false
+                    revenue:
+                      type: object
+                      properties:
+                        average:
+                          type: string
+                        low:
+                          type: string
+                        high:
+                          type: string
+                        yearAgo:
+                          type: string
+                        analystCount:
+                          type: integer
+                        growthPercent:
+                          type: string
+                        currency:
+                          type: string
+                      required: []
+                      unevaluatedProperties: false
+                    epsTrend:
+                      type: object
+                      properties:
+                        current:
+                          type: string
+                        sevenDaysAgo:
+                          type: string
+                        thirtyDaysAgo:
+                          type: string
+                        sixtyDaysAgo:
+                          type: string
+                        ninetyDaysAgo:
+                          type: string
+                      required: []
+                      unevaluatedProperties: false
+                    epsRevisions:
+                      type: object
+                      properties:
+                        upLast7Days:
+                          type: integer
+                        upLast30Days:
+                          type: integer
+                        downLast7Days:
+                          type: integer
+                        downLast30Days:
+                          type: integer
+                      required: []
+                      unevaluatedProperties: false
+                  required:
+                  - period
+                  unevaluatedProperties: false
+              priceTarget:
+                type: object
+                properties:
+                  current:
+                    type: string
+                  high:
+                    type: string
+                  low:
+                    type: string
+                  mean:
+                    type: string
+                  median:
+                    type: string
+                required: []
+                unevaluatedProperties: false
+              recommendations:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    period:
+                      description: 0m is the current month, -1m the month before.
+                      type: string
+                    strongBuy:
+                      type: integer
+                    buy:
+                      type: integer
+                    hold:
+                      type: integer
+                    sell:
+                      type: integer
+                    strongSell:
+                      type: integer
+                  required:
+                  - period
+                  - strongBuy
+                  - buy
+                  - hold
+                  - sell
+                  - strongSell
+                  unevaluatedProperties: false
+              earningsHistory:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    quarterEnd:
+                      type: string
+                    epsActual:
+                      type: string
+                    epsEstimate:
+                      type: string
+                    epsDifference:
+                      type: string
+                    surprisePercent:
+                      type: string
+                  required:
+                  - quarterEnd
+                  unevaluatedProperties: false
+              ratingChanges:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    at:
+                      type: string
+                    firm:
+                      type: string
+                    toGrade:
+                      type: string
+                    fromGrade:
+                      type: string
+                    action:
+                      type: string
+                    priceTargetAction:
+                      type: string
+                    currentPriceTarget:
+                      type: string
+                    priorPriceTarget:
+                      type: string
+                  required:
+                  - at
+                  - firm
+                  unevaluatedProperties: false
+              retrievedAt:
+                type: string
+              ratingChangeCount:
+                minimum: 0
+                type: integer
+              warnings:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    code:
+                      type: string
+                    message:
+                      type: string
+                    details:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          key:
+                            type: string
+                          value:
+                            type: string
+                        required:
+                        - key
+                        - value
+                        unevaluatedProperties: false
+                  required:
+                  - code
+                  - message
+                  - details
+                  unevaluatedProperties: false
+            required:
+            - symbol
+            - provider
+            - retrievedAt
+            - ratingChangeCount
+            unevaluatedProperties: false
       required:
       - symbol
       - asOfDate
@@ -284,7 +610,11 @@ agents:
 
         content 只写定性分析和反证，不包含数字、比例、目标价或未经校验的阈值断言。事实性数字必须在最终 claims 字段引用 evidenceIds 并保留口径，阈值必须在 thresholds
         中明示 guidance/historical/hypothesis。无法支持的数字不输出。最终裁决必须在 content 中明确写出偏多、偏空、中性或证据不足，并给出依据、反证、定性失效条件与历史文字对比；这些方向与论证仍只是模型意见。最终裁决的
-        content 是未核实定性解读，不是规范报告；后续确定性工具负责生成唯一保存正文。previousReport 仅为用户未核实的历史文字，用于定性对比，不是监测基线。没有材料时明确缺口，不声称分析成功。'
+        content 是未核实定性解读，不是规范报告；后续确定性工具负责生成唯一保存正文。previousReport 仅为用户未核实的历史文字，用于定性对比，不是监测基线。没有材料时明确缺口，不声称分析成功。
+
+        holders 与 estimates 是可选的当前快照：缺省或空数组表示本次未采集。它们没有 evidenceId，不受 cutoffAt
+        约束，可能晚于截止时间，也没有更早版本，因此只能用于定性说明持仓结构与市场一致预期，并注明取自当前快照；不得据此写数字、阈值或
+        claims，也不得当作截止日事实。'
     tools: []
     resources: []
     budget:
@@ -3722,6 +4052,417 @@ agents:
       maxTokens: 1
       deadlineSeconds: 240
       maxParallelTools: 1
+  collect_holders:
+    name: 读取当前持仓结构
+    inputSchema:
+      type: object
+      properties:
+        symbol:
+          description: One granted symbol.
+          maxLength: 32
+          minLength: 1
+          type: string
+      required:
+      - symbol
+      unevaluatedProperties: false
+      title: 查询持仓结构
+    outputSchema:
+      type: object
+      properties:
+        snapshots:
+          maxItems: 1
+          type: array
+          items:
+            type: object
+            properties:
+              symbol:
+                type: string
+              provider:
+                type: string
+              breakdown:
+                type: object
+                properties:
+                  insidersPercent:
+                    type: string
+                  institutionsPercent:
+                    type: string
+                  institutionsFloatPercent:
+                    type: string
+                  institutionCount:
+                    type: integer
+                required: []
+                unevaluatedProperties: false
+              institutions:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    holder:
+                      type: string
+                    reportDate:
+                      type: string
+                    percentHeld:
+                      type: string
+                    shares:
+                      type: integer
+                    value:
+                      type: string
+                    percentChange:
+                      type: string
+                  required:
+                  - holder
+                  unevaluatedProperties: false
+              funds:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    holder:
+                      type: string
+                    reportDate:
+                      type: string
+                    percentHeld:
+                      type: string
+                    shares:
+                      type: integer
+                    value:
+                      type: string
+                    percentChange:
+                      type: string
+                  required:
+                  - holder
+                  unevaluatedProperties: false
+              insiders:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    position:
+                      type: string
+                    latestTransaction:
+                      type: string
+                    latestTransactionDate:
+                      type: string
+                    sharesOwnedDirectly:
+                      type: integer
+                    positionDirectDate:
+                      type: string
+                  required:
+                  - name
+                  unevaluatedProperties: false
+              retrievedAt:
+                type: string
+              warnings:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    code:
+                      type: string
+                    message:
+                      type: string
+                    details:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          key:
+                            type: string
+                          value:
+                            type: string
+                        required:
+                        - key
+                        - value
+                        unevaluatedProperties: false
+                  required:
+                  - code
+                  - message
+                  - details
+                  unevaluatedProperties: false
+            required:
+            - symbol
+            - provider
+            - retrievedAt
+            unevaluatedProperties: false
+      required:
+      - snapshots
+      unevaluatedProperties: false
+    strategy:
+      kind: deterministic
+      toolId: signaldeck/finance/holders_lookup
+      inputMapping:
+        ref: agent.input
+      outputMapping:
+        object:
+          snapshots:
+            array:
+            - ref: tool.output
+    tools:
+    - signaldeck/finance/holders_lookup
+    resources:
+    - finance-market-data
+    budget:
+      maxModelRequests: 1
+      maxToolCalls: 1
+      maxTokens: 1
+      deadlineSeconds: 240
+      maxParallelTools: 1
+  collect_estimates:
+    name: 读取当前分析师预期
+    inputSchema:
+      type: object
+      properties:
+        symbol:
+          description: One granted symbol.
+          maxLength: 32
+          minLength: 1
+          type: string
+        ratingChangeLimit:
+          description: Newest rating changes to return; 0 omits them.
+          maximum: 50
+          minimum: 0
+          type: integer
+      required:
+      - symbol
+      unevaluatedProperties: false
+      title: 查询分析师预期
+    outputSchema:
+      type: object
+      properties:
+        snapshots:
+          maxItems: 1
+          type: array
+          items:
+            type: object
+            properties:
+              symbol:
+                type: string
+              provider:
+                type: string
+              periods:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    period:
+                      description: 0q current and +1q next fiscal quarter; 0y, +1y years.
+                      type: string
+                    eps:
+                      type: object
+                      properties:
+                        average:
+                          type: string
+                        low:
+                          type: string
+                        high:
+                          type: string
+                        yearAgo:
+                          type: string
+                        analystCount:
+                          type: integer
+                        growthPercent:
+                          type: string
+                        currency:
+                          type: string
+                      required: []
+                      unevaluatedProperties: false
+                    revenue:
+                      type: object
+                      properties:
+                        average:
+                          type: string
+                        low:
+                          type: string
+                        high:
+                          type: string
+                        yearAgo:
+                          type: string
+                        analystCount:
+                          type: integer
+                        growthPercent:
+                          type: string
+                        currency:
+                          type: string
+                      required: []
+                      unevaluatedProperties: false
+                    epsTrend:
+                      type: object
+                      properties:
+                        current:
+                          type: string
+                        sevenDaysAgo:
+                          type: string
+                        thirtyDaysAgo:
+                          type: string
+                        sixtyDaysAgo:
+                          type: string
+                        ninetyDaysAgo:
+                          type: string
+                      required: []
+                      unevaluatedProperties: false
+                    epsRevisions:
+                      type: object
+                      properties:
+                        upLast7Days:
+                          type: integer
+                        upLast30Days:
+                          type: integer
+                        downLast7Days:
+                          type: integer
+                        downLast30Days:
+                          type: integer
+                      required: []
+                      unevaluatedProperties: false
+                  required:
+                  - period
+                  unevaluatedProperties: false
+              priceTarget:
+                type: object
+                properties:
+                  current:
+                    type: string
+                  high:
+                    type: string
+                  low:
+                    type: string
+                  mean:
+                    type: string
+                  median:
+                    type: string
+                required: []
+                unevaluatedProperties: false
+              recommendations:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    period:
+                      description: 0m is the current month, -1m the month before.
+                      type: string
+                    strongBuy:
+                      type: integer
+                    buy:
+                      type: integer
+                    hold:
+                      type: integer
+                    sell:
+                      type: integer
+                    strongSell:
+                      type: integer
+                  required:
+                  - period
+                  - strongBuy
+                  - buy
+                  - hold
+                  - sell
+                  - strongSell
+                  unevaluatedProperties: false
+              earningsHistory:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    quarterEnd:
+                      type: string
+                    epsActual:
+                      type: string
+                    epsEstimate:
+                      type: string
+                    epsDifference:
+                      type: string
+                    surprisePercent:
+                      type: string
+                  required:
+                  - quarterEnd
+                  unevaluatedProperties: false
+              ratingChanges:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    at:
+                      type: string
+                    firm:
+                      type: string
+                    toGrade:
+                      type: string
+                    fromGrade:
+                      type: string
+                    action:
+                      type: string
+                    priceTargetAction:
+                      type: string
+                    currentPriceTarget:
+                      type: string
+                    priorPriceTarget:
+                      type: string
+                  required:
+                  - at
+                  - firm
+                  unevaluatedProperties: false
+              retrievedAt:
+                type: string
+              ratingChangeCount:
+                minimum: 0
+                type: integer
+              warnings:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    code:
+                      type: string
+                    message:
+                      type: string
+                    details:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          key:
+                            type: string
+                          value:
+                            type: string
+                        required:
+                        - key
+                        - value
+                        unevaluatedProperties: false
+                  required:
+                  - code
+                  - message
+                  - details
+                  unevaluatedProperties: false
+            required:
+            - symbol
+            - provider
+            - retrievedAt
+            - ratingChangeCount
+            unevaluatedProperties: false
+      required:
+      - snapshots
+      unevaluatedProperties: false
+    strategy:
+      kind: deterministic
+      toolId: signaldeck/finance/analyst_estimates_lookup
+      inputMapping:
+        ref: agent.input
+      outputMapping:
+        object:
+          snapshots:
+            array:
+            - ref: tool.output
+    tools:
+    - signaldeck/finance/analyst_estimates_lookup
+    resources:
+    - finance-market-data
+    budget:
+      maxModelRequests: 1
+      maxToolCalls: 1
+      maxTokens: 1
+      deadlineSeconds: 240
+      maxParallelTools: 1
   merge_evidence:
     name: 合并原始证据与覆盖缺口
     inputSchema:
@@ -5627,6 +6368,18 @@ workflows:
           title: 启用内部人申报
           x-signaldeck-schema: signaldeck.schema/2
           default: false
+        includeHolders:
+          type: boolean
+          title: 启用当前持仓结构
+          x-signaldeck-schema: signaldeck.schema/2
+          default: false
+          description: 读取当前机构、基金与内部人持仓快照。它可能晚于信息截止时间，只供定性参考，不进入证据与事实校验。
+        includeEstimates:
+          type: boolean
+          title: 启用当前分析师预期
+          x-signaldeck-schema: signaldeck.schema/2
+          default: false
+          description: 读取当前 EPS 与营收一致预期、目标价和评级快照。它可能晚于信息截止时间，只供定性参考，不进入证据与事实校验。
         includePrediction:
           type: boolean
           title: 启用指定预测事件
@@ -6083,6 +6836,34 @@ workflows:
             onMissing:
               value: false
           - value: true
+      holders_source:
+        uses: collect_holders
+        inputMapping:
+          object:
+            symbol:
+              ref: workflow.input.symbol
+        condition:
+          op: eq
+          args:
+          - ref: workflow.input.includeHolders
+            onMissing:
+              value: false
+          - value: true
+      estimates_source:
+        uses: collect_estimates
+        inputMapping:
+          object:
+            symbol:
+              ref: workflow.input.symbol
+            ratingChangeLimit:
+              value: 5
+        condition:
+          op: eq
+          args:
+          - ref: workflow.input.includeEstimates
+            onMissing:
+              value: false
+          - value: true
       collection:
         uses: merge_evidence
         inputMapping:
@@ -6229,6 +7010,14 @@ workflows:
               ref: nodes.collection.output.analysisContextTruncated
               onMissing:
                 value: true
+            holders:
+              ref: nodes.holders_source.output.snapshots
+              onMissing:
+                value: []
+            estimates:
+              ref: nodes.estimates_source.output.snapshots
+              onMissing:
+                value: []
             collectionGaps:
               ref: nodes.collection.output.gaps
               onMissing:
@@ -7130,6 +7919,18 @@ workflows:
           - sources
           unevaluatedProperties: false
           title: 研究范围与触发规则
+        includeHolders:
+          type: boolean
+          title: 启用当前持仓结构
+          x-signaldeck-schema: signaldeck.schema/2
+          default: false
+          description: 深研究执行时读取当前持仓快照。它没有历史版本，不属于冻结范围，也不参与变化判定，只供定性参考。
+        includeEstimates:
+          type: boolean
+          title: 启用当前分析师预期
+          x-signaldeck-schema: signaldeck.schema/2
+          default: false
+          description: 深研究执行时读取当前一致预期与评级快照。它没有历史版本，不属于冻结范围，也不参与变化判定，只供定性参考。
       required:
       - monitorKey
       - scope
@@ -7404,6 +8205,50 @@ workflows:
         - timed_out
         - blocked
         - skipped
+      holders_source:
+        uses: collect_holders
+        inputMapping:
+          object:
+            symbol:
+              ref: workflow.input.scope.symbol
+        condition:
+          op: all
+          args:
+          - op: eq
+            args:
+            - ref: nodes.observe.output.shouldResearch
+              onMissing:
+                value: false
+            - value: true
+          - op: eq
+            args:
+            - ref: workflow.input.includeHolders
+              onMissing:
+                value: false
+            - value: true
+      estimates_source:
+        uses: collect_estimates
+        inputMapping:
+          object:
+            symbol:
+              ref: workflow.input.scope.symbol
+            ratingChangeLimit:
+              value: 5
+        condition:
+          op: all
+          args:
+          - op: eq
+            args:
+            - ref: nodes.observe.output.shouldResearch
+              onMissing:
+                value: false
+            - value: true
+          - op: eq
+            args:
+            - ref: workflow.input.includeEstimates
+              onMissing:
+                value: false
+            - value: true
       market:
         uses: market_analyst
         maxAttempts: 2
@@ -7476,6 +8321,14 @@ workflows:
               ref: nodes.collection.output.analysisContextTruncated
               onMissing:
                 value: true
+            holders:
+              ref: nodes.holders_source.output.snapshots
+              onMissing:
+                value: []
+            estimates:
+              ref: nodes.estimates_source.output.snapshots
+              onMissing:
+                value: []
             collectionGaps:
               ref: nodes.collection.output.gaps
               onMissing:
