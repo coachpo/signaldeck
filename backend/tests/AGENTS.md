@@ -4,7 +4,7 @@ The database resolution and the Temporal CLI install are in [CONTRIBUTING](../..
 
 - Database tests use real PostgreSQL, never SQLite.
 - Every module that calls `WorkflowEnvironment.start_local` (for example `test_durable_runtime*.py`, `test_target_schedules.py` and `test_execution_tracing.py`) starts a real Temporal dev server from `TEMPORAL_CLI` (default `/tmp/sd-temporal-bin/temporal`, no `PATH` lookup) and fails instead of skipping when it is missing.
-- Provider tests use `httpx.MockTransport`, the local protocol servers in `test_durable_runtime_support.py` and `fake_openai_provider.py`; never depend on real provider credentials or availability.
+- Provider tests use `httpx.MockTransport`, the local protocol servers in `test_durable_runtime_support.py` and `fake_openai_provider.py`, or injected fake yfinance tickers; never depend on real provider credentials or availability.
 - Build definitions from `test_dag_compiler.py`, `test_platform_api.py` or `fixtures/`; never read, copy or refer to `demo/`.
 - Recovery, cancellation, isolation and unknown write effects need the real Temporal and plugin-process tests; mocked engine or plugin responses do not prove them, so keep those protocol and worker-boundary tests. `test_independent_plugins.py` runs separate plugin processes with their own databases, and the plugin tests (`test_finance_*`, `test_oracle_*`, `test_notes_*`, `test_research_*`) import packages from `plugins/` through `sys.path`.
 - Serialize public API models with `model_dump(mode="json", by_alias=True)`, check route presence through `app.openapi()["paths"]` rather than private FastAPI router internals, and assert responses through `TestClient`.

@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-import importlib
 from collections.abc import Mapping, Sequence
 from datetime import date
 from decimal import Decimal, InvalidOperation
-from typing import Protocol, cast
+from typing import Protocol
 
-from oracle_plugin.config import YFINANCE_OPTIONAL_DEPENDENCY
+import yfinance as yf
 from oracle_plugin.contracts import RuntimeToolWarning
 from oracle_plugin.runtime_options_payloads import (
     map_option_rows,
@@ -51,21 +50,17 @@ class OptionsTickerFactory(Protocol):
     def __call__(self, symbol: str) -> OptionsTicker: ...
 
 
-class YFinanceModule(Protocol):
-    Ticker: OptionsTickerFactory
-
-
 class YahooOptionsProvider:
     provider_name = "yahoo"
 
-    def __init__(self, ticker_factory: OptionsTickerFactory | None = None) -> None:
+    def __init__(self, ticker_factory: OptionsTickerFactory = yf.Ticker) -> None:
         self._ticker_factory = ticker_factory
 
     def lookup_options(
         self,
         query: DigitalOracleOptionsProviderQuery,
     ) -> DigitalOracleOptionsProviderResult:
-        ticker = self._ticker_factory_for_call()(query.symbol)
+        ticker = self._ticker_factory(query.symbol)
         expirations = _selected_expirations(ticker.options, query.expirations)
         spot_price = _spot_price(ticker)
         warnings: list[RuntimeToolWarning] = []
@@ -100,22 +95,6 @@ class YahooOptionsProvider:
             chains=tuple(chains),
             warnings=tuple(warnings),
         )
-
-    def _ticker_factory_for_call(self) -> OptionsTickerFactory:
-        if self._ticker_factory is not None:
-            return self._ticker_factory
-        try:
-            module = cast(YFinanceModule, importlib.import_module(YFINANCE_OPTIONAL_DEPENDENCY))
-        except ImportError as exc:
-            raise DigitalOracleProviderError(
-                "Yahoo options data is unavailable because yfinance is not installed",
-                code="provider_unavailable",
-                details={
-                    "provider": self.provider_name,
-                    "dependency": YFINANCE_OPTIONAL_DEPENDENCY,
-                },
-            ) from exc
-        return module.Ticker
 
 
 def create_options_providers() -> tuple[DigitalOracleOptionsProvider, ...]:

@@ -76,7 +76,7 @@ OPTIONS_LOOKUP_TOOL_SPEC = RuntimeToolSpec(
     key=OPTIONS_LOOKUP_TOOL_KEY,
     openai_function_name=OPTIONS_LOOKUP_OPENAI_FUNCTION_NAME,
     display_name="Options Lookup",
-    description="Read normalized Yahoo option-chain data through an optional yfinance adapter.",
+    description="Read normalized Yahoo option-chain data through yfinance.",
     parameters_schema=_PARAMETERS_SCHEMA,
     guidance=(
         "When you need equity option chains, call signaldeck_digital_oracle_options_lookup. "

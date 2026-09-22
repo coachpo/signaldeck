@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import importlib.util
 from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
 
@@ -14,9 +13,6 @@ from .config import (
     MARKET_SENTIMENT_PROVIDER_KEY,
     MARKET_SENTIMENT_SOURCE_URL,
     PREDICTION_MARKET_VENUES,
-    YFINANCE_OPTIONAL_DEPENDENCY,
-    YFINANCE_OPTIONAL_DEPENDENCY_MISSING_CODE,
-    YFINANCE_OPTIONAL_DEPENDENCY_MISSING_MESSAGE,
     DigitalOracleProviderConfig,
     DigitalOracleSettings,
     MarketSentimentIndicator,
@@ -46,7 +42,6 @@ _PROVIDER_LABELS: Mapping[str, str] = {
     "treasury": "US Treasury",
     "worldbank": "World Bank",
     "yahoo": "Yahoo Finance",
-    "yfinance": "YFinance",
 }
 
 _MACRO_RATE_PROVIDER_KEYS = ("treasury", "bis", "worldbank", "cme_fedwatch", "fred")
@@ -138,24 +133,6 @@ def _missing_fred_key_failure() -> DigitalOracleProviderFailure:
             "secret": FRED_API_KEY_SECRET,
         },
     )
-
-
-def _missing_yfinance_failure() -> DigitalOracleProviderFailure:
-    return DigitalOracleProviderFailure(
-        code=YFINANCE_OPTIONAL_DEPENDENCY_MISSING_CODE,
-        message=YFINANCE_OPTIONAL_DEPENDENCY_MISSING_MESSAGE,
-        details={
-            "dependency": YFINANCE_OPTIONAL_DEPENDENCY,
-            "provider": "yfinance",
-        },
-    )
-
-
-def _optional_dependency_available(module_name: str) -> bool:
-    try:
-        return importlib.util.find_spec(module_name) is not None
-    except (ImportError, ValueError):
-        return False
 
 
 def _descriptor(
@@ -342,11 +319,6 @@ def create_digital_oracle_phase1_provider_bundle(
             provider_keys=_OPTIONS_PROVIDER_KEYS,
             config=config,
             default_item_limit=config.options_default_item_limit,
-            source_failures=(
-                ()
-                if _optional_dependency_available(YFINANCE_OPTIONAL_DEPENDENCY)
-                else (_missing_yfinance_failure(),)
-            ),
         ),
     )
 

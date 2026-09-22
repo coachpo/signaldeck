@@ -78,10 +78,8 @@ MARKET_SENTIMENT_PROVIDER_KEY: MarketSentimentIndicator = "fear_greed"
 MARKET_SENTIMENT_SOURCE_URL = "https://www.cnn.com/markets/fear-and-greed"
 
 DIGITAL_ORACLE_PHASE1_REQUIRES_VENDORED_PACKAGE = False
-DIGITAL_ORACLE_PHASE1_REQUIRES_YFINANCE = False
 DIGITAL_ORACLE_PHASE1_PROVIDER_BOUNDARY = (
-    "Phase 1 uses Digital Oracle provider wrappers; do not vendor "
-    "digital-oracle or require yfinance."
+    "Phase 1 uses Digital Oracle provider wrappers; do not vendor digital-oracle."
 )
 
 EDGAR_CONTACT_EMAIL_SECRET = "edgar_contact_email"
@@ -96,12 +94,6 @@ FRED_API_KEY_MISSING_CODE = "digital_oracle_fred_secret_missing"
 FRED_API_KEY_MISSING_MESSAGE = (
     "FRED macro rates source is not configured. Set FRED_API_KEY in the Digital Oracle "
     "plugin deployment environment before using the FRED source."
-)
-YFINANCE_OPTIONAL_DEPENDENCY = "yfinance"
-YFINANCE_OPTIONAL_DEPENDENCY_MISSING_CODE = "digital_oracle_yfinance_missing"
-YFINANCE_OPTIONAL_DEPENDENCY_MISSING_MESSAGE = (
-    "YFinance options source is unavailable because the optional yfinance dependency is not "
-    "installed."
 )
 
 
@@ -124,7 +116,6 @@ class DigitalOracleProviderConfig:
     edgar_contact_email: str | None
     fred_api_key: str | None
     requires_vendored_package: bool = DIGITAL_ORACLE_PHASE1_REQUIRES_VENDORED_PACKAGE
-    requires_yfinance: bool = DIGITAL_ORACLE_PHASE1_REQUIRES_YFINANCE
     provider_boundary: str = DIGITAL_ORACLE_PHASE1_PROVIDER_BOUNDARY
 
     @property
@@ -175,7 +166,6 @@ def get_digital_oracle_provider_config(
 __all__ = [
     "DIGITAL_ORACLE_PHASE1_PROVIDER_BOUNDARY",
     "DIGITAL_ORACLE_PHASE1_REQUIRES_VENDORED_PACKAGE",
-    "DIGITAL_ORACLE_PHASE1_REQUIRES_YFINANCE",
     "DigitalOracleSettings",
     "CRYPTO_DERIVATIVES_DATA_TYPES",
     "CRYPTO_DERIVATIVES_VENUES",
@@ -192,9 +182,6 @@ __all__ = [
     "MARKET_SENTIMENT_SOURCE_URL",
     "OPTIONS_MONEYNESS_VALUES",
     "PREDICTION_MARKET_VENUES",
-    "YFINANCE_OPTIONAL_DEPENDENCY",
-    "YFINANCE_OPTIONAL_DEPENDENCY_MISSING_CODE",
-    "YFINANCE_OPTIONAL_DEPENDENCY_MISSING_MESSAGE",
     "DigitalOracleProviderConfig",
     "CftcPositioningReportType",
     "CryptoDerivativesDataType",

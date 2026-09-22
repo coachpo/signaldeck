@@ -9,17 +9,14 @@ from .providers.news_provider import (
     NewsProvider,
     YahooFinanceNewsProvider,
 )
-from .providers.quote_provider import (
-    DeterministicQuoteProvider,
-    QuoteProvider,
-    YahooFinanceQuoteProvider,
-)
+from .providers.quote_provider import DeterministicQuoteProvider, QuoteProvider
 from .providers.social_sentiment_provider import (
     RedditSocialSentimentAdapter,
     SocialSentimentSourceAdapter,
     StockTwitsSocialSentimentAdapter,
     _RedditRequestConfig,
 )
+from .providers.yahoo_quote_provider import YahooFinanceQuoteProvider
 
 
 def create_quote_provider(settings: FinanceSettings) -> QuoteProvider:

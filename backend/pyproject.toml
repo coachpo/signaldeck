@@ -33,6 +33,7 @@ dev = [
   "pytest>=9.1.1,<10.0",
   "ruff>=0.15.20,<1.0",
   "types-jsonschema==4.26.0.20260518",
+  "yfinance==1.7.0",
 ]
 
 [tool.uv]

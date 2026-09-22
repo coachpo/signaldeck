@@ -12,6 +12,7 @@ from typing import cast, get_type_hints
 
 import httpx
 import pytest
+from curl_cffi import requests as curl_requests
 from pydantic import ValidationError
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -3458,6 +3459,8 @@ def _block_unmocked_finance_http(monkeypatch):
         raise AssertionError("Provider tests must use an explicit transport fixture")
 
     monkeypatch.setattr(httpx.HTTPTransport, "handle_request", reject_request)
+    # yfinance sends its requests through curl_cffi rather than httpx.
+    monkeypatch.setattr(curl_requests.Session, "request", reject_request)
 
 
 def test_market_data_quote_lookup_dispatches_to_service_with_injected_provider(

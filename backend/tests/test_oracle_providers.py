@@ -22,7 +22,6 @@ for directory in ("runtime", "digital_oracle"):
 from oracle_plugin.config import (  # noqa: E402
     DIGITAL_ORACLE_PHASE1_PROVIDER_BOUNDARY,
     DIGITAL_ORACLE_PHASE1_REQUIRES_VENDORED_PACKAGE,
-    DIGITAL_ORACLE_PHASE1_REQUIRES_YFINANCE,
     EDGAR_CONTACT_EMAIL_MISSING_CODE,
     EDGAR_CONTACT_EMAIL_MISSING_MESSAGE,
     EDGAR_CONTACT_EMAIL_SECRET,
@@ -642,9 +641,7 @@ def test_digital_oracle_configured_provider_factory_construction_uses_defaults()
     assert config.market_sentiment_enabled is True
     assert config.provider_timeout_seconds == 2.5
     assert config.requires_vendored_package is DIGITAL_ORACLE_PHASE1_REQUIRES_VENDORED_PACKAGE
-    assert config.requires_yfinance is DIGITAL_ORACLE_PHASE1_REQUIRES_YFINANCE
     assert config.requires_vendored_package is False
-    assert config.requires_yfinance is False
     assert config.provider_boundary == DIGITAL_ORACLE_PHASE1_PROVIDER_BOUNDARY
     bundle = create_digital_oracle_phase1_provider_bundle(
         settings,
@@ -728,17 +725,6 @@ def test_digital_oracle_provider_bundle_missing_fred_key_is_source_scoped_failur
     assert not isinstance(bundle.macro_rates, DigitalOracleProviderFailure)
     assert [failure.details for failure in bundle.macro_rates.source_failures] == [
         {"provider": "fred", "secret": FRED_API_KEY_SECRET}
-    ]
-
-
-def test_digital_oracle_optional_dependency_missing_yfinance_is_source_scoped_failure(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setitem(sys.modules, "yfinance", None)
-    bundle = create_digital_oracle_phase1_provider_bundle(DigitalOracleSettings())
-    assert not isinstance(bundle.options, DigitalOracleProviderFailure)
-    assert [failure.details for failure in bundle.options.source_failures] == [
-        {"dependency": "yfinance", "provider": "yfinance"}
     ]
 
 
@@ -3709,9 +3695,6 @@ def test_options_lookup_service_and_executor_return_normalized_fake_provider_pay
             ),
         )
     )
-    monkeypatch.setattr(
-        "oracle_plugin.factory.importlib.util.find_spec", lambda module_name: object()
-    )
     service_payload = map_options_result(
         DigitalOraclePhase1Service(options_providers=(provider,)).lookup_options(
             DigitalOracleOptionsQuery(
@@ -5047,53 +5030,14 @@ _NOW = datetime(2026, 1, 2, 3, 4, 5, tzinfo=UTC)
 @pytest.fixture(autouse=True)
 def _block_unmocked_oracle_http(monkeypatch):
     import httpx
+    from curl_cffi import requests as curl_requests
 
     def reject_request(*args, **kwargs):
         raise AssertionError("Provider tests must use an explicit transport fixture")
 
     monkeypatch.setattr(httpx.HTTPTransport, "handle_request", reject_request)
-
-
-def test_missing_optional_yfinance_returns_plugin_warning_without_runtime_registry(
-    monkeypatch,
-):
-    import importlib
-
-    import_module = importlib.import_module
-
-    def unavailable(module):
-        if module == "yfinance":
-            raise ImportError("No module named yfinance")
-        return import_module(module)
-
-    monkeypatch.setattr(
-        "oracle_plugin.factory.importlib.util.find_spec",
-        lambda module: None if module == "yfinance" else object(),
-    )
-    monkeypatch.setattr(
-        "oracle_plugin.runtime_options_providers.importlib.import_module", unavailable
-    )
-    reset_digital_oracle_settings_cache()
-    try:
-        payload = execute_options_lookup(
-            RuntimeToolContext(),
-            parse_options_lookup_arguments(
-                json.dumps({"symbols": ["AAPL"], "includeGreeks": True})
-            ),
-        )
-    finally:
-        reset_digital_oracle_settings_cache()
-    assert payload["chains"] == []
-    assert [warning["code"] for warning in payload["warnings"]] == [
-        "digital_oracle_yfinance_missing",
-        "options_provider_unavailable",
-        "options_unavailable",
-    ]
-    assert payload["warnings"][0]["details"] == [
-        {"key": "dependency", "value": "yfinance"},
-        {"key": "operation", "value": "options"},
-        {"key": "provider", "value": "yfinance"},
-    ]
+    # yfinance sends its requests through curl_cffi rather than httpx.
+    monkeypatch.setattr(curl_requests.Session, "request", reject_request)
 
 
 def test_cftc_positioning_plugin_executor_preserves_provider_values(
