@@ -19,7 +19,7 @@ RUN VITE_API_BASE_URL="$VITE_API_BASE_URL" \
 # The plugin page bundle is written to /source/plugins/runtime/plugin_runtime/web.
 RUN pnpm run build:plugin-ui
 
-FROM python:3.13.13-slim@sha256:aa938a849bcb82dce8f49480f056ab82bf5c1c3ebc294f0430f37b6820e7f286 AS runtime
+FROM python:3.15.0-slim@sha256:f5b92f2a669a4c347044f29367f31983280b648250ca94dea66f98c53bc87e58 AS runtime
 
 LABEL org.opencontainers.image.title="SignalDeck" \
       org.opencontainers.image.description="SignalDeck application, dispatcher, immutable Core worker and independent business plugins"
